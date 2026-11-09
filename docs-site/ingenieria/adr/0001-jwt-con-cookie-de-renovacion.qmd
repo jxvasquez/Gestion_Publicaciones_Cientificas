@@ -28,12 +28,12 @@ La interfaz es una SPA de Angular que consume una API REST. Hace falta autentica
 
 ## Consecuencias
 
-- ✅ Un XSS no puede leer el token de renovación, y el de acceso dura minutos.
-- ✅ Revocar una sesión o un rol surte efecto en la siguiente solicitud.
-- ✅ La API no filtra qué cuentas existen.
-- ⚠️ Cada solicitud consulta los roles en la base de datos (un costo pequeño, aceptado por la escala del piloto).
-- ⚠️ La renovación depende de que el navegador y la API compartan origen, lo que se cumple porque Nginx sirve ambos bajo el mismo dominio.
-- ⚠️ Al recargar la página el token de acceso se pierde; la SPA lo recupera al arrancar con una renovación (`restoreSession`).
+- OK Un XSS no puede leer el token de renovación, y el de acceso dura minutos.
+- OK Revocar una sesión o un rol surte efecto en la siguiente solicitud.
+- OK La API no filtra qué cuentas existen.
+- AVISO Cada solicitud consulta los roles en la base de datos (un costo pequeño, aceptado por la escala del piloto).
+- AVISO La renovación depende de que el navegador y la API compartan origen, lo que se cumple porque Nginx sirve ambos bajo el mismo dominio.
+- AVISO Al recargar la página el token de acceso se pierde; la SPA lo recupera al arrancar con una renovación (`restoreSession`).
 
 ## Referencias
 

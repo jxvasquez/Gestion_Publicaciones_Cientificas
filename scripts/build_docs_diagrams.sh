@@ -13,7 +13,7 @@
 #         structurizr/cli y renderiza a SVG, junto con c4-codigo-envio.puml, en
 #         docs-site/diagrams/out/.
 #
-# Requisitos: bpmn → node y npm. c4 → docker, graphviz y PlantUML. PlantUML se ejecuta como
+# Requisitos: bpmn -> node y npm. c4 -> docker, graphviz y PlantUML. PlantUML se ejecuta como
 # `java -jar` si PLANTUML_JAR apunta a un plantuml.jar (lo que hace el CI, con una versión
 # reciente); si no, se usa el comando `plantuml` del sistema (apt-get install plantuml graphviz),
 # cuya versión en Ubuntu 24.04 es demasiado antigua para el .puml que exporta Structurizr.
@@ -58,7 +58,7 @@ build_bpmn() {
   # shellcheck disable=SC2064
   trap "rm -rf '$work'" RETURN
 
-  echo "→ bpmn-js ${BPMN_JS_VERSION}"
+  echo "-> bpmn-js ${BPMN_JS_VERSION}"
   npm install --prefix "$work" --no-audit --no-fund --silent "bpmn-js@${BPMN_JS_VERSION}"
   dist="$work/node_modules/bpmn-js"
 
@@ -87,7 +87,7 @@ build_c4() {
   rm -rf "$out"
   mkdir -p "$src"
 
-  echo "→ Structurizr (${STRUCTURIZR_IMAGE}): workspace.dsl → PlantUML"
+  echo "-> Structurizr (${STRUCTURIZR_IMAGE}): workspace.dsl -> PlantUML"
   # --user evita que los archivos exportados queden como propiedad de root.
   docker run --rm --user "$(id -u):$(id -g)" \
     -v "$DIAGRAMS:/usr/local/structurizr" \
@@ -95,7 +95,7 @@ build_c4() {
 
   cp "$DIAGRAMS/c4-codigo-envio.puml" "$src/"
 
-  echo "→ PlantUML: .puml → SVG"
+  echo "-> PlantUML: .puml -> SVG"
   plantuml_run -tsvg -charset UTF-8 "$src"/*.puml
 
   # Structurizr nombra los archivos structurizr-<clave>.puml y, junto a cada uno, una

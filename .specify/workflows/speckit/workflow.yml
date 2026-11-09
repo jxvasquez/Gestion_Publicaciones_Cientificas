@@ -4,7 +4,7 @@ workflow:
   name: "Full SDD Cycle"
   version: "1.0.1"
   author: "GitHub"
-  description: "Runs specify → plan → tasks → implement with review gates"
+  description: "Runs specify -> plan -> tasks -> implement with review gates"
 
 requires:
   # 0.8.5 is the first release with engine-side resolution of the

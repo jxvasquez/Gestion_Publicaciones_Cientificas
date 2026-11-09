@@ -28,11 +28,11 @@ El Administrador necesita **evidencia verificable** de las acciones críticas (s
 
 ## Consecuencias
 
-- ✅ Cualquier manipulación posterior es detectable.
-- ✅ Ninguna acción crítica ocurre sin dejar evidencia.
-- ⚠️ Una falla de la auditoría **bloquea** la acción: la disponibilidad de la auditoría es parte de la disponibilidad del sistema. Se acepta a propósito (RN-13).
-- ⚠️ Cada escritura de auditoría toma un *advisory lock* transaccional de PostgreSQL para mantener la cadena en orden; serializa esas escrituras, un costo pequeño a la escala del piloto.
-- ⚠️ El rol de ejecución y el rol que migra son distintos, lo que añade un paso al desplegar.
+- OK Cualquier manipulación posterior es detectable.
+- OK Ninguna acción crítica ocurre sin dejar evidencia.
+- AVISO Una falla de la auditoría **bloquea** la acción: la disponibilidad de la auditoría es parte de la disponibilidad del sistema. Se acepta a propósito (RN-13).
+- AVISO Cada escritura de auditoría toma un *advisory lock* transaccional de PostgreSQL para mantener la cadena en orden; serializa esas escrituras, un costo pequeño a la escala del piloto.
+- AVISO El rol de ejecución y el rol que migra son distintos, lo que añade un paso al desplegar.
 
 ## Referencias
 

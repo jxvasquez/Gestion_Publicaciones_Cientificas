@@ -12,7 +12,7 @@
 #   ./scripts/e2e.sh                       # todos los flujos
 #   ./scripts/e2e.sh -g "fuga"             # solo los que coinciden (argumentos de playwright test)
 #
-# Variables: E2E_WEB_PORT (20080, HTTP→HTTPS), E2E_TLS_PORT (20443), E2E_KEEP=1 (conserva
+# Variables: E2E_WEB_PORT (20080, HTTP->HTTPS), E2E_TLS_PORT (20443), E2E_KEEP=1 (conserva
 # el stack), E2E_REUSE=1 (usa el stack ya levantado con E2E_KEEP=1: salta la construcción;
 # vuelve a sembrar con una contraseña nueva y NO lo apaga).
 set -euo pipefail

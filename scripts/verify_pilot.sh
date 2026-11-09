@@ -3,8 +3,8 @@
 #
 # Levanta un stack AISLADO (proyecto «gpc_verify», otros volúmenes y puertos; la
 # base y los PDF de trabajo no se tocan), siembra datos por la API real y ejecuta
-# scripts/verify/verify_pilot.py: respaldo → desastre → restore.sh → huella
-# idéntica → verify_integrity, y pruebas de puertos, ubicaciones internas, TLS y
+# scripts/verify/verify_pilot.py: respaldo -> desastre -> restore.sh -> huella
+# idéntica -> verify_integrity, y pruebas de puertos, ubicaciones internas, TLS y
 # cabeceras. Se apaga al terminar (VERIFY_KEEP=1 lo conserva).
 #
 # Uso:  ./scripts/verify_pilot.sh

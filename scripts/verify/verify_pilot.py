@@ -292,7 +292,7 @@ class Verifier:
         for label, path in probes.items():
             status, _, body = self.raw(self.api, path)
             served_spa = b"<app-root" in body
-            self.check(f"HTTPS {label} → {status} sin PDF",
+            self.check(f"HTTPS {label} -> {status} sin PDF",
                        status in (403, 404) or (served_spa and b"%PDF" not in body[:8]),
                        "")
             if status == 200:
@@ -304,7 +304,7 @@ class Verifier:
         self.check("X-Accel-Redirect enviado por el cliente se ignora", status == 200 and b"%PDF" not in body)
         # Por HTTP plano nada se entrega: solo la redirección.
         status, hdrs, body = self.raw(self.http, f"/_protected/{inner['private']}")
-        self.check("HTTP /_protected/ → 301 sin cuerpo con PDF", status == 301 and b"%PDF" not in body)
+        self.check("HTTP /_protected/ -> 301 sin cuerpo con PDF", status == 301 and b"%PDF" not in body)
 
         # Control positivo: lo autorizado sí se entrega por Nginx.
         code = self.before_api["codes"][0]

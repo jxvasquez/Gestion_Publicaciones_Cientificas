@@ -284,4 +284,4 @@ class TestFactories:
 
         assert opened.closed_by_version is None and str(opened) == f"{manuscript.pk} · ronda 1"
         assert (event.from_status, event.to_status) == (None, "DRAFT")
-        assert str(event) == f"{manuscript.pk}: None → DRAFT"
+        assert str(event) == f"{manuscript.pk}: None -> DRAFT"

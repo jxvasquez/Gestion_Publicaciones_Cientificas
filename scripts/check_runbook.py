@@ -79,7 +79,7 @@ def decisions() -> None:
     check("el compose tiene exactamente db, backend y web", sorted(services) == ["backend", "db", "web"], ", ".join(sorted(services)))
     check("solo web publica puertos, y son 80 y 443",
           published.get("web") == ["443", "80"] and not published.get("db") and not published.get("backend"), str(published))
-    check("Nginx sirve TLS 1.2/1.3 y redirige 80→443",
+    check("Nginx sirve TLS 1.2/1.3 y redirige 80->443",
           contains(nginx, r"ssl_protocols\s+TLSv1\.2 TLSv1\.3;") and contains(nginx, r"return\s+301\s+https://"))
 
     print("Q4 — X-Accel-Redirect con ubicaciones internas separadas")

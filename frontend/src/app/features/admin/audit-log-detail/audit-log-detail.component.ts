@@ -47,7 +47,7 @@ const INSTITUTIONAL_OFFSET = '-0500';
   ],
   template: `
     <section aria-labelledby="audit-log-detail-title">
-      <p><a [routerLink]="['/app/admin/audit']">← Volver a la auditoría</a></p>
+      <p><a [routerLink]="['/app/admin/audit']">Volver a la auditoría</a></p>
       <h1 id="audit-log-detail-title">Detalle del evento</h1>
 
       @switch (viewState()) {

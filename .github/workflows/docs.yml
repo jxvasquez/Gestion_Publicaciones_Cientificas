@@ -11,8 +11,8 @@ name: Documentación
 #   `build` sigue validando y `deploy` no corre ni falla.
 #
 # Para activar la publicación en un repositorio:
-#   1. Settings → Pages → Build and deployment → Source: «GitHub Actions».
-#   2. Settings → Secrets and variables → Actions → Variables → DOCS_DEPLOY = true.
+#   1. Settings -> Pages -> Build and deployment -> Source: «GitHub Actions».
+#   2. Settings -> Secrets and variables -> Actions -> Variables -> DOCS_DEPLOY = true.
 
 on:
   push:

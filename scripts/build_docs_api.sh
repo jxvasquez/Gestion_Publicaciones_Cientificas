@@ -27,7 +27,7 @@ command -v "$PYTHON" >/dev/null 2>&1 || fail "no se encuentra '$PYTHON'. Active 
 
 mkdir -p "$API_DIR"
 
-echo "→ Schema OpenAPI"
+echo "-> Schema OpenAPI"
 (
   cd "$ROOT/backend"
   export DJANGO_SETTINGS_MODULE="${DJANGO_SETTINGS_MODULE:-config.settings.development}"
@@ -40,7 +40,7 @@ echo "→ Schema OpenAPI"
 )
 [[ -s "$API_DIR/openapi.yaml" ]] || fail "no se generó openapi.yaml"
 
-echo "→ Swagger UI (drf-spectacular-sidecar)"
+echo "-> Swagger UI (drf-spectacular-sidecar)"
 DIST="$("$PYTHON" -c 'import pathlib, drf_spectacular_sidecar as s; print(pathlib.Path(s.__file__).parent / "static" / "drf_spectacular_sidecar" / "swagger-ui-dist")')"
 [[ -d "$DIST" ]] || fail "drf-spectacular-sidecar no incluye swagger-ui-dist en $DIST"
 

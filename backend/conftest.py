@@ -8,9 +8,9 @@ meta}`` (``config.renderers``). Las pruebas de dominio —cientos de lecturas de
 dice* la API, no *cómo la envuelve*. Para que sigan leyéndose como el dominio,
 este módulo hace que ``response.json()`` desenvuelva el sobre:
 
-* éxito → ``data``; una lista paginada → ``{count, next, previous, results}``
+* éxito -> ``data``; una lista paginada -> ``{count, next, previous, results}``
   (más cualquier dato extra que la vista haya puesto en ``meta``);
-* error → ``{"error": {code, message, details, request_id}}``, con ``details``
+* error -> ``{"error": {code, message, details, request_id}}``, con ``details``
   reconstruido desde ``errors``.
 
 Esto **no** debilita la prueba del contrato: ``tests/contract.py`` lee

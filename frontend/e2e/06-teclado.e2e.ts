@@ -74,10 +74,10 @@ for (const role of [null, ...roles]) {
       const report = await tabThrough(page);
       expect(report.total, `${screen.name}: no se encontró ningún control`).toBeGreaterThan(0);
       if (report.unreachable.length > 0) {
-        problems.push(`${screen.name}: no se alcanza con Tab → ${report.unreachable.join(', ')}`);
+        problems.push(`${screen.name}: no se alcanza con Tab -> ${report.unreachable.join(', ')}`);
       }
       if (report.noIndicator.length > 0) {
-        problems.push(`${screen.name}: sin indicador de foco → ${report.noIndicator.join(', ')}`);
+        problems.push(`${screen.name}: sin indicador de foco -> ${report.noIndicator.join(', ')}`);
       }
     }
     expect(problems, problems.join('\n')).toEqual([]);

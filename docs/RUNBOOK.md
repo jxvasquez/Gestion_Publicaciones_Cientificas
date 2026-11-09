@@ -63,11 +63,11 @@ Son las cinco decisiones de infraestructura que fijó la especificación (`.spec
 
 | | Decisión | Dónde está implementada | Cómo se comprueba en vivo | Estado |
 |---|---|---|---|---|
-| **Q1** | PDF en **volumen local**: original y copia sanitizada inmutables, en rutas separadas | `media_data` en `/data/media` (`private/drafts`, `private/manuscripts`, `public/catalog`, `tmp/uploads`); lo crea `scripts/init_media.sh` al arrancar | `docker compose exec backend find /data/media -maxdepth 2 -type d` | ✅ |
-| **Q2** | **50 MB** por PDF; **60 MB** en el proxy | `MAX_PDF_SIZE_MB=50`, `client_max_body_size 60m`, validador de Angular (50 MiB) y `DATA_UPLOAD_MAX_MEMORY_SIZE` de Django (60 MiB) | `./scripts/load_test.sh` (50 MB exactos → 201, 51 MB → 413, 61 MB → 413 de Nginx) | ✅ |
-| **Q3** | **Un servidor Linux on-premise** con Compose; Nginx termina TLS | `docker-compose.yml` con `db`, `backend`, `web`; solo `web` publica 80/443 | `docker compose ps` y `./scripts/verify_pilot.sh` | ✅ (certificado institucional **pendiente en el servidor**) |
-| **Q4** | **`X-Accel-Redirect`**: Django autoriza y Nginx entrega desde rutas internas separadas | `location /_protected/` (privado) y `/_catalog/` (público), ambas `internal`; `/media/` es `deny all` | `./scripts/smoke_media_isolation.sh` y `./scripts/verify_pilot.sh` | ✅ |
-| **Q5** | Respaldo **diario completo cifrado** a almacenamiento **externo**, 30 días, prueba mensual | Diario 02:15 (`gpc.cron`), `RETENTION_DAYS=30`, prueba mensual (§14) | `ls -l /backups` y la prueba de §9.1 | 🟡 **Parcial**: el script respalda y retiene, pero **no cifra ni copia fuera del servidor**; eso se hace con §8.3 |
+| **Q1** | PDF en **volumen local**: original y copia sanitizada inmutables, en rutas separadas | `media_data` en `/data/media` (`private/drafts`, `private/manuscripts`, `public/catalog`, `tmp/uploads`); lo crea `scripts/init_media.sh` al arrancar | `docker compose exec backend find /data/media -maxdepth 2 -type d` | OK |
+| **Q2** | **50 MB** por PDF; **60 MB** en el proxy | `MAX_PDF_SIZE_MB=50`, `client_max_body_size 60m`, validador de Angular (50 MiB) y `DATA_UPLOAD_MAX_MEMORY_SIZE` de Django (60 MiB) | `./scripts/load_test.sh` (50 MB exactos -> 201, 51 MB -> 413, 61 MB -> 413 de Nginx) | OK |
+| **Q3** | **Un servidor Linux on-premise** con Compose; Nginx termina TLS | `docker-compose.yml` con `db`, `backend`, `web`; solo `web` publica 80/443 | `docker compose ps` y `./scripts/verify_pilot.sh` | OK (certificado institucional **pendiente en el servidor**) |
+| **Q4** | **`X-Accel-Redirect`**: Django autoriza y Nginx entrega desde rutas internas separadas | `location /_protected/` (privado) y `/_catalog/` (público), ambas `internal`; `/media/` es `deny all` | `./scripts/smoke_media_isolation.sh` y `./scripts/verify_pilot.sh` | OK |
+| **Q5** | Respaldo **diario completo cifrado** a almacenamiento **externo**, 30 días, prueba mensual | Diario 02:15 (`gpc.cron`), `RETENTION_DAYS=30`, prueba mensual (§14) | `ls -l /backups` y la prueba de §9.1 | PARCIAL **Parcial**: el script respalda y retiene, pero **no cifra ni copia fuera del servidor**; eso se hace con §8.3 |
 
 > **Q5 es la única decisión que no queda cubierta solo con configuración.** `backup.sh` deja el respaldo en `BACKUP_ROOT` (permisos `0700`). El cifrado y la copia externa dependen de §8.3: sin ellos el respaldo vive en el mismo servidor que los datos.
 
@@ -354,7 +354,7 @@ cd <directorio-vacío>/<AAAAMMDDTHHMMSS> && sha256sum --check --strict SHA256SUM
 
 Un respaldo solo es válido si se ha restaurado. **No restaures sobre el sistema en producción para probar.** Hay dos formas:
 
-**Automática (recomendada).** Hace respaldo → desastre → restauración sobre base vacía → compara todo → comprueba que detecta la manipulación:
+**Automática (recomendada).** Hace respaldo -> desastre -> restauración sobre base vacía -> compara todo -> comprueba que detecta la manipulación:
 
 ```bash
 ./scripts/verify_pilot.sh        # ~6 min; pila "gpc_verify", no toca datos de producción
@@ -378,7 +378,7 @@ Debe terminar con `Restauración completada` y `Integridad correcta: sin discrep
 ./scripts/restore.sh /ruta/al/respaldo/<AAAAMMDDTHHMMSS>     # pide escribir SI
 ```
 
-*Qué hace, en orden:* verifica los checksums (si no coinciden, **se niega sin tocar nada**) → detiene `web` y `backend` → `pg_restore --clean` → recrea el rol restringido de la aplicación y sus permisos (el volcado no los trae) → reemplaza `media_data` → normaliza permisos → ejecuta la verificación de integridad → levanta los servicios → `manage.py check`.
+*Qué hace, en orden:* verifica los checksums (si no coinciden, **se niega sin tocar nada**) -> detiene `web` y `backend` -> `pg_restore --clean` -> recrea el rol restringido de la aplicación y sus permisos (el volcado no los trae) -> reemplaza `media_data` -> normaliza permisos -> ejecuta la verificación de integridad -> levanta los servicios -> `manage.py check`.
 
 4. Comprueba: `docker compose ps`, `curl -ks https://localhost/api/health/`, `./scripts/verify_integrity.sh`, y entra con una cuenta de prueba.
 
@@ -572,7 +572,7 @@ El **panel funciona igual** (los avisos son visibles ahí). Los correos fallidos
 
 ### 12.9 Una persona no puede iniciar sesión
 
-- Tras **5 intentos fallidos en 15 minutos** la cuenta se bloquea (`429` con el tiempo de espera). **Se desbloquea sola** al pasar la ventana; no hay desbloqueo manual, y los intentos bloqueados no la alargan. Los intentos se ven (solo lectura) en Admin → Login attempts.
+- Tras **5 intentos fallidos en 15 minutos** la cuenta se bloquea (`429` con el tiempo de espera). **Se desbloquea sola** al pasar la ventana; no hay desbloqueo manual, y los intentos bloqueados no la alargan. Los intentos se ven (solo lectura) en Admin -> Login attempts.
 - Cuenta desactivada o sin rol: se revisa y corrige con los comandos de §11.2 (no hay Django Admin en producción: `/admin/` responde `404`).
 - Tras rotar `DJANGO_SECRET_KEY`, todos deben volver a iniciar sesión.
 
@@ -600,7 +600,7 @@ El piloto se acepta cuando **todo** lo siguiente se cumple. «Hecho» indica la 
 | # | Criterio | Cómo se comprueba | Estado |
 |---|---|---|---|
 | 1 | Solo `web` publica puertos (80 y 443) | `docker compose ps`; `./scripts/verify_pilot.sh` | Hecho (TSK-87) |
-| 2 | HTTPS con TLS 1.2/1.3, redirección 80→443 y las cinco cabeceras de seguridad | `./scripts/verify_pilot.sh` | Hecho con certificado autofirmado; **pendiente con el institucional** |
+| 2 | HTTPS con TLS 1.2/1.3, redirección 80->443 y las cinco cabeceras de seguridad | `./scripts/verify_pilot.sh` | Hecho con certificado autofirmado; **pendiente con el institucional** |
 | 3 | `/_protected/`, `/_catalog/` y `/media/` no responden desde fuera | `./scripts/verify_pilot.sh`, `./scripts/smoke_media_isolation.sh` | Hecho (TSK-58, 87) |
 | 4 | Carga de 50 MB exactos aceptada, 51 MB y 61 MB rechazadas, 50 personas concurrentes | `./scripts/load_test.sh --timeouts` (35/35) | Hecho (TSK-86); **pendiente en el servidor** |
 | 5 | Memoria por debajo del 90 % del límite, sin `OOMKilled` | Misma prueba y `docker stats` | Hecho (TSK-86) |
@@ -610,11 +610,11 @@ El piloto se acepta cuando **todo** lo siguiente se cumple. «Hecho» indica la 
 | 9 | Cron y logrotate instalados y ejecutándose | §10.2 | **Pendiente en el servidor** |
 | 10 | Certificado institucional instalado y vigente | §5.2 | **Pendiente en el servidor** |
 | 11 | Credencial publicada (D-01) rotada | Declarado por el responsable (rotación manual en el proveedor) | **Hecho** (no verificable desde el repositorio) |
-| 12 | `.env` con secretos únicos y permisos `0600` | `stat -c %a .env` → `600` | **Pendiente en el servidor** |
+| 12 | `.env` con secretos únicos y permisos `0600` | `stat -c %a .env` -> `600` | **Pendiente en el servidor** |
 | 13 | Cuentas institucionales y Revisores con perfil creados | §11.2 | **Pendiente en el servidor** |
 | 14 | `./scripts/check_runbook.py` termina sin fallos | En el CI | Hecho (TSK-88) |
 | 15 | Matriz de acceso de la API: cada ruta × cada tipo de actor responde 401/403/404/acceso según lo planeado; el Administrador no alcanza manuscritos, evaluaciones ni PDF | `pytest tests/security` (37 pruebas; falla si se añade una ruta sin clasificar) | Hecho (TSK-89) |
-| 16 | El Django Admin no existe en producción (`/admin/`, `/static/admin/` → `404`) y las cuentas se crean con `create_user` | `./scripts/verify_pilot.sh` (85 criterios), `./scripts/e2e.sh` | Hecho (D-31) |
+| 16 | El Django Admin no existe en producción (`/admin/`, `/static/admin/` -> `404`) y las cuentas se crean con `create_user` | `./scripts/verify_pilot.sh` (85 criterios), `./scripts/e2e.sh` | Hecho (D-31) |
 | 17 | Los diez flujos críticos funcionan por las pantallas reales (login multirrol, envío, revisión, veredicto, catálogo, baja, auditoría, corrección, fuga de identidad) | `./scripts/e2e.sh` (Playwright contra un stack aislado) | Hecho (TSK-91) |
 | 18 | Accesibilidad WCAG A/AA, teclado y foco, y diseño responsive (escritorio y tableta) en todas las pantallas | `./scripts/e2e.sh` (suites 05 a 07) | Hecho (TSK-92) |
 | 19 | El build de producción no incluye `sourceMap` ni dependencias de desarrollo | `python3 scripts/check_frontend_build.py` | Hecho (TSK-92) |
@@ -625,9 +625,9 @@ Los comprueban las pruebas automáticas del repositorio (backend, 1302 de fronte
 
 | Criterio | Automatizado | Requiere personas |
 |---|---|---|
-| SC-03 archivos inválidos rechazados · SC-05 doble ciego en todos los canales · SC-06 un solo Revisor activo · SC-07 vencimiento a los 20 días · SC-08 veredicto con evaluación · SC-09 sin sobrescrituras · SC-10 auditoría inmutable · SC-13 contador de rondas · SC-14 avisos sin fugas · SC-15 acceso no autorizado denegado | ✅ pruebas del backend | Revisión de muestra en el piloto |
-| SC-04 el aceptado aparece en el catálogo en ≤ 5 min | ✅ | Muestreo tras cada veredicto |
-| SC-11 búsquedas del catálogo < 2 s con 50 personas | ✅ `load_test.sh` (p95 0,32 s) | Repetir en el servidor |
+| SC-03 archivos inválidos rechazados · SC-05 doble ciego en todos los canales · SC-06 un solo Revisor activo · SC-07 vencimiento a los 20 días · SC-08 veredicto con evaluación · SC-09 sin sobrescrituras · SC-10 auditoría inmutable · SC-13 contador de rondas · SC-14 avisos sin fugas · SC-15 acceso no autorizado denegado | OK pruebas del backend | Revisión de muestra en el piloto |
+| SC-04 el aceptado aparece en el catálogo en ≤ 5 min | OK | Muestreo tras cada veredicto |
+| SC-11 búsquedas del catálogo < 2 s con 50 personas | OK `load_test.sh` (p95 0,32 s) | Repetir en el servidor |
 | SC-01 panel unificado sin elegir rol · SC-02 envío en < 10 min · SC-12 evaluación en < 15 min | Parcial (pruebas de interfaz) | **Prueba de usabilidad con personas reales** |
 
 ### 13.3 Qué NO prueba este piloto todavía

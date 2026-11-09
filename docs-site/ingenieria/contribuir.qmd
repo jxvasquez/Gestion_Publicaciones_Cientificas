@@ -79,8 +79,8 @@ El flujo `.github/workflows/docs.yml` construye el sitio en **cada** *push* y *p
 | Diagrama | Fuente | Herramienta |
 |---|---|---|
 | Bocetos de arquitectura, estados y flujos | Bloques ```` ```{mermaid} ```` dentro de las páginas | Mermaid (en el navegador) |
-| C4 niveles 1 a 3 | `docs-site/diagrams/workspace.dsl` | Structurizr → PlantUML → SVG |
-| C4 nivel 4 (código) | `docs-site/diagrams/c4-codigo-envio.puml` | PlantUML → SVG |
+| C4 niveles 1 a 3 | `docs-site/diagrams/workspace.dsl` | Structurizr -> PlantUML -> SVG |
+| C4 nivel 4 (código) | `docs-site/diagrams/c4-codigo-envio.puml` | PlantUML -> SVG |
 | Proceso editorial | `docs-site/diagrams/proceso-editorial.bpmn` | BPMN 2.0.2, visor bpmn-js |
 
 Si cambia el comportamiento que un diagrama describe, actualice su fuente **en el mismo cambio**.

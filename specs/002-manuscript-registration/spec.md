@@ -60,11 +60,11 @@ El autor consulta el detalle de un manuscrito que ya registró: ve sus metadatos
 
 ### Edge Cases
 
-- ¿Qué sucede cuando el autor sube un archivo grande que excede el límite permitido? → El sistema rechaza el archivo por superar el tamaño máximo y no inicia el registro.
-- ¿Qué ocurre si el autor abandona el formulario a medio completar? → No se crea ningún registro; los datos no confirmados no persisten.
-- **¿Qué ocurre si el PDF contiene metadatos de autoría o afiliación institucional?** → El sistema DEBE sanitizar el PDF (retirar metadatos de autor, firmas de software y afiliación) antes de persistirlo, conforme al principio de evaluación a doble ciego de la Constitución.
-- ¿Qué sucede si dos autores envían el mismo manuscrito simultáneamente? → Se crean registros independientes; la detección de duplicados no forma parte de esta feature.
-- ¿Qué ocurre si el envío se interrumpe por falla de red? → No se crea registro parcial; el autor puede reintentar.
+- ¿Qué sucede cuando el autor sube un archivo grande que excede el límite permitido? -> El sistema rechaza el archivo por superar el tamaño máximo y no inicia el registro.
+- ¿Qué ocurre si el autor abandona el formulario a medio completar? -> No se crea ningún registro; los datos no confirmados no persisten.
+- **¿Qué ocurre si el PDF contiene metadatos de autoría o afiliación institucional?** -> El sistema DEBE sanitizar el PDF (retirar metadatos de autor, firmas de software y afiliación) antes de persistirlo, conforme al principio de evaluación a doble ciego de la Constitución.
+- ¿Qué sucede si dos autores envían el mismo manuscrito simultáneamente? -> Se crean registros independientes; la detección de duplicados no forma parte de esta feature.
+- ¿Qué ocurre si el envío se interrumpe por falla de red? -> No se crea registro parcial; el autor puede reintentar.
 
 ## Requirements *(mandatory)*
 

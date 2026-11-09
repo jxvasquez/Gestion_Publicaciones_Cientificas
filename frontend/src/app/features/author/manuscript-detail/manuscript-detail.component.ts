@@ -60,7 +60,7 @@ const INSTITUTIONAL_OFFSET = '-0500';
   template: `
     <section aria-labelledby="manuscript-detail-title">
       <nav aria-label="Navegación del manuscrito">
-        <a routerLink="/app/author/manuscripts">← Volver a mis manuscritos</a>
+        <a routerLink="/app/author/manuscripts">Volver a mis manuscritos</a>
       </nav>
 
       @if (loading()) {

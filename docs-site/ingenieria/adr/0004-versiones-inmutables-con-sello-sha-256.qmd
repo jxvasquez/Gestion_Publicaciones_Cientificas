@@ -31,11 +31,11 @@ La constitución exige que una versión nueva **nunca sobrescriba** a una anteri
 
 ## Consecuencias
 
-- ✅ Cada iteración es demostrable: el sello permite comprobar que el PDF conservado no cambió.
-- ✅ Las versiones anteriores permanecen intactas por construcción, no por disciplina.
-- ✅ La autorización de descargas es la misma para todos los archivos y queda auditada.
-- ⚠️ El servidor es un único punto de fallo para los archivos; mitigado con el respaldo diario. El runbook señala como pendiente cifrar el respaldo y copiarlo fuera del servidor.
-- ⚠️ El esquema de rutas del volumen es parte del contrato con Nginx: una prueba comprueba que coincide con la ubicación interna.
+- OK Cada iteración es demostrable: el sello permite comprobar que el PDF conservado no cambió.
+- OK Las versiones anteriores permanecen intactas por construcción, no por disciplina.
+- OK La autorización de descargas es la misma para todos los archivos y queda auditada.
+- AVISO El servidor es un único punto de fallo para los archivos; mitigado con el respaldo diario. El runbook señala como pendiente cifrar el respaldo y copiarlo fuera del servidor.
+- AVISO El esquema de rutas del volumen es parte del contrato con Nginx: una prueba comprueba que coincide con la ubicación interna.
 
 ## Referencias
 

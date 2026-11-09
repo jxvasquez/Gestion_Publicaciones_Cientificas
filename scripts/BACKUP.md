@@ -51,7 +51,7 @@ La restauración:
 8. Levanta `db`, `backend` y `web`.
 9. Ejecuta `python manage.py check` y valida la estructura del volumen.
 
-No restaures sobre el entorno institucional sin haber probado antes el respaldo en un entorno aislado. `./scripts/verify_pilot.sh` automatiza esa prueba (respaldo → desastre → restauración sobre una base vacía → huella idéntica → integridad).
+No restaures sobre el entorno institucional sin haber probado antes el respaldo en un entorno aislado. `./scripts/verify_pilot.sh` automatiza esa prueba (respaldo -> desastre -> restauración sobre una base vacía -> huella idéntica -> integridad).
 
 ## Verificación de integridad
 

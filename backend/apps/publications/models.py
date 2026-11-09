@@ -474,7 +474,7 @@ class StatusEvent(AppendOnlyModel):
         ]
 
     def __str__(self) -> str:
-        return f"{self.manuscript_id}: {self.from_status} → {self.to_status}"
+        return f"{self.manuscript_id}: {self.from_status} -> {self.to_status}"
 
 
 class Verdict(AppendOnlyModel):

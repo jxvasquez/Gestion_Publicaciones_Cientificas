@@ -702,7 +702,7 @@ cd .. && ./scripts/e2e.sh      # los 10 flujos (≈ 3 min, más la primera const
 ./scripts/e2e.sh -g "Flujo 9"  # uno solo
 ```
 
-`scripts/e2e.sh` levanta un stack **aislado** (`gpc_e2e`, HTTPS en `https://localhost:20443`; no toca tu base ni tus PDF), siembra cinco personas con una contraseña aleatoria, ejecuta Playwright en la imagen oficial `mcr.microsoft.com/playwright` (trae Chromium: el host no instala navegadores) y **borra el stack al terminar**. Los flujos están en `frontend/e2e/`: login multirrol; Autor → Editor → Revisor → veredicto → catálogo público → baja → auditoría; corrección administrativa; y fuga de identidad. Si fallan, las capturas y trazas quedan en `frontend/test-results/` (`npx playwright show-trace <trace.zip>`). Para iterar: `E2E_KEEP=1 ./scripts/e2e.sh` deja el stack y `E2E_REUSE=1 ./scripts/e2e.sh -g "…"` lo reutiliza. El CI lo ejecuta en el trabajo `e2e`.
+`scripts/e2e.sh` levanta un stack **aislado** (`gpc_e2e`, HTTPS en `https://localhost:20443`; no toca tu base ni tus PDF), siembra cinco personas con una contraseña aleatoria, ejecuta Playwright en la imagen oficial `mcr.microsoft.com/playwright` (trae Chromium: el host no instala navegadores) y **borra el stack al terminar**. Los flujos están en `frontend/e2e/`: login multirrol; Autor -> Editor -> Revisor -> veredicto -> catálogo público -> baja -> auditoría; corrección administrativa; y fuga de identidad. Si fallan, las capturas y trazas quedan en `frontend/test-results/` (`npx playwright show-trace <trace.zip>`). Para iterar: `E2E_KEEP=1 ./scripts/e2e.sh` deja el stack y `E2E_REUSE=1 ./scripts/e2e.sh -g "…"` lo reutiliza. El CI lo ejecuta en el trabajo `e2e`.
 
 ### 10.10 Accesibilidad, responsive y build de producción (TSK-92)
 
@@ -765,13 +765,13 @@ El flujo `.github/workflows/docs.yml` tiene dos trabajos:
 
 Para **activar la publicación en un repositorio** (hágalo en cada uno: el del equipo y el personal):
 
-1. *Settings → Pages → Build and deployment → Source:* **GitHub Actions**.
-2. *Settings → Secrets and variables → Actions → Variables → New repository variable:* `DOCS_DEPLOY` = `true`.
+1. *Settings -> Pages -> Build and deployment -> Source:* **GitHub Actions**.
+2. *Settings -> Secrets and variables -> Actions -> Variables -> New repository variable:* `DOCS_DEPLOY` = `true`.
 3. Haga un *push* a la rama predeterminada, o ejecute el flujo a mano desde la pestaña *Actions*.
 
 La dirección queda en `https://<usuario-o-organización>.github.io/<repositorio>/`. Mientras la variable no exista, `build` sigue validando la documentación y `deploy` simplemente no corre.
 
-> **Nota:** publicar desde una rama que no es la predeterminada exige que el entorno `github-pages` la permita (*Settings → Environments → github-pages → Deployment branches*).
+> **Nota:** publicar desde una rama que no es la predeterminada exige que el entorno `github-pages` la permita (*Settings -> Environments -> github-pages -> Deployment branches*).
 
 ### Construir el portal en local
 

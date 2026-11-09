@@ -175,7 +175,7 @@ def _status_marker(ok: bool) -> str:
     already have in-tree: see Test-FileExists in scripts/powershell/common.ps1
     and normalize_status_text in tests/parity_helpers.py.
     """
-    glyph = "✓" if ok else "✗"
+    glyph = "OK" if ok else "FAIL"
     try:
         glyph.encode(getattr(sys.stdout, "encoding", None) or "utf-8")
     except (LookupError, UnicodeEncodeError):

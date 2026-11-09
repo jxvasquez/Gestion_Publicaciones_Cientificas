@@ -368,7 +368,7 @@ describe('toPage', () => {
     [{ page: '-4' }, 1],
     [{ page: 'abc' }, 1],
     [{}, 1],
-  ])('%j → %i', (query, expected) => {
+  ])('%j -> %i', (query, expected) => {
     expect(toPage(convertToParamMap(query))).toBe(expected);
   });
 });

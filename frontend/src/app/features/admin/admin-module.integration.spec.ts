@@ -14,7 +14,7 @@ import { EVENT_ID, buildEvent, buildEventDetail, buildEventPage } from './testin
 
 /**
  * Auditoría del Administrador con las rutas REALES de la SPA (TSK-81):
- * carga diferida, guard de rol, títulos y navegación lista → detalle.
+ * carga diferida, guard de rol, títulos y navegación lista -> detalle.
  */
 const USER: SessionUser = {
   id: 'u-1',

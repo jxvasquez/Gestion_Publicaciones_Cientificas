@@ -24,7 +24,7 @@ técnico en inglés para modelos/campos.
 | Campo | Tipo | Reglas |
 |-------|------|--------|
 | `id` | BigAutoField | PK |
-| `actor` | FK → `users.User`, `SET_NULL`, null | responsable de la acción |
+| `actor` | FK -> `users.User`, `SET_NULL`, null | responsable de la acción |
 | `action` | CharField / Choice | p. ej. `LOGIN`, `MANUSCRIPT_CREATED`, `STATUS_CHANGED`, `REVIEWER_ASSIGNED`, `EVALUATION_SUBMITTED`, `VERDICT_ISSUED`, `ROLE_CHANGED` |
 | `entity_type` | CharField | nombre de la entidad afectada |
 | `entity_id` | CharField/BigInteger | id de la entidad afectada |
@@ -46,7 +46,7 @@ API para el Administrador (FR-021, FR-022, Principio IV).
 | `is_author_enabled` | BooleanField | habilitado como Autor |
 | `is_reviewer_enabled` | BooleanField | habilitado como Revisor |
 | `is_editor_enabled` | BooleanField | habilitado como Editor |
-| `roles` | M2M → `auth.Group` | grupos de rol |
+| `roles` | M2M -> `auth.Group` | grupos de rol |
 
 **Métodos**: `switch_role(role)`, `has_role(role)`, `is_author`/`is_reviewer`/`is_editor`/`is_admin`
 (propiedades derivadas). **Regla**: los permisos combinan roles sin escalar privilegios; el rol
@@ -67,13 +67,13 @@ activo restringe la experiencia (FR-002, FR-004).
 | `abstract` | TextField | obligatorio |
 | `keywords` | CharField/JSON | obligatorio |
 | `language` | CharField | obligatorio |
-| `research_area` | FK → `ResearchArea`, `PROTECT` | obligatorio |
-| `category` | FK → `Category`, `PROTECT` | obligatorio |
+| `research_area` | FK -> `ResearchArea`, `PROTECT` | obligatorio |
+| `category` | FK -> `Category`, `PROTECT` | obligatorio |
 | `doi` | CharField | obligatorio (FR-005) |
 | `issn` | CharField | obligatorio |
 | `funding` | TextField | obligatorio |
 | `status` | CharField / Choice (`ManuscriptStatus`) | inicia en `DRAFT` (FR-007) |
-| `submitting_author` | FK → `users.User`, `PROTECT` | Autor principal responsable |
+| `submitting_author` | FK -> `users.User`, `PROTECT` | Autor principal responsable |
 | `version` | PositiveIntegerField(default=0) | bloqueo optimista (FR-004a) |
 | `is_active` | BooleanField(default=True) | baja lógica (FR-012) |
 | `published_at` | DateTimeField, null | al pasar a `PUBLISHED` |
@@ -87,11 +87,11 @@ activo restringe la experiencia (FR-002, FR-004).
 
 | Campo | Tipo | Reglas |
 |-------|------|--------|
-| `manuscript` | FK → `Manuscript`, `PROTECT` | relación |
+| `manuscript` | FK -> `Manuscript`, `PROTECT` | relación |
 | `number` | PositiveIntegerField | secuencia 1, 2, ... única por manuscrito (FR-010) |
 | `file` | FileField (upload_to protegido) | PDF validado |
 | `is_anonymized` | BooleanField | marca de sanitización (doble ciego) |
-| `uploaded_by` | FK → `users.User`, `SET_NULL` | autor de la carga |
+| `uploaded_by` | FK -> `users.User`, `SET_NULL` | autor de la carga |
 | `created_at` | DateTimeField(auto_now_add) | fecha de entrega |
 
 **Restricción**: `unique_together = (manuscript, number)`; no sobrescritura (cada entrega crea un
@@ -101,8 +101,8 @@ registro nuevo); el Revisor accede solo a la versión vigente (FR-010a, Principi
 
 | Campo | Tipo | Reglas |
 |-------|------|--------|
-| `manuscript` | FK → `Manuscript`, `PROTECT` | — |
-| `user` | FK → `users.User`, `SET_NULL`, null | si es usuario del sistema |
+| `manuscript` | FK -> `Manuscript`, `PROTECT` | — |
+| `user` | FK -> `users.User`, `SET_NULL`, null | si es usuario del sistema |
 | `full_name` | CharField | obligatorio |
 | `email` | EmailField | **protegido del Revisor** |
 | `affiliation` | CharField | protegido del Revisor |
@@ -117,9 +117,9 @@ manuscrito (FR-011, clarificación Q2).
 
 | Campo | Tipo | Reglas |
 |-------|------|--------|
-| `manuscript` | FK → `Manuscript`, `PROTECT` | — |
-| `reviewer` | FK → `users.User`, `PROTECT` | rol Revisor |
-| `assigned_by` | FK → `users.User`, `SET_NULL` | Editor |
+| `manuscript` | FK -> `Manuscript`, `PROTECT` | — |
+| `reviewer` | FK -> `users.User`, `PROTECT` | rol Revisor |
+| `assigned_by` | FK -> `users.User`, `SET_NULL` | Editor |
 | `status` | CharField / Choice (`AssignmentStatus`) | `PENDING`/`ACCEPTED`/`DECLINED`/`COMPLETED` |
 | `due_date` | DateField, null | plazo |
 
@@ -130,7 +130,7 @@ manuscrito (FR-011, clarificación Q2).
 
 | Campo | Tipo | Reglas |
 |-------|------|--------|
-| `assignment` | OneToOne/FK → `ReviewAssignment`, `PROTECT` | — |
+| `assignment` | OneToOne/FK -> `ReviewAssignment`, `PROTECT` | — |
 | `comments_to_author` | TextField | observaciones |
 | `comments_to_editor` | TextField | confidencial |
 | `recommendation` | CharField / Choice (`Recommendation`) | `ACCEPT`/`MINOR`/`MAJOR`/`REJECT` |
@@ -142,8 +142,8 @@ manuscrito (FR-011, clarificación Q2).
 
 | Campo | Tipo | Reglas |
 |-------|------|--------|
-| `manuscript` | OneToOne/FK → `Manuscript`, `PROTECT` | — |
-| `issued_by` | FK → `users.User`, `SET_NULL` | Editor |
+| `manuscript` | OneToOne/FK -> `Manuscript`, `PROTECT` | — |
+| `issued_by` | FK -> `users.User`, `SET_NULL` | Editor |
 | `decision` | CharField / Choice (`VerdictDecision`) | `ACCEPTED`/`REJECTED`/`REQUIRES_REVISION` |
 | `observations` | TextField | para el Autor |
 | `issued_at` | DateTimeField(auto_now_add) | — |
@@ -154,8 +154,8 @@ manuscrito (FR-011, clarificación Q2).
 
 ### 2.1 `ManuscriptStatus`
 
-`DRAFT → RECEIVED → UNDER_REVIEW → {REQUIRES_REVISION → UNDER_REVIEW | ACCEPTED | REJECTED}`
-`ACCEPTED → PUBLISHED`; `* → WITHDRAWN` (solo por baja lógica del Autor principal, FR-012).
+`DRAFT -> RECEIVED -> UNDER_REVIEW -> {REQUIRES_REVISION -> UNDER_REVIEW | ACCEPTED | REJECTED}`
+`ACCEPTED -> PUBLISHED`; `* -> WITHDRAWN` (solo por baja lógica del Autor principal, FR-012).
 
 **Transiciones válidas** (validadas en `ManuscriptService`):
 
@@ -169,7 +169,7 @@ manuscrito (FR-011, clarificación Q2).
 | ACCEPTED | PUBLISHED | Editor | — |
 | * (salvo PUBLISHED) | WITHDRAWN | Autor principal | baja lógica (FR-012) |
 
-Transiciones fuera de esta tabla → rechazadas (escenarios 2.5, 4.3; casos límite).
+Transiciones fuera de esta tabla -> rechazadas (escenarios 2.5, 4.3; casos límite).
 
 ### 2.2 Otras enumeraciones
 
@@ -196,16 +196,16 @@ AuditLog >── User (actor, SET_NULL)
 
 ## 4. Reglas de validación (derivadas de requisitos)
 
-1. **Metadatos** (FR-005): todos los campos obligatorios presentes; si falta alguno → rechazo
+1. **Metadatos** (FR-005): todos los campos obligatorios presentes; si falta alguno -> rechazo
    indicando el campo (SC-012).
-2. **PDF** (FR-006): parseo estructural válido y tamaño ≤ `MAX_UPLOAD_SIZE`; si no → `400`.
+2. **PDF** (FR-006): parseo estructural válido y tamaño ≤ `MAX_UPLOAD_SIZE`; si no -> `400`.
 3. **Versionado** (FR-010): nueva versión solo en `REQUIRES_REVISION`; `number` incremental único;
    nunca sobrescribir.
 4. **Doble ciego** (FR-019, RNF-07): los serializadores de `reviews` **excluyen** `Author.full_name`,
    `Author.email`, `Author.affiliation` y cualquier identificador del Autor; el PDF expuesto al
    Revisor va sanitizado (`is_anonymized=True`).
-5. **Veredicto** (FR-016): requiere ≥ 1 `Evaluation`; en otro caso → `400`/`409`.
-6. **Concurrencia** (FR-004a): UPDATE condicional por `version`; conflicto → `409`.
+5. **Veredicto** (FR-016): requiere ≥ 1 `Evaluation`; en otro caso -> `400`/`409`.
+6. **Concurrencia** (FR-004a): UPDATE condicional por `version`; conflicto -> `409`.
 7. **Auditoría** (FR-021, FR-022): toda transición crítica genera `AuditLog`; prohibido update/delete.
 
 ## 5. RNF / índices de rendimiento

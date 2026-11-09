@@ -9,7 +9,7 @@
 #   ./scripts/load_test.sh                # prueba completa (~5 min)
 #   ./scripts/load_test.sh --timeouts     # añade el corte de 120 s (~+2 min)
 #
-# Variables: LOAD_WEB_PORT (18080, HTTP→HTTPS), LOAD_TLS_PORT (18443), LOAD_USERS (50), LOAD_UPLOADS (5),
+# Variables: LOAD_WEB_PORT (18080, HTTP->HTTPS), LOAD_TLS_PORT (18443), LOAD_USERS (50), LOAD_UPLOADS (5),
 # LOAD_KEEP=1 conserva el stack al terminar, LOAD_OUTPUT=ruta.json guarda el informe.
 set -euo pipefail
 

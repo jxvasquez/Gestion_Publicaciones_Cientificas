@@ -64,7 +64,7 @@ Los archivos de credenciales locales (por ejemplo `credentials.txt`) están igno
 
 ## Superficie expuesta
 
-- Solo Nginx publica puertos (80 → 443); `db` y `backend` viven en la red interna de Compose.
+- Solo Nginx publica puertos (80 -> 443); `db` y `backend` viven en la red interna de Compose.
 - **Cabeceras de seguridad** en todas las respuestas (SPA, API, errores y PDF): `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy` y una `Content-Security-Policy` estricta (`script-src 'self'`, sin `unsafe-eval`). Nginx es el único dueño de esa política y oculta las que Django también emite.
 - **Django Admin apagado en producción:** `/admin/` responde `404` en Nginx y en Django, y ninguna variable lo enciende.
 - **Documentación de la API** controlada por `API_DOCS_ENABLED` y compatible con la CSP (Swagger UI sin `<script>` en línea).

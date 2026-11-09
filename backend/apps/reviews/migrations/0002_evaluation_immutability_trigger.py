@@ -1,7 +1,7 @@
 """Trigger that makes a final evaluation immutable (plan section 1.20).
 
 ``UPDATE`` and ``DELETE`` over a ``reviews_evaluation`` row whose stored
-status is ``FINAL`` fail. The ``DRAFT`` → ``FINAL`` transition is allowed
+status is ``FINAL`` fail. The ``DRAFT`` -> ``FINAL`` transition is allowed
 because the check looks at the status the row had before the change, and
 drafts stay editable and removable.
 

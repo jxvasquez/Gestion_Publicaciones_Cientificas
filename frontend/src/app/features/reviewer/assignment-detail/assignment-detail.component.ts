@@ -50,7 +50,7 @@ const INSTITUTIONAL_OFFSET = '-0500';
   template: `
     <section aria-labelledby="assignment-detail-title">
       <nav aria-label="Navegación de la asignación">
-        <a routerLink="/app/reviewer/assignments">← Volver a mis asignaciones</a>
+        <a routerLink="/app/reviewer/assignments">Volver a mis asignaciones</a>
       </nav>
 
       @if (loading()) {
