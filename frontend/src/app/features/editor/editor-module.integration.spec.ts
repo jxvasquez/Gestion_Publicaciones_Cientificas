@@ -194,7 +194,7 @@ describe('Módulo Editor: integración con las rutas reales', () => {
   });
 
   describe('navegación por enlaces', () => {
-    it('bandeja → detalle, usando el enlace del código', async () => {
+    it('bandeja -> detalle, usando el enlace del código', async () => {
       signIn('EDITOR');
       const { element, settle } = await open('/app/editor/submissions');
       inbox().flush(
@@ -211,13 +211,13 @@ describe('Módulo Editor: integración con las rutas reales', () => {
       expect(element.querySelector('h1')?.textContent).toContain('Efecto del clima');
     });
 
-    it('detalle → bandeja con el enlace de regreso', async () => {
+    it('detalle -> bandeja con el enlace de regreso', async () => {
       signIn('EDITOR');
       const { element, settle } = await open('/app/editor/submissions/s-1');
       detail().flush(buildSubmissionDetail());
       await settle();
 
-      await click(element, '← Volver a nuevos envíos', settle);
+      await click(element, 'Volver a nuevos envíos', settle);
 
       expect(router.url).toBe('/app/editor/submissions');
       inbox().flush(emptyPage);
@@ -225,7 +225,7 @@ describe('Módulo Editor: integración con las rutas reales', () => {
       expect(element.querySelector('app-submission-inbox')).not.toBeNull();
     });
 
-    it('vencidas → detalle del envío con «Ver envío»', async () => {
+    it('vencidas -> detalle del envío con «Ver envío»', async () => {
       signIn('EDITOR');
       const { element, settle } = await open('/app/editor/assignments/expired');
       expired().flush({

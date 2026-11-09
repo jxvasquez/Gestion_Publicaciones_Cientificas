@@ -185,7 +185,7 @@ Solo Nginx expone puertos; la base de datos y el backend viven en la red interna
 
 ```{mermaid}
 flowchart TB
-    internet(["Internet / red institucional"]) -->|"80 → 443"| web
+    internet(["Internet / red institucional"]) -->|"80 -> 443"| web
     subgraph compose["Red interna de Docker Compose"]
         web["web (Nginx)"] --> backend["backend (Gunicorn)"]
         backend --> db[("db (PostgreSQL)")]

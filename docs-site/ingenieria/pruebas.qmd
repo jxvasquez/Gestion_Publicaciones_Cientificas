@@ -30,7 +30,7 @@ Las pruebas están escritas contra los criterios de las historias de usuario (`s
 | PDF inválido, cifrado, sin páginas o con contenido activo se rechaza | `tests/publications/test_pdf.py`, `test_draft_file.py` |
 | Envío formal crea v1 y ronda 0, con sello y auditoría; es idempotente | `test_submission.py`, `test_idempotency.py` |
 | Nueva versión en correcciones; la anterior queda intacta | `test_new_version.py` |
-| Ciclo completo: envío → asignación → evaluación → veredicto | `test_lifecycle.py`, `test_phase5_*` |
+| Ciclo completo: envío -> asignación -> evaluación -> veredicto | `test_lifecycle.py`, `test_phase5_*` |
 | Un solo Revisor activo; revocación y plazo de 20 días | `tests/reviews/test_assignment_service.py`, `test_expire_command.py` |
 | Doble ciego en todas las respuestas del Revisor | `tests/reviews/test_double_blind.py` |
 | Evaluación final inmutable (también en la base de datos) | `test_final_evaluation_immutable.py` |

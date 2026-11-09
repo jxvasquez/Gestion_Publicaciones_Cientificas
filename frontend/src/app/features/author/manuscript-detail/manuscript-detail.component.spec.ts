@@ -216,7 +216,7 @@ describe('ManuscriptDetailComponent', () => {
         '/app/author/manuscripts/m-1/history',
       ]);
       expect(links(element)).toContainEqual([
-        '← Volver a mis manuscritos',
+        'Volver a mis manuscritos',
         '/app/author/manuscripts',
       ]);
     });

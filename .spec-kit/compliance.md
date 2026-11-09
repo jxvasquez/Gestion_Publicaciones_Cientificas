@@ -23,7 +23,7 @@
 
 **Cómo leer los porcentajes.** Es la proporción de criterios de aceptación de cada tarea que se verificó como cumplida (por lectura de código y/o pruebas ejecutadas). Es una estimación del auditor, no una métrica automática.
 
-**Estados.** ✅ Cumple · 🟡 Cumple parcialmente · ❌ No cumple · ⏳ Pendiente por diseño (depende de una fase posterior).
+**Estados.** Cumple · Cumple parcialmente · No cumple · Pendiente por diseño (depende de una fase posterior).
 
 **No verificado en esta auditoría** (la restauración de `restore.sh` y el comportamiento TLS se ejercitaron en la TSK-87 con `scripts/verify_pilot.sh`; sigue pendiente repetirlos en el servidor con el certificado institucional) (requiere entorno o acción que no se ejecutó): contraste WCAG AA real, un `413` extremo a extremo a través de Nginx con un PDF de 60 MB, la instalación de `scripts/cron/gpc.cron` en `/etc/cron.d/gpc` del servidor, el envío real de correo contra un servidor SMTP (se probó con el backend de correo de Django), la ejecución de `apply_db_privileges` contra una base ya productiva, cualquier recorrido manual en navegador de las pantallas del Editor, del Revisor, del Administrador, del catálogo y de los avisos (se probaron con Vitest contra las rutas reales y una API simulada), la descarga del PDF sanitizado del Revisor y la del catálogo **a través de Nginx** (las pruebas verifican la cabecera `X-Accel-Redirect`, que Nginx consume, pero no la entrega real del archivo) y la lectura de los PDF servidos con un visor externo.
 

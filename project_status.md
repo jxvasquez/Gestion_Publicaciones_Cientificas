@@ -23,7 +23,7 @@
 | Lenguaje frontend | TypeScript / RxJS | ~6.0.2 / ~7.8 |
 | Pruebas frontend | Vitest + jsdom | ^5.0 / ^30.0 |
 | Borde / estáticos | Nginx | 1.27-alpine |
-| Orquestación | Docker Compose | build multietapa (Node 22 → Nginx) |
+| Orquestación | Docker Compose | build multietapa (Node 22 -> Nginx) |
 
 ---
 
@@ -43,7 +43,7 @@ Navegador ──:80──▶ web (Nginx + SPA Angular)
 | Servicio | Imagen / build | Redes | Volúmenes | Notas |
 |---|---|---|---|---|
 | `db` | `postgres:16-alpine` | `backend_net` | `postgres_data` | Healthcheck `pg_isready`. Publica `5432` al host (cambio local sin commitear). |
-| `backend` | `./backend/Dockerfile` | `backend_net`, `frontend_net` | `media_data` (rw), `static_data` (rw), `./scripts` (ro) | `env_file: .env`. Arranca con `check_env.sh` → `init_media.sh` → `migrate` → `collectstatic` → Gunicorn. Healthcheck contra `/api/health/`. |
+| `backend` | `./backend/Dockerfile` | `backend_net`, `frontend_net` | `media_data` (rw), `static_data` (rw), `./scripts` (ro) | `env_file: .env`. Arranca con `check_env.sh` -> `init_media.sh` -> `migrate` -> `collectstatic` -> Gunicorn. Healthcheck contra `/api/health/`. |
 | `web` | `frontend/Dockerfile` (contexto raíz) | `frontend_net` | `media_data` (ro), `static_data` (ro), `./nginx/certs` (ro) | Publica `80`. Espera a que `backend` esté sano. |
 | `adminer` | `adminer` | `backend_net`, `frontend_net` | — | Solo desarrollo. Puerto `8888`. |
 
@@ -134,7 +134,7 @@ Prefijo común: `/api/`. Formato JSON, salvo la carga de PDF (`multipart/form-da
 
 **Leyenda de la columna «Auth»:** `P` público; `Token` JWT institucional en `Authorization: Bearer <access>`; `Cookie` refresh token en cookie `HttpOnly`. Los roles son `A` Autor, `R` Revisor, `E` Editor y `ADM` Administrador.
 
-**Estado:** ✅ implementado y verificado en el código · 🗓 planificado en `plan.md` §2, sin implementar.
+**Estado:** OK implementado y verificado en el código · FECHA planificado en `plan.md` §2, sin implementar.
 
 ### 4.1 Convenciones transversales
 
@@ -154,17 +154,17 @@ Códigos HTTP: `200`/`201`/`204` éxito; `400` validación o PDF inválido; `401
 
 | Estado | Método | Ruta | Auth | Cabeceras especiales | Notas |
 |---|---|---|---|---|---|
-| ✅ | `GET` | `/api/health/` | P | — | Verifica base de datos y volumen de escritura. `200` / `503`. Lo usa el healthcheck de Docker. |
-| ✅ | `GET` | `/api/dashboard/` | Token | — | Todas las secciones habilitadas (`author`, `reviewer`, `editor`, `admin`) en una respuesta. Una sección fallida no rompe el `200`. |
+| OK | `GET` | `/api/health/` | P | — | Verifica base de datos y volumen de escritura. `200` / `503`. Lo usa el healthcheck de Docker. |
+| OK | `GET` | `/api/dashboard/` | Token | — | Todas las secciones habilitadas (`author`, `reviewer`, `editor`, `admin`) en una respuesta. Una sección fallida no rompe el `200`. |
 
 ### 4.3 Auth
 
 | Estado | Método | Ruta | Auth | Cabeceras especiales | Éxito | Notas |
 |---|---|---|---|---|---|---|
-| ✅ | `POST` | `/api/auth/login/` | P | — | `200` | Cuerpo con credenciales. Devuelve access token, usuario y roles, y fija la cookie de refresh. Errores `400`, `401`, `429`, `503`. |
-| ✅ | `POST` | `/api/auth/refresh/` | Cookie | Cookie `gpc_refresh` | `200` | Rota el refresh token y devuelve un access nuevo. Errores `401`, `429`. |
-| ✅ | `POST` | `/api/auth/logout/` | Token | Cookie `gpc_refresh` | `204` | Revoca el refresh y limpia la cookie. Revocación y auditoría van en una transacción: `503` si la auditoría falla. |
-| ✅ | `GET` | `/api/auth/me/` | Token | — | `200` | Identidad, roles activos y permisos de navegación. |
+| OK | `POST` | `/api/auth/login/` | P | — | `200` | Cuerpo con credenciales. Devuelve access token, usuario y roles, y fija la cookie de refresh. Errores `400`, `401`, `429`, `503`. |
+| OK | `POST` | `/api/auth/refresh/` | Cookie | Cookie `gpc_refresh` | `200` | Rota el refresh token y devuelve un access nuevo. Errores `401`, `429`. |
+| OK | `POST` | `/api/auth/logout/` | Token | Cookie `gpc_refresh` | `204` | Revoca el refresh y limpia la cookie. Revocación y auditoría van en una transacción: `503` si la auditoría falla. |
+| OK | `GET` | `/api/auth/me/` | Token | — | `200` | Identidad, roles activos y permisos de navegación. |
 
 ### 4.4 Manuscripts (Autor y Editor)
 
@@ -172,21 +172,21 @@ Todas las rutas son `/api/manuscripts/...` y requieren `Token`. `{id}` y `{versi
 
 | Estado | Método | Ruta | Roles | Cabeceras especiales | Éxito | Notas |
 |---|---|---|---|---|---|---|
-| ✅ | `GET` | `/api/manuscripts/` | A (propios), E (ámbito) | — | `200` | Paginado y filtrable. Con ambos roles se obtiene la unión. |
-| ✅ | `POST` | `/api/manuscripts/` | A | Respuesta con `ETag` | `201` | Crea un `DRAFT`. No crea versión. |
-| ✅ | `GET` | `/api/manuscripts/{id}/` | A (propio), E | Respuesta con `ETag` | `200` | Serializador distinto por rol. |
-| ✅ | `PATCH` | `/api/manuscripts/{id}/` | A (propio) | **`If-Match`** obligatorio; respuesta con `ETag` | `200` | Solo en `DRAFT` o `REQUIRES_CORRECTIONS`. Otro estado, `409`. |
-| ✅ | `POST` | `/api/manuscripts/{id}/draft-file/` | A (propio) | `Content-Type: multipart/form-data` (campo `file`) | `201` / `200` | Solo en `DRAFT`. `201` si adjunta, `200` si reemplaza. No crea versión. `413`, `415`. |
-| ✅ | `POST` | `/api/manuscripts/{id}/submit/` | A (propio) | **`Idempotency-Key`** obligatoria; respuesta con `ETag` | `201` | Solo desde `DRAFT`. Crea v1 y ronda 0, congela metadatos y devuelve el código de seguimiento y el sello de integridad. Misma clave repite la respuesta; clave nueva sobre un manuscrito ya enviado, `409`. |
-| ✅ | `GET` | `/api/manuscripts/{id}/versions/` | A (propio), E | — | `200` | Lista paginada de iteraciones, de la más antigua a la más nueva. |
-| ✅ | `POST` | `/api/manuscripts/{id}/versions/` | A (propio) | **`Idempotency-Key`** obligatoria; `multipart/form-data` (campo `file`); respuesta con `ETag` | `201` | Solo en `REQUIRES_CORRECTIONS`. Misma clave con el mismo PDF repite; con otro PDF, `409`. |
-| ✅ | `GET` | `/api/manuscripts/{id}/versions/{version_id}/file/` | A (propio), E | — | `200` | PDF original por `X-Accel-Redirect`. Se audita antes; si falla, `503`. El Revisor no accede aquí. |
-| ✅ | `GET` | `/api/manuscripts/{id}/history/` | A (propio), E | — | `200` | Historial inmutable, también tras la baja lógica. Sin actor, ruta ni hash de la copia sanitizada. |
-| ✅ | `POST` | `/api/manuscripts/{id}/withdraw/` | A (propio) | Respuesta con `ETag` | `200` | Baja lógica desde cualquier estado. El motivo es obligatorio en `UNDER_REVIEW` y `ACCEPTED`. Un segundo intento, `409`. |
+| OK | `GET` | `/api/manuscripts/` | A (propios), E (ámbito) | — | `200` | Paginado y filtrable. Con ambos roles se obtiene la unión. |
+| OK | `POST` | `/api/manuscripts/` | A | Respuesta con `ETag` | `201` | Crea un `DRAFT`. No crea versión. |
+| OK | `GET` | `/api/manuscripts/{id}/` | A (propio), E | Respuesta con `ETag` | `200` | Serializador distinto por rol. |
+| OK | `PATCH` | `/api/manuscripts/{id}/` | A (propio) | **`If-Match`** obligatorio; respuesta con `ETag` | `200` | Solo en `DRAFT` o `REQUIRES_CORRECTIONS`. Otro estado, `409`. |
+| OK | `POST` | `/api/manuscripts/{id}/draft-file/` | A (propio) | `Content-Type: multipart/form-data` (campo `file`) | `201` / `200` | Solo en `DRAFT`. `201` si adjunta, `200` si reemplaza. No crea versión. `413`, `415`. |
+| OK | `POST` | `/api/manuscripts/{id}/submit/` | A (propio) | **`Idempotency-Key`** obligatoria; respuesta con `ETag` | `201` | Solo desde `DRAFT`. Crea v1 y ronda 0, congela metadatos y devuelve el código de seguimiento y el sello de integridad. Misma clave repite la respuesta; clave nueva sobre un manuscrito ya enviado, `409`. |
+| OK | `GET` | `/api/manuscripts/{id}/versions/` | A (propio), E | — | `200` | Lista paginada de iteraciones, de la más antigua a la más nueva. |
+| OK | `POST` | `/api/manuscripts/{id}/versions/` | A (propio) | **`Idempotency-Key`** obligatoria; `multipart/form-data` (campo `file`); respuesta con `ETag` | `201` | Solo en `REQUIRES_CORRECTIONS`. Misma clave con el mismo PDF repite; con otro PDF, `409`. |
+| OK | `GET` | `/api/manuscripts/{id}/versions/{version_id}/file/` | A (propio), E | — | `200` | PDF original por `X-Accel-Redirect`. Se audita antes; si falla, `503`. El Revisor no accede aquí. |
+| OK | `GET` | `/api/manuscripts/{id}/history/` | A (propio), E | — | `200` | Historial inmutable, también tras la baja lógica. Sin actor, ruta ni hash de la copia sanitizada. |
+| OK | `POST` | `/api/manuscripts/{id}/withdraw/` | A (propio) | Respuesta con `ETag` | `200` | Baja lógica desde cualquier estado. El motivo es obligatorio en `UNDER_REVIEW` y `ACCEPTED`. Un segundo intento, `409`. |
 
-No existe `DELETE` para manuscritos. El plan además prevé que el Revisor asignado consulte `GET /api/manuscripts/{id}/` y `history/` de forma anonimizada. Esa parte está 🗓 y no aparece en el código actual.
+No existe `DELETE` para manuscritos. El plan además prevé que el Revisor asignado consulte `GET /api/manuscripts/{id}/` y `history/` de forma anonimizada. Esa parte está FECHA y no aparece en el código actual.
 
-### 4.5 Reviews (Revisor) — 🗓 sin implementar
+### 4.5 Reviews (Revisor) — FECHA sin implementar
 
 Roles: `R` dueño de la asignación. `reviews/views.py` y `urls.py` están vacíos. La «Regla de corte»: el envío final solo se acepta si `now() < due_at`; en el instante exacto devuelve `410`.
 
@@ -203,7 +203,7 @@ Roles: `R` dueño de la asignación. `reviews/views.py` y `urls.py` están vací
 | `GET` | `/api/reviewer/evaluations/` | — | `200` | Historial propio, sin identidad de Autores. |
 | `GET` | `/api/reviewer/evaluations/{id}/` | — | `200` | Solo lectura. |
 
-### 4.6 Editor — 🗓 sin implementar
+### 4.6 Editor — FECHA sin implementar
 
 Rol: `E`. Todas requieren `Token`.
 
@@ -223,7 +223,7 @@ Rol: `E`. Todas requieren `Token`.
 | `GET` | `/api/editor/incidents/` | — | `200` | Incidentes confidenciales. |
 | `POST` | `/api/editor/incidents/{id}/resolve/` | — | `200` | Cuerpo: `resolution` (`REQUEST_ANONYMIZED_VERSION`, `REASSIGN` o `DISMISS`). Una sola vez. |
 
-### 4.7 Admin — 🗓 sin implementar
+### 4.7 Admin — FECHA sin implementar
 
 Rol: `ADM`. Todas requieren `Token`. No hay endpoints de gestión de usuarios ni roles: el aprovisionamiento es por comando de gestión o Django Admin.
 
@@ -233,7 +233,7 @@ Rol: `ADM`. Todas requieren `Token`. No hay endpoints de gestión de usuarios ni
 | `GET` | `/api/admin/audit/{id}/` | — | `200` | Detalle; el propio acceso se audita. Incluye `can_authorize_correction`. |
 | `POST` | `/api/admin/verdicts/{id}/authorize-correction/` | **`Idempotency-Key`** obligatoria | `201` | Cuerpo: `reason` (10–1000 caracteres). Solo el veredicto más reciente y con una autorización activa por veredicto, si no `409`. |
 
-### 4.8 Catalog (público) — 🗓 sin implementar
+### 4.8 Catalog (público) — FECHA sin implementar
 
 Sin autenticación. Solo muestra artículos `ACCEPTED` con `is_active = true`; no expone evaluaciones, revisores, historial ni auditoría. Caché máxima de 5 minutos.
 
@@ -243,7 +243,7 @@ Sin autenticación. Solo muestra artículos `ACCEPTED` con `is_active = true`; n
 | `GET` | `/api/catalog/{code}/` | — | `200` | Ficha pública. `{code}` es el código `GPC-AAAA-######`. |
 | `GET` | `/api/catalog/{code}/document/` | — | `200` | PDF de la versión aceptada por `X-Accel-Redirect` público. `410` si fue retirado. |
 
-### 4.9 Notifications — 🗓 sin implementar
+### 4.9 Notifications — FECHA sin implementar
 
 Requieren `Token`; el aviso debe ser del propio usuario.
 
@@ -301,7 +301,7 @@ Valores del `docker-compose.yml` y de las configuraciones actuales. Los usuarios
 | Recurso | URL / dirección | Qué es | Notas |
 |---|---|---|---|
 | SPA Angular (producción local) | `http://localhost/` | Servicio `web`: Nginx sirviendo la SPA compilada | Puerto 80. Las rutas profundas caen en `index.html`. |
-| API REST | `http://localhost/api/` | Nginx → `backend:8000` (Gunicorn) | Devuelve `{"service": "gestion-publicaciones-cientificas", "api": "v1"}`. |
+| API REST | `http://localhost/api/` | Nginx -> `backend:8000` (Gunicorn) | Devuelve `{"service": "gestion-publicaciones-cientificas", "api": "v1"}`. |
 | Health check | `http://localhost/api/health/` | Estado de la base de datos y del volumen de escritura | Es el que usa el healthcheck de Docker. |
 | Servidor de desarrollo Angular | `http://localhost:4200/` | `npm start` en `frontend/` (`ng serve --proxy-config proxy.conf.json`) | Puerto por defecto de Angular (no hay `port` en `angular.json`). El proxy reenvía `/api` a `http://localhost`, es decir, al Nginx del compose; el compose debe estar levantado. |
 | Adminer | `http://localhost:8888/` | Cliente web de la base de datos | Solo desarrollo. En el formulario: sistema PostgreSQL, servidor `db`, y base, usuario y contraseña de `.env` (`POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`). |

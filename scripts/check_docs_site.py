@@ -209,7 +209,7 @@ def main() -> int:
     if problems:
         print(f"\n{len(problems)} problema(s):")
         for problem in problems:
-            print(f"  ✗ {problem}")
+            print(f"  FAIL {problem}")
         return 1
     print("Todo en orden.")
     return 0

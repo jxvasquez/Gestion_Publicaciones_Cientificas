@@ -201,7 +201,7 @@ Centralizar el ciclo editorial en un flujo único, trazable y confidencial, dond
 5. Si el Autor edita metadatos en "Requiere Correcciones" y luego envía una nueva versión, el nuevo registro conserva los metadatos actualizados; el registro anterior no cambia.
 6. La reasignación de Revisor no altera la ronda ni la versión. El nuevo Revisor recibe un plazo propio de 20 días.
 7. Un manuscrito puede tener más versiones que rondas si el Autor abandona una corrección; el historial conserva ambos datos por separado.
-8. Ejemplo: v1/ronda 0 → correcciones → v2/ronda 1 → correcciones → v3/ronda 2 → aceptado.
+8. Ejemplo: v1/ronda 0 -> correcciones -> v2/ronda 1 -> correcciones -> v3/ronda 2 -> aceptado.
 
 ### 7.4 Historial frente a auditoría
 

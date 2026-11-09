@@ -60,11 +60,11 @@ El usuario autenticado cierra su sesión voluntariamente y el sistema invalida e
 
 ### Edge Cases
 
-- ¿Qué sucede cuando un usuario con credenciales válidas pero cuenta inactiva intenta iniciar sesión? → Rechazo con código HTTP apropiado (cubierto en US2).
-- ¿Cómo maneja el sistema un bloqueo por intentos fallidos repetidos? → El sistema aplica un bloqueo temporal progresivo tras intentos fallidos consecutivos para mitigar fuerza bruta.
-- ¿Qué ocurre si el repositorio de usuarios institucionales no está disponible? → El sistema responde con error del servidor (HTTP `503 Service Unavailable`) sin conceder acceso.
-- ¿Qué sucede si un usuario activo intenta iniciar sesión desde dos dispositivos? → Se permiten sesiones independientes por dispositivo; el cierre de una no afecta a la otra.
-- ¿Qué ocurre si una sesión permanece inactiva? → La sesión expira tras un período de inactividad y el usuario debe autenticarse de nuevo.
+- ¿Qué sucede cuando un usuario con credenciales válidas pero cuenta inactiva intenta iniciar sesión? -> Rechazo con código HTTP apropiado (cubierto en US2).
+- ¿Cómo maneja el sistema un bloqueo por intentos fallidos repetidos? -> El sistema aplica un bloqueo temporal progresivo tras intentos fallidos consecutivos para mitigar fuerza bruta.
+- ¿Qué ocurre si el repositorio de usuarios institucionales no está disponible? -> El sistema responde con error del servidor (HTTP `503 Service Unavailable`) sin conceder acceso.
+- ¿Qué sucede si un usuario activo intenta iniciar sesión desde dos dispositivos? -> Se permiten sesiones independientes por dispositivo; el cierre de una no afecta a la otra.
+- ¿Qué ocurre si una sesión permanece inactiva? -> La sesión expira tras un período de inactividad y el usuario debe autenticarse de nuevo.
 
 ## Requirements *(mandatory)*
 

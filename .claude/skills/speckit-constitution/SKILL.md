@@ -48,7 +48,7 @@ and commands read the constitution at runtime and are not modified here.
 - For each remaining hook, do **not** attempt to interpret or evaluate hook `condition` expressions:
   - If the hook has no `condition` field, or it is null/empty, treat the hook as executable
   - If the hook defines a non-empty `condition`, skip the hook and leave condition evaluation to the HookExecutor implementation
-- When constructing command invocations from hook command names, replace dots (`.`) with hyphens (`-`). For example, `speckit.git.commit` → `/speckit-git-commit`.
+- When constructing command invocations from hook command names, replace dots (`.`) with hyphens (`-`). For example, `speckit.git.commit` -> `/speckit-git-commit`.
 - For each executable hook, output the following based on its `optional` flag:
   - **Optional hook** (`optional: true`):
     ```
@@ -114,8 +114,8 @@ Follow this execution flow:
 4. Produce a Sync Impact Report as an HTML comment at the top of the constitution file after update.
    This report is temporary scratch material for human review of the amendment, not governance
    content; it is expected to be removed before the amended constitution file is committed.
-   - Version change: old → new
-   - List of modified principles (old title → new title if renamed)
+   - Version change: old -> new
+   - List of modified principles (old title -> new title if renamed)
    - Added sections
    - Removed sections
    - Follow-up TODOs if any placeholders intentionally deferred.
@@ -124,7 +124,7 @@ Follow this execution flow:
    - No remaining unexplained bracket tokens.
    - Version line matches report.
    - Dates ISO format YYYY-MM-DD.
-   - Principles are declarative, testable, and free of vague language ("should" → replace with MUST/SHOULD rationale where appropriate).
+   - Principles are declarative, testable, and free of vague language ("should" -> replace with MUST/SHOULD rationale where appropriate).
 
 6. Write the completed constitution back to `.specify/memory/constitution.md` (overwrite).
 
@@ -157,7 +157,7 @@ Check if `.specify/extensions.yml` exists in the project root.
 - For each remaining hook, do **not** attempt to interpret or evaluate hook `condition` expressions:
   - If the hook has no `condition` field, or it is null/empty, treat the hook as executable
   - If the hook defines a non-empty `condition`, skip the hook and leave condition evaluation to the HookExecutor implementation
-- When constructing command invocations from hook command names, replace dots (`.`) with hyphens (`-`). For example, `speckit.git.commit` → `/speckit-git-commit`.
+- When constructing command invocations from hook command names, replace dots (`.`) with hyphens (`-`). For example, `speckit.git.commit` -> `/speckit-git-commit`.
 - For each executable hook, output the following based on its `optional` flag:
   - **Optional hook** (`optional: true`):
     ```

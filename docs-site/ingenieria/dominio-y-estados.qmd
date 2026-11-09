@@ -75,7 +75,7 @@ stateDiagram-v2
 | `UNDER_REVIEW` | `REJECTED` | Editor | Evaluación final registrada y justificación obligatoria. |
 | `REQUIRES_CORRECTIONS` | `SUBMITTED` | Autor | Nueva versión válida con los metadatos actualizados. |
 
-**Transiciones prohibidas** (se bloquean y se registran): `DRAFT → UNDER_REVIEW`, `SUBMITTED → ACCEPTED/REJECTED`, `REQUIRES_CORRECTIONS → ACCEPTED/REJECTED` sin nuevo envío y evaluación, y cualquier edición desde `ACCEPTED` o `REJECTED`.
+**Transiciones prohibidas** (se bloquean y se registran): `DRAFT -> UNDER_REVIEW`, `SUBMITTED -> ACCEPTED/REJECTED`, `REQUIRES_CORRECTIONS -> ACCEPTED/REJECTED` sin nuevo envío y evaluación, y cualquier edición desde `ACCEPTED` o `REJECTED`.
 
 El **retiro lógico** no es un estado: es la marca `is_active = false`, aplicable desde cualquier estado.
 

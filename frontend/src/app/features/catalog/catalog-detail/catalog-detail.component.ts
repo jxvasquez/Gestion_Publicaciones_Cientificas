@@ -44,7 +44,7 @@ const DOCUMENT_UNAVAILABLE = 'Documento no disponible.';
   template: `
     <app-public-header />
     <main class="detail">
-      <p class="detail__back"><a routerLink="/catalog">← Volver al catálogo</a></p>
+      <p class="detail__back"><a routerLink="/catalog">Volver al catálogo</a></p>
 
       @switch (viewState()) {
         @case ('loading') {

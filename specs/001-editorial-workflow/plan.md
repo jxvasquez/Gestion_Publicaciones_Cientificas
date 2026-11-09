@@ -302,19 +302,19 @@ y en los serializadores (no solo en la interfaz) — Principio II + RNF-07 + FR-
 
 **Validación de archivo** (`core/services/pdf_service.py`):
 - Extensión + `python-magic` como prefiltro y **parseo estructural** con `pypdf`
-  (`PdfReader`) para confirmar `%PDF-` y ausencia de corrupción → si falla, `400 Bad Request`
+  (`PdfReader`) para confirmar `%PDF-` y ausencia de corrupción -> si falla, `400 Bad Request`
   (FR-006, Principio III).
 - Tamaño máximo por `settings.MAX_UPLOAD_SIZE` en el validador; refuerzo con
   `DATA_UPLOAD_MAX_MEMORY_SIZE`/`FILE_UPLOAD_MAX_MEMORY_SIZE`.
 
 **Anonimización** (antes de exponer al Revisor):
 - `pikepdf`: `DocInfo = None`, eliminar `Root.Metadata` (XMP), reescribir con `linearize=True`
-  para descartar historial incremental → se guarda como versión `is_anonymized=True`.
+  para descartar historial incremental -> se guarda como versión `is_anonymized=True`.
 
 **Versionado inmutable** (FR-009, FR-010, Principio III):
 - Cada corrección crea un `ManuscriptVersion` nuevo con `number = max+1`; **jamás** `UPDATE`
   sobre el archivo anterior. `UNIQUE(manuscript_id, number)` garantiza integridad.
-- Se permite la nueva versión **solo** en estado `REQUIRES_REVISION`; cualquier otro estado →
+- Se permite la nueva versión **solo** en estado `REQUIRES_REVISION`; cualquier otro estado ->
   `400`.
 
 **Almacenamiento protegido**:
@@ -324,8 +324,8 @@ y en los serializadores (no solo en la interfaz) — Principio II + RNF-07 + FR-
 
 **Máquina de estados** (`publications/services/manuscript_service.py`): transiciones validadas
 centralmente (tabla en `data-model.md`); cada transición emite `AuditService.log(...)`. Estados:
-`DRAFT → RECEIVED → UNDER_REVIEW → {REQUIRES_REVISION|ACCEPTED|REJECTED}`, `ACCEPTED → PUBLISHED`,
-`* → WITHDRAWN` (baja lógica).
+`DRAFT -> RECEIVED -> UNDER_REVIEW -> {REQUIRES_REVISION|ACCEPTED|REJECTED}`, `ACCEPTED -> PUBLISHED`,
+`* -> WITHDRAWN` (baja lógica).
 
 **Interoperabilidad DOI** (previsto, fuera del alcance de esta iteración según Constitución): el
 campo `doi` se almacena ya; la resolución/redirección a repositorios externos se expondrá tras

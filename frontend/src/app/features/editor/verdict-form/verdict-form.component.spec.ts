@@ -813,7 +813,7 @@ describe('justificationRequired', () => {
     ['ACCEPTED', null, false],
     ['REQUIRES_CORRECTIONS', 'REQUIRES_CORRECTIONS', false],
     ['REQUIRES_CORRECTIONS', 'ACCEPT', true],
-  ] as const)('%s con recomendación %s → %s', (decision, recommendation, expected) => {
+  ] as const)('%s con recomendación %s -> %s', (decision, recommendation, expected) => {
     expect(justificationRequired(decision, recommendation)).toBe(expected);
   });
 

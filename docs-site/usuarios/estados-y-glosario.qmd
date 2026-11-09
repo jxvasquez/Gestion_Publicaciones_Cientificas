@@ -37,7 +37,7 @@ Cualquier otro cambio de estado se bloquea y queda registrado. En particular, no
 
 El **envío inicial** crea la **versión 1** y la **ronda 0**. Cada veredicto *Requiere correcciones* abre la ronda siguiente (1, 2, 3…); la respuesta del Autor se guarda como la versión consecutiva (v2, v3…). Son contadores independientes: editar metadatos no crea versión ni ronda, y reasignar un Revisor tampoco.
 
-Ejemplo: `v1 / ronda 0` → correcciones → `v2 / ronda 1` → correcciones → `v3 / ronda 2` → aceptado.
+Ejemplo: `v1 / ronda 0` -> correcciones -> `v2 / ronda 1` -> correcciones -> `v3 / ronda 2` -> aceptado.
 
 ## Estados de una asignación
 

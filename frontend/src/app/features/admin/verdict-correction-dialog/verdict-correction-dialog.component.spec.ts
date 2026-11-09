@@ -183,7 +183,7 @@ describe('correctionReasonError', () => {
     ['   ', 'Indique el motivo de la habilitación.'],
     ['123456789', 'El motivo debe tener al menos 10 caracteres.'],
     ['x'.repeat(1001), 'El motivo no puede superar 1000 caracteres.'],
-  ])('%j → %s', (reason, expected) => {
+  ])('%j -> %s', (reason, expected) => {
     expect(correctionReasonError(reason)).toBe(expected);
   });
 

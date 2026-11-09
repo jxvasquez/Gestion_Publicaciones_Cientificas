@@ -30,10 +30,10 @@ El anonimato no depende de «acordarse de ocultar» campos: la información proh
 
 ## Consecuencias
 
-- ✅ Un campo nuevo es privado hasta que alguien lo autoriza explícitamente.
-- ✅ La garantía se prueba, no se supone: las pruebas buscan nombres concretos en cada artefacto.
-- ⚠️ Hay serializadores y *querysets* distintos por rol; es más código, aceptado a cambio de seguridad.
-- ⚠️ La sanitización de PDF puede rechazar archivos que no se dejan limpiar; en ese caso la carga se rechaza.
+- OK Un campo nuevo es privado hasta que alguien lo autoriza explícitamente.
+- OK La garantía se prueba, no se supone: las pruebas buscan nombres concretos en cada artefacto.
+- AVISO Hay serializadores y *querysets* distintos por rol; es más código, aceptado a cambio de seguridad.
+- AVISO La sanitización de PDF puede rechazar archivos que no se dejan limpiar; en ese caso la carga se rechaza.
 
 ## Referencias
 

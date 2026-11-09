@@ -46,7 +46,7 @@ const INSTITUTIONAL_OFFSET = '-0500';
   template: `
     <section aria-labelledby="version-history-title">
       <nav aria-label="Navegación del manuscrito">
-        <a [routerLink]="['/app/author/manuscripts', id]">← Volver al manuscrito</a>
+        <a [routerLink]="['/app/author/manuscripts', id]">Volver al manuscrito</a>
       </nav>
 
       <h1 id="version-history-title">Historial de versiones</h1>
@@ -155,7 +155,7 @@ const INSTITUTIONAL_OFFSET = '-0500';
                     <h2>Cambio de estado</h2>
                     <p>
                       @if (entry.from_status) {
-                        <app-status-badge [status]="entry.from_status" /> →
+                        <app-status-badge [status]="entry.from_status" /> ->
                       }
                       <app-status-badge [status]="entry.to_status" />
                     </p>

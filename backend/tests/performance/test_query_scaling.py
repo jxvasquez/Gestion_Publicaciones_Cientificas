@@ -188,4 +188,4 @@ def test_the_number_of_queries_does_not_grow_with_the_rows(world, name) -> None:
     detail = "\n".join(q["sql"][:160] for q in captured)
     assert many == few, f"{name}: {few} consultas con {few_rows} filas y {many} con {many_rows}\n{detail}"
     if few_rows is not None:
-        assert many_rows > few_rows, f"{name}: la prueba no aumentó las filas ({few_rows} → {many_rows})"
+        assert many_rows > few_rows, f"{name}: la prueba no aumentó las filas ({few_rows} -> {many_rows})"

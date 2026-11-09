@@ -156,7 +156,7 @@ describe('Módulo Autor: integración con las rutas reales', () => {
   });
 
   describe('navegación por enlaces', () => {
-    it('listado → detalle → edición → historial, usando los enlaces de cada pantalla', async () => {
+    it('listado -> detalle -> edición -> historial, usando los enlaces de cada pantalla', async () => {
       signIn('AUTHOR');
       const { element, settle } = await open('/app/author/manuscripts');
       list().flush(

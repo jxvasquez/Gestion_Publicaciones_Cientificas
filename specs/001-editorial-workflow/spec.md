@@ -15,11 +15,11 @@ público."
 
 ### Session 2026-10-20
 
-- Q: ¿Qué significa exactamente "publicación" en el sistema y en qué punto del flujo un manuscrito pasa a ser considerado un artículo publicado? → A: "Publicación/artículo" es el mismo manuscrito una vez alcanza el estado Publicado; no existe una entidad separada.
-- Q: ¿Cómo se manejan los manuscritos con múltiples autores (coautoría), y quién tiene permiso para editar y entregar versiones? → A: Un Autor principal (responsable) gestiona el manuscrito (editar, entregar versiones, dar de baja); los coautores se registran con orden y datos de contacto pero sin permisos de gestión.
-- Q: ¿Cómo se visualizan y quién puede consultar las versiones anteriores de un manuscrito? → A: Se conservan todas las versiones; el Revisor ve solo la versión vigente asignada; Autor, Editor y Administrador ven el historial completo con fecha y número de versión.
-- Q: ¿Qué ocurre si dos personas con permiso de gestión editan el mismo manuscrito al mismo tiempo? → A: Bloqueo optimista: se rechaza el guardado si la copia está desactualizada y se pide recargar; solo se guarda el primer cambio válido.
-- Q: ¿Qué metadatos son indispensables en el registro de un manuscrito y cuáles quedan para una fase futura? → A: Obligatorios desde el inicio: título, resumen, palabras clave, idioma, área temática/categoría, DOI, ISSN, ORCID de autores y financiamiento, más el PDF; no se difiere ningún metadato obligatorio.
+- Q: ¿Qué significa exactamente "publicación" en el sistema y en qué punto del flujo un manuscrito pasa a ser considerado un artículo publicado? -> A: "Publicación/artículo" es el mismo manuscrito una vez alcanza el estado Publicado; no existe una entidad separada.
+- Q: ¿Cómo se manejan los manuscritos con múltiples autores (coautoría), y quién tiene permiso para editar y entregar versiones? -> A: Un Autor principal (responsable) gestiona el manuscrito (editar, entregar versiones, dar de baja); los coautores se registran con orden y datos de contacto pero sin permisos de gestión.
+- Q: ¿Cómo se visualizan y quién puede consultar las versiones anteriores de un manuscrito? -> A: Se conservan todas las versiones; el Revisor ve solo la versión vigente asignada; Autor, Editor y Administrador ven el historial completo con fecha y número de versión.
+- Q: ¿Qué ocurre si dos personas con permiso de gestión editan el mismo manuscrito al mismo tiempo? -> A: Bloqueo optimista: se rechaza el guardado si la copia está desactualizada y se pide recargar; solo se guarda el primer cambio válido.
+- Q: ¿Qué metadatos son indispensables en el registro de un manuscrito y cuáles quedan para una fase futura? -> A: Obligatorios desde el inicio: título, resumen, palabras clave, idioma, área temática/categoría, DOI, ISSN, ORCID de autores y financiamiento, más el PDF; no se difiere ningún metadato obligatorio.
 
 ## User Scenarios & Testing *(mandatory)*
 

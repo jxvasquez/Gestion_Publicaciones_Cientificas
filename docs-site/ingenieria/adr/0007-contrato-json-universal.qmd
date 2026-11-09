@@ -31,13 +31,13 @@ La API nació con respuestas distintas según el endpoint: los éxitos devolvía
 
 ## Consecuencias
 
-- ✅ Un cliente escribe **un** manejador de respuestas y **uno** de errores.
-- ✅ `request_id` en cada respuesta facilita la correlación con logs y auditoría.
-- ✅ La versión en la ruta permite introducir una `v2` sin romper a los consumidores de `v1`.
-- ✅ El schema OpenAPI y la API no pueden divergir sin que una prueba falle.
-- ⚠️ Fue un cambio **incompatible** que tocó la API, el frontend, los scripts y las pruebas; se hizo en un solo cambio coordinado.
-- ⚠️ Las pruebas de dominio leen la carga ya desenvuelta (`conftest.py`); la forma exacta del sobre se prueba aparte, leyendo `response.content` en bruto (`tests/contract.py`).
-- ⚠️ El sobre añade unos bytes a cada respuesta; es despreciable frente a la ganancia de uniformidad.
+- OK Un cliente escribe **un** manejador de respuestas y **uno** de errores.
+- OK `request_id` en cada respuesta facilita la correlación con logs y auditoría.
+- OK La versión en la ruta permite introducir una `v2` sin romper a los consumidores de `v1`.
+- OK El schema OpenAPI y la API no pueden divergir sin que una prueba falle.
+- AVISO Fue un cambio **incompatible** que tocó la API, el frontend, los scripts y las pruebas; se hizo en un solo cambio coordinado.
+- AVISO Las pruebas de dominio leen la carga ya desenvuelta (`conftest.py`); la forma exacta del sobre se prueba aparte, leyendo `response.content` en bruto (`tests/contract.py`).
+- AVISO El sobre añade unos bytes a cada respuesta; es despreciable frente a la ganancia de uniformidad.
 
 ## Referencias
 

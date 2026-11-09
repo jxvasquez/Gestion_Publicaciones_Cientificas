@@ -210,7 +210,7 @@ describe('Módulo Revisor: integración con las rutas reales', () => {
   });
 
   describe('navegación por enlaces', () => {
-    it('bandeja → detalle, con el enlace del código', async () => {
+    it('bandeja -> detalle, con el enlace del código', async () => {
       signIn('REVIEWER');
       const { element, settle } = await open('/app/reviewer/assignments');
       inbox().flush(
@@ -229,7 +229,7 @@ describe('Módulo Revisor: integración con las rutas reales', () => {
       expect(element.querySelector('h1')?.textContent).toContain('Efecto del clima');
     });
 
-    it('detalle → formulario con «Evaluar manuscrito» y vuelta con el enlace de regreso', async () => {
+    it('detalle -> formulario con «Evaluar manuscrito» y vuelta con el enlace de regreso', async () => {
       signIn('REVIEWER');
       const { element, settle } = await open('/app/reviewer/assignments/a-1');
       detail().flush(buildAssignmentDetail());
@@ -243,7 +243,7 @@ describe('Módulo Revisor: integración con las rutas reales', () => {
       await settle();
       expect(element.querySelector('app-evaluation-form')).not.toBeNull();
 
-      await click(element, '← Volver al detalle de la asignación', settle);
+      await click(element, 'Volver al detalle de la asignación', settle);
       expect(router.url).toBe('/app/reviewer/assignments/a-1');
       detail().flush(buildAssignmentDetail());
       await settle();
@@ -269,7 +269,7 @@ describe('Módulo Revisor: integración con las rutas reales', () => {
       await settle();
       expect(element.querySelector('app-evaluation-history')).not.toBeNull();
 
-      await click(element, '← Volver a mis asignaciones', settle);
+      await click(element, 'Volver a mis asignaciones', settle);
       expect(router.url).toBe('/app/reviewer/assignments');
       inbox().flush(emptyPage);
       await settle();
@@ -395,7 +395,7 @@ describe('Módulo Revisor: integración con las rutas reales', () => {
       const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false);
       const { element, settle } = await dirtyForm();
 
-      await click(element, '← Volver al detalle de la asignación', settle);
+      await click(element, 'Volver al detalle de la asignación', settle);
 
       expect(confirm).toHaveBeenCalledTimes(1);
       expect(router.url).toBe('/app/reviewer/assignments/a-1/evaluate');
@@ -406,7 +406,7 @@ describe('Módulo Revisor: integración con las rutas reales', () => {
       vi.spyOn(window, 'confirm').mockReturnValue(true);
       const { element, settle } = await dirtyForm();
 
-      await click(element, '← Volver al detalle de la asignación', settle);
+      await click(element, 'Volver al detalle de la asignación', settle);
 
       expect(router.url).toBe('/app/reviewer/assignments/a-1');
       detail().flush(buildAssignmentDetail());
@@ -421,7 +421,7 @@ describe('Módulo Revisor: integración con las rutas reales', () => {
       evaluation().flush(buildReviewerEvaluation(), { headers: { ETag: '"0"' } });
       await settle();
 
-      await click(element, '← Volver al detalle de la asignación', settle);
+      await click(element, 'Volver al detalle de la asignación', settle);
 
       expect(confirm).not.toHaveBeenCalled();
       expect(router.url).toBe('/app/reviewer/assignments/a-1');

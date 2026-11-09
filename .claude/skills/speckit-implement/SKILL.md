@@ -29,7 +29,7 @@ You **MUST** consider the user input before proceeding (if not empty).
 - For each remaining hook, do **not** attempt to interpret or evaluate hook `condition` expressions:
   - If the hook has no `condition` field, or it is null/empty, treat the hook as executable
   - If the hook defines a non-empty `condition`, skip the hook and leave condition evaluation to the HookExecutor implementation
-- When constructing command invocations from hook command names, replace dots (`.`) with hyphens (`-`). For example, `speckit.git.commit` → `/speckit-git-commit`.
+- When constructing command invocations from hook command names, replace dots (`.`) with hyphens (`-`). For example, `speckit.git.commit` -> `/speckit-git-commit`.
 - For each executable hook, output the following based on its `optional` flag:
   - **Optional hook** (`optional: true`):
     ```
@@ -73,9 +73,9 @@ You **MUST** consider the user input before proceeding (if not empty).
      ```text
      | Checklist | Total | Checked | Unchecked | Status |
      |-----------|-------|---------|-----------|--------|
-     | ux.md     | 12    | 12      | 0         | ✓ PASS |
-     | test.md   | 8     | 5       | 3         | ✗ FAIL |
-     | security.md | 6   | 6       | 0         | ✓ PASS |
+     | ux.md     | 12    | 12      | 0         | OK PASS |
+     | test.md   | 8     | 5       | 3         | FAIL FAIL |
+     | security.md | 6   | 6       | 0         | OK PASS |
      ```
 
    - Calculate overall status:
@@ -112,13 +112,13 @@ You **MUST** consider the user input before proceeding (if not empty).
      git rev-parse --git-dir 2>/dev/null
      ```
 
-   - Check if Dockerfile* exists or Docker in plan.md → create/verify .dockerignore
-   - Check if .eslintrc* exists → create/verify .eslintignore
-   - Check if eslint.config.* exists → ensure the config's `ignores` entries cover required patterns
-   - Check if .prettierrc* exists → create/verify .prettierignore
-   - Check if .npmrc or package.json exists → create/verify .npmignore (if publishing)
-   - Check if terraform files (*.tf) exist → create/verify .terraformignore
-   - Check if .helmignore needed (helm charts present) → create/verify .helmignore
+   - Check if Dockerfile* exists or Docker in plan.md -> create/verify .dockerignore
+   - Check if .eslintrc* exists -> create/verify .eslintignore
+   - Check if eslint.config.* exists -> ensure the config's `ignores` entries cover required patterns
+   - Check if .prettierrc* exists -> create/verify .prettierignore
+   - Check if .npmrc or package.json exists -> create/verify .npmignore (if publishing)
+   - Check if terraform files (*.tf) exist -> create/verify .terraformignore
+   - Check if .helmignore needed (helm charts present) -> create/verify .helmignore
 
    **If ignore file already exists**: Verify it contains essential patterns, append missing critical patterns only
    **If ignore file missing**: Create with full pattern set for detected technology
@@ -194,7 +194,7 @@ Check if `.specify/extensions.yml` exists in the project root.
 - For each remaining hook, do **not** attempt to interpret or evaluate hook `condition` expressions:
   - If the hook has no `condition` field, or it is null/empty, treat the hook as executable
   - If the hook defines a non-empty `condition`, skip the hook and leave condition evaluation to the HookExecutor implementation
-- When constructing command invocations from hook command names, replace dots (`.`) with hyphens (`-`). For example, `speckit.git.commit` → `/speckit-git-commit`.
+- When constructing command invocations from hook command names, replace dots (`.`) with hyphens (`-`). For example, `speckit.git.commit` -> `/speckit-git-commit`.
 - For each executable hook, output the following based on its `optional` flag:
   - **Mandatory hook** (`optional: false`) — **You MUST emit `EXECUTE_COMMAND:` for each mandatory hook**:
     ```

@@ -39,7 +39,7 @@ export class AuthService {
    * `HttpClient` se resuelve perezosamente: el interceptor de errores
    * inyecta este servicio durante una petición y una referencia eager
    * de HttpClient cerraría una dependencia circular
-   * (interceptor → AuthService → HttpClient → interceptor).
+   * (interceptor -> AuthService -> HttpClient -> interceptor).
    */
   private readonly injector = inject(Injector);
   private readonly store = inject(AuthStore);

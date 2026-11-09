@@ -84,7 +84,7 @@ submit_manuscript --> storage : copia sin sobrescribir
 submit_manuscript --> snapshot : congela los metadatos
 submit_manuscript --> AuditService : misma transacción
 submit_manuscript ..> IdempotencyScope : guarda la respuesta
-submit_manuscript --> Manuscript : DRAFT → SUBMITTED
+submit_manuscript --> Manuscript : DRAFT -> SUBMITTED
 submit_manuscript --> ManuscriptVersion : crea la versión 1
 submit_manuscript --> CorrectionRound : abre la ronda 0
 submit_manuscript --> StatusEvent : registra la transición

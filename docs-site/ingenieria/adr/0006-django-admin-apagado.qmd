@@ -25,10 +25,10 @@ Django incluye un panel de administración que permite editar cualquier fila de 
 
 ## Consecuencias
 
-- ✅ Menos superficie expuesta y ninguna vía para saltarse la auditoría desde un panel.
-- ✅ Una sola forma de modificar datos: la API, con sus reglas.
-- ⚠️ La administración de cuentas es por línea de comandos; requiere acceso al servidor.
-- ⚠️ Para inspeccionar datos en producción hay que usar la auditoría, los logs o `psql` con el rol adecuado, no un panel.
+- OK Menos superficie expuesta y ninguna vía para saltarse la auditoría desde un panel.
+- OK Una sola forma de modificar datos: la API, con sus reglas.
+- AVISO La administración de cuentas es por línea de comandos; requiere acceso al servidor.
+- AVISO Para inspeccionar datos en producción hay que usar la auditoría, los logs o `psql` con el rol adecuado, no un panel.
 
 ## Referencias
 

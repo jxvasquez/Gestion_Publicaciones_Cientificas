@@ -73,7 +73,7 @@ const INSTITUTIONAL_OFFSET = '-0500';
   template: `
     <section aria-labelledby="submission-detail-title">
       <nav aria-label="Navegación del envío">
-        <a routerLink="/app/editor/submissions">← Volver a nuevos envíos</a>
+        <a routerLink="/app/editor/submissions">Volver a nuevos envíos</a>
       </nav>
 
       @if (loading()) {
@@ -306,7 +306,7 @@ const INSTITUTIONAL_OFFSET = '-0500';
                     @default {
                       @if (entry.type === 'STATUS_CHANGED') {
                         @if (entry.from_status) {
-                          <app-status-badge [status]="entry.from_status" /> →
+                          <app-status-badge [status]="entry.from_status" /> ->
                         }
                         <app-status-badge [status]="entry.to_status" />
                       }

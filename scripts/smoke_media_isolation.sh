@@ -51,7 +51,7 @@ check_denied() {
   local status
   status="$(curl -sk -o "${WORK}/body" -w '%{http_code}' --path-as-is "$@" "${BASE}${path}")"
   if [[ "${status}" == "${expected}" ]] && ! grep -q '%PDF' "${WORK}/body"; then
-    pass "${description} → ${status}"
+    pass "${description} -> ${status}"
   else
     fail "${description}: esperaba ${expected} sin PDF y obtuve ${status}"
   fi
@@ -178,7 +178,7 @@ fetch_authorized() {
   local status
   status="$(curl -sk -D "${WORK}/headers" -o "${WORK}/body" -w '%{http_code}' "${BASE}${path}")"
   if [[ "${status}" == "200" ]] && grep -q "${marker}" "${WORK}/body"; then
-    pass "${description} → 200 con el contenido esperado"
+    pass "${description} -> 200 con el contenido esperado"
   else
     fail "${description}: esperaba 200 con ${marker} y obtuve ${status}"
     return

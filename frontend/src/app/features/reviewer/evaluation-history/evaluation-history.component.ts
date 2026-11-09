@@ -190,7 +190,7 @@ type DetailState =
       }
 
       <p class="back">
-        <a routerLink="/app/reviewer/assignments">← Volver a mis asignaciones</a>
+        <a routerLink="/app/reviewer/assignments">Volver a mis asignaciones</a>
       </p>
     </section>
   `,

@@ -83,7 +83,7 @@ let nextId = 0;
     <section aria-labelledby="evaluation-form-title">
       <nav aria-label="Navegación de la evaluación">
         <a [routerLink]="['/app/reviewer/assignments', assignmentId]"
-          >← Volver al detalle de la asignación</a
+          >Volver al detalle de la asignación</a
         >
       </nav>
 

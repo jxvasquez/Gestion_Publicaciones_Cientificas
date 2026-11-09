@@ -8,7 +8,7 @@ They follow the implementation plan (sections 1.13, 1.14, 1.14.1 and 1.20):
 * ``Evaluation`` is the reviewer's draft and, once ``FINAL``, the
   immutable evaluation. A trigger (migration ``0002``) rejects any
   ``UPDATE`` or ``DELETE`` over a ``FINAL`` row; the submission logic
-  that performs the ``DRAFT`` → ``FINAL`` transition arrives in Phase 4.
+  that performs the ``DRAFT`` -> ``FINAL`` transition arrives in Phase 4.
 * ``IncidentReport`` is the reviewer's confidential report of a possible
   identity leak (CA-HU-16-06). It only stores the report: it never
   touches the PDF, the evaluation or the manuscript status.

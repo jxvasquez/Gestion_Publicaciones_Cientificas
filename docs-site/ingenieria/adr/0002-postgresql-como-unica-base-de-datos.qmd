@@ -31,10 +31,10 @@ Se aprovechan sus capacidades:
 
 ## Consecuencias
 
-- ✅ Las invariantes críticas se cumplen aunque falle la aplicación o alguien escriba directamente en la base.
-- ✅ Las pruebas verifican el comportamiento real (disparadores, bloqueos, privilegios).
-- ⚠️ **Todas** las pruebas del backend corren contra PostgreSQL real: son más lentas que con una base en memoria. El CI falla si detecta el motor SQLite.
-- ⚠️ Las migraciones se ejecutan con el rol administrador (`DB_USE_ADMIN=1`), distinto del rol de ejecución.
+- OK Las invariantes críticas se cumplen aunque falle la aplicación o alguien escriba directamente en la base.
+- OK Las pruebas verifican el comportamiento real (disparadores, bloqueos, privilegios).
+- AVISO **Todas** las pruebas del backend corren contra PostgreSQL real: son más lentas que con una base en memoria. El CI falla si detecta el motor SQLite.
+- AVISO Las migraciones se ejecutan con el rol administrador (`DB_USE_ADMIN=1`), distinto del rol de ejecución.
 
 ## Referencias
 
