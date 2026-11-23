@@ -1,0 +1,72 @@
+<section class="notice-list" aria-labelledby="notification-list-title">
+  <header class="list-header">
+    <div>
+      <h1 id="notification-list-title">Avisos</h1>
+      <p class="list-header__count" role="status">
+        @if (unreadCount() > 0) {
+          {{ unreadCount() }} {{ unreadCount() === 1 ? 'aviso sin leer' : 'avisos sin leer' }}
+        } @else {
+          No tiene avisos sin leer.
+        }
+      </p>
+    </div>
+    <button
+      type="button"
+      class="btn btn--ghost"
+      [disabled]="busyAll() || unreadCount() === 0"
+      (click)="markAll()"
+    >
+      Marcar todos como leídos
+    </button>
+  </header>
+
+  <nav class="tabs" aria-label="Filtrar avisos">
+    @for (option of filters; track option.value) {
+      <a
+        class="tabs__link"
+        [routerLink]="[]"
+        [queryParams]="filterParams(option.value)"
+        [attr.aria-current]="filter() === option.value ? 'page' : null"
+      >
+        {{ option.label }}
+      </a>
+    }
+  </nav>
+
+  @if (actionError(); as message) {
+    <p class="callout" role="alert">{{ message }}</p>
+  }
+
+  @switch (viewState()) {
+    @case ('loading') {
+      <app-loading-spinner label="Cargando avisos…" />
+    }
+    @case ('error') {
+      <app-error-state [message]="error()?.userMessage ?? ''" (retry)="reload()" />
+    }
+    @default {
+      @if (rows().length === 0) {
+        <app-empty-state [message]="emptyMessage()" />
+      } @else {
+        <ul class="notices">
+          @for (notice of rows(); track notice.id) {
+            <li>
+              <app-notification-item
+                [notice]="notice"
+                [busy]="busyId() === notice.id"
+                (opened)="open($event)"
+                (markRead)="markOne($event)"
+              />
+            </li>
+          }
+        </ul>
+        <app-pagination
+          [page]="currentPage()"
+          [pageSize]="pageSize"
+          [totalItems]="total()"
+          (pageChange)="goToPage($event)"
+        />
+      }
+    }
+  }
+</section>

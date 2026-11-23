@@ -1,0 +1,60 @@
+<section class="dashboard" aria-labelledby="dashboard-title">
+  <h1 id="dashboard-title">Panel unificado</h1>
+
+  @if (loading()) {
+    <app-loading-spinner label="Cargando su panel…" />
+  } @else if (globalError(); as failure) {
+    <app-error-state [message]="failure.userMessage" retryLabel="Reintentar" (retry)="load()" />
+  } @else if (hasNoRoles()) {
+    <!-- Sin roles activos: mensaje explícito y sin módulos. -->
+    <app-empty-state
+      message="Sin roles habilitados. Solicite acceso a la administración institucional."
+    />
+  } @else {
+    <div class="dashboard__grid">
+      @for (key of sectionKeys; track key) {
+        @if (section(key); as current) {
+          <div
+            class="dashboard__section"
+            [class.card]="current.status !== 'ok'"
+            [class.dashboard__section--error]="current.status !== 'ok'"
+            [attr.data-section]="key"
+          >
+            @if (current.status === 'ok') {
+              <!-- La tarjeta resumen ya lleva el nombre del rol: no se repite aquí. -->
+              @switch (key) {
+                @case ('author') {
+                  <app-author-summary [data]="current.data" />
+                }
+                @case ('reviewer') {
+                  <app-reviewer-summary [data]="current.data" />
+                }
+                @case ('editor') {
+                  <app-editor-summary [data]="current.data" />
+                }
+                @case ('admin') {
+                  <app-admin-summary [data]="current.data" />
+                }
+              }
+            } @else {
+              <!-- La sección falló, las demás siguen visibles. Sin tarjeta resumen,
+                   este título es lo único que nombra el rol. -->
+              <h2 class="dashboard__section-title">{{ sectionLabels[key] }}</h2>
+              <app-error-state
+                [message]="current.message ?? 'No se pudo cargar esta sección.'"
+                retryLabel="Reintentar"
+                (retry)="retrySection(key)"
+              />
+            }
+          </div>
+        }
+      }
+    </div>
+    @if (sectionErrors().length > 0) {
+      <p class="dashboard__errors" role="status">
+        {{ sectionErrors().length }}
+        {{ sectionErrors().length === 1 ? 'sección con problemas' : 'secciones con problemas' }}.
+      </p>
+    }
+  }
+</section>

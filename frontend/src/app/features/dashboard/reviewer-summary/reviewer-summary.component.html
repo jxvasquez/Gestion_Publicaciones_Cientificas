@@ -1,0 +1,8 @@
+<app-kpi-card
+  title="Revisor"
+  icon="reviewer"
+  [metrics]="[{ label: 'Asignaciones pendientes', value: data()?.['pending'] }]"
+>
+  <a class="btn btn--ghost" routerLink="/app/reviewer/assignments">Mis asignaciones</a>
+  <a class="btn btn--ghost" routerLink="/app/reviewer/history">Historial de evaluaciones</a>
+</app-kpi-card>

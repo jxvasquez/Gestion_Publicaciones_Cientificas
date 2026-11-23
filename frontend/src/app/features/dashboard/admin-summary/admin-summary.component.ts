@@ -1,4 +1,7 @@
 import { Component, input } from '@angular/core';
+import { RouterLink } from '@angular/router';
+
+import { KpiCardComponent } from '../../../shared/components/kpi-card.component';
 
 /**
  * Resumen del rol Administrador dentro del panel unificado
@@ -8,24 +11,9 @@ import { Component, input } from '@angular/core';
  */
 @Component({
   selector: 'app-admin-summary',
-  template: `
-    <article class="summary" aria-labelledby="admin-summary-title">
-      <h3 id="admin-summary-title">Administrador</h3>
-      <p class="summary__hint">Auditoría y habilitación de corrección.</p>
-      @if (entries().length > 0) {
-        <dl class="summary__data">
-          @for (entry of entries(); track entry.key) {
-            <div class="summary__row">
-              <dt>{{ entry.key }}</dt>
-              <dd>{{ entry.value }}</dd>
-            </div>
-          }
-        </dl>
-      } @else {
-        <p class="summary__empty">Sin datos por ahora.</p>
-      }
-    </article>
-  `,
+  imports: [KpiCardComponent, RouterLink],
+  templateUrl: './admin-summary.component.html',
+  styleUrl: './admin-summary.component.scss',
 })
 export class AdminSummaryComponent {
   readonly data = input<Record<string, unknown> | null>(null);

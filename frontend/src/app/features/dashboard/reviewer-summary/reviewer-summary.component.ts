@@ -1,4 +1,7 @@
 import { Component, input } from '@angular/core';
+import { RouterLink } from '@angular/router';
+
+import { KpiCardComponent } from '../../../shared/components/kpi-card.component';
 
 /**
  * Resumen del rol Revisor dentro del panel unificado (plan sección 3.4).
@@ -9,24 +12,9 @@ import { Component, input } from '@angular/core';
  */
 @Component({
   selector: 'app-reviewer-summary',
-  template: `
-    <article class="summary" aria-labelledby="reviewer-summary-title">
-      <h3 id="reviewer-summary-title">Revisor</h3>
-      <p class="summary__hint">Sus asignaciones, plazos y vencimientos.</p>
-      @if (entries().length > 0) {
-        <dl class="summary__data">
-          @for (entry of entries(); track entry.key) {
-            <div class="summary__row">
-              <dt>{{ entry.key }}</dt>
-              <dd>{{ entry.value }}</dd>
-            </div>
-          }
-        </dl>
-      } @else {
-        <p class="summary__empty">Sin datos por ahora.</p>
-      }
-    </article>
-  `,
+  imports: [KpiCardComponent, RouterLink],
+  templateUrl: './reviewer-summary.component.html',
+  styleUrl: './reviewer-summary.component.scss',
 })
 export class ReviewerSummaryComponent {
   readonly data = input<Record<string, unknown> | null>(null);

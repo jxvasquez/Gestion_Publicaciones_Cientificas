@@ -1,0 +1,9 @@
+<app-kpi-card
+  title="Editor"
+  icon="editor"
+  [metrics]="[{ label: 'Nuevos envíos', value: data()?.['new_submissions'] }]"
+>
+  <a class="btn btn--ghost" routerLink="/app/editor/submissions">Nuevos envíos</a>
+  <a class="btn btn--ghost" routerLink="/app/editor/assignments/expired">Asignaciones vencidas</a>
+  <a class="btn btn--ghost" routerLink="/app/editor/incidents">Incidentes</a>
+</app-kpi-card>

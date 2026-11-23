@@ -1,0 +1,81 @@
+<app-public-header />
+<main class="catalog">
+  <section class="catalog__content" aria-labelledby="catalog-title">
+    <header class="catalog__header">
+      <h1 id="catalog-title">Catálogo público</h1>
+      <p class="catalog__count" role="status">
+        @if (viewState() === 'ready') {
+          {{ total() }} {{ total() === 1 ? 'artículo' : 'artículos' }}
+        }
+      </p>
+    </header>
+
+    <app-catalog-search
+      [filters]="filters()"
+      (searched)="search($event)"
+      (cleared)="clear()"
+    />
+
+    @switch (viewState()) {
+      @case ('loading') {
+        <app-loading-spinner label="Cargando artículos…" />
+      }
+      @case ('error') {
+        <app-error-state [message]="error()?.userMessage ?? ''" (retry)="reload()" />
+      }
+      @default {
+        @if (rows().length === 0) {
+          @if (filtered()) {
+            <app-empty-state
+              message="Ningún artículo coincide con la búsqueda."
+              actionLabel="Limpiar filtros"
+              (action)="clear()"
+            />
+          } @else {
+            <app-empty-state message="Aún no hay artículos publicados." />
+          }
+        } @else {
+          <ul class="articles">
+            @for (article of rows(); track article.code) {
+              <li class="card article" [attr.aria-labelledby]="'article-' + article.code">
+                <h2 class="article__title" [id]="'article-' + article.code">
+                  <a [routerLink]="['/catalog', article.code]">{{ article.title }}</a>
+                </h2>
+                @if (authors(article); as authorNames) {
+                  <p class="article__authors">{{ authorNames }}</p>
+                }
+                <p class="article__meta">
+                  {{ article.code }}
+                  @if (article.area) {
+                    &ngsp;·&ngsp;<span class="badge badge--info">{{ article.area }}</span>
+                  }
+                  @if (article.language) {
+                    &ngsp;·&ngsp;<span class="badge badge--neutral">{{ language(article) }}</span>
+                  }
+                  &ngsp;· Publicado el
+                  <time [attr.datetime]="article.published_at">
+                    {{ article.published_at | date: 'dd/MM/yyyy' : offset }}
+                  </time>
+                </p>
+                <p class="article__abstract">{{ excerpt(article) }}</p>
+                @if (article.keywords.length > 0) {
+                  <ul class="article__keywords" aria-label="Palabras clave">
+                    @for (keyword of article.keywords; track keyword) {
+                      <li class="badge badge--neutral">{{ keyword }}</li>
+                    }
+                  </ul>
+                }
+              </li>
+            }
+          </ul>
+          <app-pagination
+            [page]="currentPage()"
+            [pageSize]="pageSize"
+            [totalItems]="total()"
+            (pageChange)="goToPage($event)"
+          />
+        }
+      }
+    }
+  </section>
+</main>

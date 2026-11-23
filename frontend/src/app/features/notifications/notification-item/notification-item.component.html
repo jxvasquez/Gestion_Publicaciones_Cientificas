@@ -1,0 +1,50 @@
+<article class="card notice" [class.notice--unread]="!notice().is_read">
+  <header class="notice__header">
+    <h2 class="notice__title">{{ notice().payload.title }}</h2>
+    @if (!notice().is_read) {
+      <span class="badge badge--info">Nuevo</span>
+    }
+    <time class="notice__time" [attr.datetime]="notice().created_at">
+      {{ notice().created_at | date: 'dd/MM/yyyy HH:mm' : offset }}
+    </time>
+  </header>
+
+  <p class="notice__message">{{ notice().payload.message }}</p>
+
+  @if (hasDetails()) {
+    <p class="notice__meta">
+      @if (notice().payload.manuscript_code; as code) {
+        <span>
+          Manuscrito <strong>{{ code }}</strong>
+          @if (notice().payload.manuscript_title; as title) {
+            · {{ title }}
+          }
+        </span>
+      }
+      @if (notice().payload.action; as action) {
+        <span>Acción: {{ action }}</span>
+      }
+      @if (notice().payload.due_at; as due) {
+        <span>Plazo: {{ due | date: 'dd/MM/yyyy HH:mm' : offset }}</span>
+      }
+    </p>
+  }
+
+  <div class="notice__actions">
+    @if (link(); as target) {
+      <a class="btn btn--ghost" [routerLink]="target" (click)="opened.emit(notice())">
+        Ver detalle
+      </a>
+    }
+    @if (!notice().is_read) {
+      <button
+        type="button"
+        class="btn btn--ghost"
+        [disabled]="busy()"
+        (click)="markRead.emit(notice())"
+      >
+        Marcar como leído
+      </button>
+    }
+  </div>
+</article>

@@ -1,6 +1,7 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 
 import { API_BASE_URL } from '../../../core/http/api-base-url.token';
 import { DashboardResponse } from '../../../core/models/dashboard.model';
@@ -45,13 +46,14 @@ describe('UnifiedDashboardComponent', () => {
   };
 
   const flush = (response: DashboardResponse) =>
-    httpMock.expectOne('/api/v1/dashboard/').flush(response);
+    httpMock.expectOne({ method: 'GET', url: '/api/v1/dashboard/' }).flush(response);
 
   beforeEach(() => {
     TestBed.configureTestingModule({
       providers: [
         provideHttpClient(),
         provideHttpClientTesting(),
+        provideRouter([]),
         { provide: API_BASE_URL, useValue: '/api/v1/' },
       ],
     });
@@ -65,8 +67,8 @@ describe('UnifiedDashboardComponent', () => {
     flush(
       dashboardOf(['AUTHOR', 'REVIEWER', 'EDITOR', 'ADMIN'], {
         author: ok({ manuscripts: 3 }),
-        reviewer: ok({ pending: 1 }),
-        editor: ok({ new_submissions: 7 }),
+        reviewer: ok({ pending: 0 }),
+        editor: ok(),
         admin: ok({ audit_events: 42 }),
       }),
     );
@@ -77,8 +79,10 @@ describe('UnifiedDashboardComponent', () => {
     expect(element.querySelector('app-reviewer-summary')).not.toBeNull();
     expect(element.querySelector('app-editor-summary')).not.toBeNull();
     expect(element.querySelector('app-admin-summary')).not.toBeNull();
-    expect(element.textContent).toContain('3');
-    expect(element.textContent).toContain('42');
+    expect(element.querySelector('app-author-summary dd')?.textContent?.trim()).toBe('3');
+    expect(element.querySelector('app-reviewer-summary dd')?.textContent?.trim()).toBe('0');
+    expect(element.querySelector('app-editor-summary app-empty-state')).not.toBeNull();
+    expect(element.querySelector('app-admin-summary dd')?.textContent?.trim()).toBe('42');
     // Una sola petición al backend por carga.
     httpMock.verify();
   });
@@ -138,6 +142,10 @@ describe('UnifiedDashboardComponent', () => {
     expect(element.querySelector('app-author-summary')).toBeNull();
     expect(element.querySelector('app-editor-summary')).toBeNull();
     expect(element.querySelector('app-admin-summary')).toBeNull();
+    expect(Array.from(element.querySelectorAll('a'), (link) => link.getAttribute('href'))).toEqual([
+      '/app/reviewer/assignments',
+      '/app/reviewer/history',
+    ]);
   });
 
   it('el fallo de una sección no oculta las demás y ofrece Reintentar', async () => {

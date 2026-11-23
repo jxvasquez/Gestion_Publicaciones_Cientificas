@@ -1,0 +1,107 @@
+<app-public-header />
+<main class="detail">
+  <p class="detail__back"><a routerLink="/catalog">← Volver al catálogo</a></p>
+
+  @switch (viewState()) {
+    @case ('loading') {
+      <app-loading-spinner label="Cargando el artículo…" />
+    }
+    @case ('unavailable') {
+      <div class="card unavailable" role="status">
+        <h1>Artículo no disponible</h1>
+        <p>{{ unavailableMessage }}</p>
+        <a class="btn btn--primary" routerLink="/catalog">Ver el catálogo</a>
+      </div>
+    }
+    @case ('error') {
+      <app-error-state [message]="error()?.userMessage ?? ''" (retry)="reload()" />
+    }
+    @default {
+      @if (article(); as item) {
+        <article class="card detail__paper" aria-labelledby="article-title">
+          <header class="detail__header">
+            <h1 id="article-title">{{ item.title }}</h1>
+            <p class="detail__meta">
+              {{ item.code }}
+              @if (item.area) {
+                &ngsp;·&ngsp;<span class="badge badge--info">{{ item.area }}</span>
+              }
+              @if (item.language) {
+                &ngsp;·&ngsp;<span class="badge badge--neutral">{{ language(item) }}</span>
+              }
+              &ngsp;· Versión {{ item.version_number }} · Publicado el
+              <time [attr.datetime]="item.published_at">
+                {{ item.published_at | date: 'dd/MM/yyyy' : offset }}
+              </time>
+            </p>
+          </header>
+
+          <section aria-labelledby="authors-title">
+            <h2 id="authors-title">Autores</h2>
+            <ul class="authors">
+              @for (author of item.authors; track $index) {
+                <li>
+                  <strong>{{ author.full_name }}</strong>&ngsp;<span class="authors__affiliation">{{ author.affiliation }}</span>
+                </li>
+              }
+            </ul>
+          </section>
+
+          <section aria-labelledby="abstract-title">
+            <h2 id="abstract-title">Resumen</h2>
+            <p class="detail__abstract">{{ item.abstract }}</p>
+          </section>
+
+          @if (item.keywords.length > 0) {
+            <section aria-labelledby="keywords-title">
+              <h2 id="keywords-title">Palabras clave</h2>
+              <ul class="keywords">
+                @for (keyword of item.keywords; track keyword) {
+                  <li>
+                    <a
+                      class="badge badge--info"
+                      [routerLink]="['/catalog']"
+                      [queryParams]="{ keyword: keyword }"
+                    >{{ keyword }}</a>
+                  </li>
+                }
+              </ul>
+            </section>
+          }
+
+          <section aria-labelledby="document-title">
+            <h2 id="document-title">Documento</h2>
+            @switch (documentState()) {
+              @case ('ready') {
+                <app-pdf-viewer
+                  [blob]="document()"
+                  [filename]="item.code + '.pdf'"
+                  [frameTitle]="'Documento ' + item.code"
+                />
+              }
+              @case ('unavailable') {
+                <p class="callout callout--error" role="alert">{{ documentUnavailable }}</p>
+              }
+              @case ('error') {
+                <p class="callout callout--error" role="alert">{{ documentError() }}</p>
+                <button type="button" class="btn btn--primary" (click)="loadDocument(item.code)">
+                  Reintentar
+                </button>
+              }
+              @default {
+                <button
+                  type="button"
+                  class="btn btn--primary"
+                  [disabled]="documentState() === 'loading'"
+                  (click)="loadDocument(item.code)"
+                >
+                  {{ documentState() === 'loading' ? 'Cargando documento…' : 'Ver el documento (PDF)' }}
+                </button>
+              }
+            }
+          </section>
+        </article>
+      }
+    }
+  }
+</main>

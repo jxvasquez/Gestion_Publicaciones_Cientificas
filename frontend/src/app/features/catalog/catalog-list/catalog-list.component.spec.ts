@@ -214,12 +214,21 @@ describe('CatalogListComponent', () => {
       expect(listRequest().request.params.has('search')).toBe(false);
     });
 
-    it('con filtros y sin resultados lo dice de forma distinta', async () => {
-      const { element } = await render([], 0, '/catalog?search=nada');
-
-      expect(text(element.querySelector('app-empty-state'))).toBe(
+    it('anuncia la búsqueda sin coincidencias y permite limpiar los filtros desde ese estado', async () => {
+      const { element, settle } = await render([], 0, '/catalog?search=nada&area=Agronom%C3%ADa');
+      const emptyState = element.querySelector('app-empty-state')!;
+      expect(text(emptyState.querySelector('[role="status"]'))).toBe(
         'Ningún artículo coincide con la búsqueda.',
       );
+      const clear = emptyState.querySelector<HTMLButtonElement>('button')!;
+      expect(text(clear)).toBe('Limpiar filtros');
+      clear.click();
+      await settle();
+
+      expect(router.url).toBe('/catalog');
+      const params = listRequest().request.params;
+      expect(params.has('search')).toBe(false);
+      expect(params.has('area')).toBe(false);
     });
   });
 

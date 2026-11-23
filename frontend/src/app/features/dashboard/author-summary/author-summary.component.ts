@@ -1,4 +1,7 @@
 import { Component, input } from '@angular/core';
+import { RouterLink } from '@angular/router';
+
+import { KpiCardComponent } from '../../../shared/components/kpi-card.component';
 
 /**
  * Resumen del rol Autor dentro del panel unificado (plan sección 3.4).
@@ -9,24 +12,9 @@ import { Component, input } from '@angular/core';
  */
 @Component({
   selector: 'app-author-summary',
-  template: `
-    <article class="summary" aria-labelledby="author-summary-title">
-      <h3 id="author-summary-title">Autor</h3>
-      <p class="summary__hint">Sus manuscritos y tareas pendientes.</p>
-      @if (entries().length > 0) {
-        <dl class="summary__data">
-          @for (entry of entries(); track entry.key) {
-            <div class="summary__row">
-              <dt>{{ entry.key }}</dt>
-              <dd>{{ entry.value }}</dd>
-            </div>
-          }
-        </dl>
-      } @else {
-        <p class="summary__empty">Sin datos por ahora.</p>
-      }
-    </article>
-  `,
+  imports: [KpiCardComponent, RouterLink],
+  templateUrl: './author-summary.component.html',
+  styleUrl: './author-summary.component.scss',
 })
 export class AuthorSummaryComponent {
   readonly data = input<Record<string, unknown> | null>(null);
