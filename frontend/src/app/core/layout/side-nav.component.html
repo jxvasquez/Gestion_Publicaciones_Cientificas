@@ -1,0 +1,72 @@
+<nav class="side-nav" aria-label="Navegación principal">
+  <ul class="side-nav__group">
+    <li>
+      <a
+        class="side-nav__link"
+        routerLink="/app/dashboard"
+        routerLinkActive="side-nav__link--active"
+        ariaCurrentWhenActive="page"
+      >
+        <svg class="side-nav__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <use href="icons/ui.svg#dashboard" />
+        </svg>
+        Panel
+      </a>
+    </li>
+    <li>
+      <a
+        class="side-nav__link"
+        routerLink="/app/notifications"
+        routerLinkActive="side-nav__link--active"
+        ariaCurrentWhenActive="page"
+      >
+        <svg class="side-nav__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <use href="icons/ui.svg#bell" />
+        </svg>
+        Notificaciones
+      </a>
+    </li>
+  </ul>
+  @for (group of groups(); track group.label) {
+    <h2 class="side-nav__heading">{{ group.label }}</h2>
+    <ul class="side-nav__group">
+      @for (item of group.items; track item.path) {
+        <li>
+          <a
+            class="side-nav__link"
+            [routerLink]="item.path"
+            routerLinkActive="side-nav__link--active"
+            ariaCurrentWhenActive="location"
+          >
+            <svg class="side-nav__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              @switch (item.path) {
+                @case ('/app/author/manuscripts') {
+                  <use href="icons/ui.svg#author" />
+                }
+                @case ('/app/reviewer/assignments') {
+                  <use href="icons/ui.svg#reviewer" />
+                }
+                @case ('/app/reviewer/history') {
+                  <use href="icons/ui.svg#history" />
+                }
+                @case ('/app/editor/submissions') {
+                  <use href="icons/ui.svg#editor" />
+                }
+                @case ('/app/editor/assignments/expired') {
+                  <use href="icons/ui.svg#expired" />
+                }
+                @case ('/app/editor/incidents') {
+                  <use href="icons/ui.svg#incident" />
+                }
+                @case ('/app/admin/audit') {
+                  <use href="icons/ui.svg#admin" />
+                }
+              }
+            </svg>
+            {{ item.label }}
+          </a>
+        </li>
+      }
+    </ul>
+  }
+</nav>
