@@ -1,46 +1,4 @@
-/*
- * Paleta institucional y estilos globales de la SPA.
- *
- * Semántica visual (plan §3.10):
- *   - Azul/gris: navegación y acciones primarias.
- *   - Verde: éxito y guardado.
- *   - Amarillo: advertencias.
- *   - Rojo: acciones destructivas y errores.
- *
- * Todos los pares texto/fondo cumplen el contraste WCAG AA (>= 4.5:1).
- */
-
-:root {
-  /* Azul institucional: navegación y acciones primarias */
-  --gpc-primary-900: #172a4a;
-  --gpc-primary-700: #1d4e89;
-  --gpc-primary-100: #e4edf7;
-  --gpc-primary-50: #f2f6fb;
-
-  /* Verde: éxito y guardado */
-  --gpc-success-700: #146c33;
-  --gpc-success-100: #e2f4e7;
-
-  /* Amarillo: advertencias */
-  --gpc-warning-800: #8a4b0b;
-  --gpc-warning-100: #fdeed3;
-
-  /* Rojo: acciones destructivas y errores */
-  --gpc-danger-700: #b3261e;
-  --gpc-danger-100: #fce8e6;
-
-  /* Neutrales */
-  --gpc-text: #1f2937;
-  --gpc-text-muted: #4b5563;
-  --gpc-border: #d1d5db;
-  --gpc-surface: #f7f8fa;
-  --gpc-surface-alt: #ffffff;
-
-  /* Métricas comunes */
-  --gpc-radius: 6px;
-  --gpc-shadow: 0 1px 3px rgba(23, 42, 74, 0.18);
-  --gpc-focus-ring: 3px solid var(--gpc-primary-700);
-}
+@use 'styles/tokens';
 
 *,
 *::before,
@@ -55,8 +13,9 @@ body {
 }
 
 body {
-  font-family: system-ui, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-  line-height: 1.5;
+  font-family: var(--gpc-font-sans);
+  font-size: var(--gpc-text-base);
+  line-height: var(--gpc-leading-base);
   color: var(--gpc-text);
   background: var(--gpc-surface);
 }
@@ -92,6 +51,7 @@ a {
 .table-wrap {
   position: relative;
   overflow-x: auto;
+  min-inline-size: 0;
 }
 
 /* Enlace de salto al contenido (accesibilidad) */
@@ -100,9 +60,9 @@ a {
   left: -999px;
   top: 0;
   z-index: 100;
-  padding: 0.75rem 1rem;
+  padding: var(--gpc-space-3) var(--gpc-space-4);
   background: var(--gpc-primary-900);
-  color: #ffffff;
+  color: var(--gpc-surface-alt);
   border-radius: 0 0 var(--gpc-radius) 0;
 }
 
@@ -110,24 +70,87 @@ a {
   left: 0;
 }
 
+/* Campos de texto y selección con sus controles nativos */
+:where(
+  input:not([type]),
+  input[type='text'],
+  input[type='password'],
+  input[type='email'],
+  input[type='search'],
+  input[type='date'],
+  input[type='number'],
+  select,
+  textarea
+) {
+  min-inline-size: 0;
+  max-inline-size: 100%;
+  padding: var(--gpc-space-2) var(--gpc-space-3);
+  border: 1px solid var(--gpc-control-border);
+  border-radius: var(--gpc-radius);
+  background: var(--gpc-surface-alt);
+  color: var(--gpc-text);
+  font: inherit;
+
+  &[aria-invalid='true'] {
+    border-color: var(--gpc-danger-700);
+  }
+}
+
+/* Superficies de contenido y diálogos */
+:where(.card, dialog) {
+  min-inline-size: 0;
+  border: 1px solid var(--gpc-border);
+  border-radius: var(--gpc-radius-lg);
+  background: var(--gpc-surface-alt);
+  color: var(--gpc-text);
+  box-shadow: var(--gpc-shadow);
+}
+
+:where(dialog) {
+  max-inline-size: calc(100% - 2rem);
+  max-block-size: calc(100dvh - 2rem);
+  box-shadow: var(--gpc-shadow-dialog);
+}
+
+:where(dialog)::backdrop {
+  background: rgb(23 42 74 / 45%);
+}
+
+/* Cabeceras y estados de fila de tablas */
+:where(table) {
+  border-collapse: collapse;
+}
+
+:where(thead th) {
+  background: var(--gpc-primary-50);
+  color: var(--gpc-primary-900);
+  font-weight: var(--gpc-weight-semibold);
+  text-align: start;
+}
+
+:where(tbody tr:hover, tbody tr:focus-within) {
+  background: var(--gpc-primary-50);
+}
+
 /* Botones compartidos */
 .btn {
   display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 1rem;
+  gap: var(--gpc-space-2);
+  padding: var(--gpc-space-2) var(--gpc-space-4);
   border: 1px solid transparent;
   border-radius: var(--gpc-radius);
   font: inherit;
-  font-weight: 600;
+  font-weight: var(--gpc-weight-semibold);
   cursor: pointer;
   text-decoration: none;
-  transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease;
+  transition-property: background-color, border-color, color;
+  transition-duration: var(--gpc-transition-duration);
 }
 
 .btn--primary {
   background: var(--gpc-primary-700);
-  color: #ffffff;
+  color: var(--gpc-surface-alt);
 }
 
 .btn--primary:hover {
@@ -136,26 +159,26 @@ a {
 
 .btn--success {
   background: var(--gpc-success-700);
-  color: #ffffff;
+  color: var(--gpc-surface-alt);
 }
 
 .btn--success:hover {
-  background: #0f5132;
+  background: var(--gpc-success-900);
 }
 
 .btn--danger {
   background: var(--gpc-danger-700);
-  color: #ffffff;
+  color: var(--gpc-surface-alt);
 }
 
 .btn--danger:hover {
-  background: #9b1c1c;
+  background: var(--gpc-danger-800);
 }
 
 .btn--ghost {
   background: var(--gpc-surface-alt);
   color: var(--gpc-primary-700);
-  border-color: var(--gpc-border);
+  border-color: var(--gpc-control-border);
 }
 
 .btn--ghost:hover {
@@ -167,20 +190,26 @@ a {
   cursor: not-allowed;
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .btn {
+    transition: none;
+  }
+}
+
 /* Insignias semánticas (estados, roles, contadores) */
 .badge {
   display: inline-flex;
   align-items: center;
-  padding: 0.125rem 0.5rem;
-  border-radius: 999px;
-  font-size: 0.8rem;
-  font-weight: 600;
+  padding: 0.125rem var(--gpc-space-2);
+  border-radius: var(--gpc-radius-pill);
+  font-size: var(--gpc-text-xs);
+  font-weight: var(--gpc-weight-semibold);
   white-space: nowrap;
 }
 
 .badge--neutral {
-  background: #e5e7eb;
-  color: #374151;
+  background: var(--gpc-neutral-100);
+  color: var(--gpc-neutral-700);
 }
 
 .badge--info {
@@ -190,7 +219,7 @@ a {
 
 .badge--success {
   background: var(--gpc-success-100);
-  color: #0f5132;
+  color: var(--gpc-success-900);
 }
 
 .badge--warning {
@@ -200,5 +229,5 @@ a {
 
 .badge--danger {
   background: var(--gpc-danger-100);
-  color: #9b1c1c;
+  color: var(--gpc-danger-800);
 }
