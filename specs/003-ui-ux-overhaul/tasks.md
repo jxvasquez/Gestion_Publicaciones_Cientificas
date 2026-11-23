@@ -40,7 +40,7 @@ En los `.component.ts` existentes, limitar los cambios a `templateUrl`, `styleUr
 
 - [x] T003 [P] Crear `frontend/src/styles/_tokens.scss` con un único `:root` para `--gpc-*`. Conservar los tokens institucionales y definir paleta semántica, escala tipográfica, espacios, radios de 8 y 12 px, pill, sombras, foco, barra de 260 px y altura base de cabecera de 64 px. Usar `#f1f5f9` para el área de trabajo, `#f8fafc` para la barra, `#e2e8f0` para el divisor decorativo y un borde funcional contrastado.
 - [x] T004 Mover la declaración global de tokens desde `frontend/src/styles.scss` y cargarla una vez con `@use 'styles/tokens';`. Aplicar los patrones de botones, campos, superficies, tablas, badges y diálogos. Mantener `.table-wrap`, el enlace de salto, el texto solo para lectura asistida y el foco visible. Reducir el movimiento cuando el sistema lo indique. Conservar el registro vigente de estilos en `frontend/angular.json`.
-- [ ] T005 [P] Crear `frontend/public/icons/ui.svg` con símbolos `dashboard`, `bell`, `logout`, `search`, `author`, `reviewer`, `editor`, `admin`, `history`, `expired`, `incident`, `menu`, `empty-state` y `alert`. Usar `currentColor`, SVG locales y el copiado de `public/` configurado en `frontend/angular.json`.
+- [x] T005 [P] Crear `frontend/public/icons/ui.svg` con símbolos `dashboard`, `bell`, `logout`, `search`, `author`, `reviewer`, `editor`, `admin`, `history`, `expired`, `incident`, `menu`, `empty-state` y `alert`. Usar `currentColor`, SVG locales y el copiado de `public/` configurado en `frontend/angular.json`.
 
 
 **Control de fase**. La configuración existente compila los estilos globales y publica el sprite. Los consumidores actuales de tokens conservan sus referencias.
