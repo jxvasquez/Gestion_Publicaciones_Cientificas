@@ -1,0 +1,81 @@
+<section class="picker" [attr.aria-labelledby]="titleId">
+  <h3 [id]="titleId">Revisores elegibles</h3>
+
+  @switch (viewState()) {
+    @case ('loading') {
+      <app-loading-spinner label="Buscando Revisores…" />
+    }
+    @case ('error') {
+      <app-error-state [message]="error()?.userMessage ?? ''" (retry)="reload()" />
+    }
+    @default {
+      @if (reviewers().length === 0) {
+        <div class="picker__empty" role="status">
+          @for (line of explanation(); track $index; let first = $first) {
+            @if (first) {
+              <p><strong>No hay Revisores elegibles.</strong> {{ line }}</p>
+            } @else {
+              <ul class="picker__causes">
+                <li>{{ line }}</li>
+              </ul>
+            }
+          }
+        </div>
+      } @else {
+        <div class="picker__search">
+          <label [for]="searchId">Buscar</label>
+          <div class="picker__query">
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <use href="icons/ui.svg#search" />
+            </svg>
+            <input
+              [id]="searchId"
+              type="search"
+              placeholder="Nombre, correo, código o área"
+              [ngModel]="query()"
+              (ngModelChange)="query.set($event)"
+            />
+          </div>
+          <p class="picker__count" role="status">
+            {{ visible().length }} de {{ reviewers().length }}
+            {{ reviewers().length === 1 ? 'Revisor' : 'Revisores' }}
+          </p>
+        </div>
+
+        @if (visible().length === 0) {
+          <p class="picker__empty" role="status">Ningún Revisor coincide con la búsqueda.</p>
+        } @else {
+          <ul class="picker__list">
+            @for (reviewer of visible(); track reviewer.id) {
+              <li class="picker__item">
+                <div>
+                  <strong>{{ reviewer.full_name }}</strong>
+                  <span class="picker__meta">{{ reviewer.email }}</span>
+                  <span class="picker__meta">
+                    Áreas: {{ reviewer.expertise_areas.join(', ') || '—' }}
+                  </span>
+                  <span class="picker__meta">
+                    Carga: {{ reviewer.active_assignments }} de
+                    {{ reviewer.max_active_assignments }} asignaciones activas
+                    @if (atCapacity(reviewer)) {
+                      <span class="badge badge--warning">Carga completa</span>
+                    }
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  class="btn btn--primary"
+                  [disabled]="atCapacity(reviewer) || disabled()"
+                  [attr.aria-label]="'Seleccionar a ' + reviewer.full_name"
+                  (click)="selected.emit(reviewer)"
+                >
+                  Seleccionar
+                </button>
+              </li>
+            }
+          </ul>
+        }
+      }
+    }
+  }
+</section>

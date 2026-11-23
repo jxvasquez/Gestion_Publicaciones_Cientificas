@@ -1,0 +1,128 @@
+<section aria-labelledby="submission-inbox-title">
+  <header class="list-header">
+    <h1 id="submission-inbox-title">Nuevos envíos</h1>
+    <p class="list-header__count" role="status">
+      @if (viewState() === 'ready') {
+        {{ total() }} {{ total() === 1 ? 'envío pendiente' : 'envíos pendientes' }}
+      }
+    </p>
+  </header>
+
+  <form
+    class="card filters"
+    [formGroup]="filters"
+    (ngSubmit)="applyFilters()"
+    aria-label="Filtros de la bandeja"
+  >
+    <div class="filters__field filters__field--wide">
+      <label for="filter-search">Buscar</label>
+      <input
+        id="filter-search"
+        type="search"
+        formControlName="search"
+        placeholder="Código, título, resumen o palabras clave"
+      />
+    </div>
+    <div class="filters__field">
+      <label for="filter-area">Área</label>
+      <input id="filter-area" type="text" formControlName="area" />
+    </div>
+    <div class="filters__field">
+      <label for="filter-from">Desde</label>
+      <input id="filter-from" type="date" formControlName="date_from" />
+    </div>
+    <div class="filters__field">
+      <label for="filter-to">Hasta</label>
+      <input id="filter-to" type="date" formControlName="date_to" />
+    </div>
+    <div class="filters__field">
+      <label for="filter-ordering">Ordenar por</label>
+      <select id="filter-ordering" formControlName="ordering">
+        @for (option of orderings; track option.value) {
+          <option [value]="option.value">{{ option.label }}</option>
+        }
+      </select>
+    </div>
+    <div class="filters__actions">
+      <button type="submit" class="btn btn--primary">Filtrar</button>
+      <button type="button" class="btn btn--ghost" (click)="clearFilters()">Limpiar</button>
+    </div>
+    @if (filters.errors?.['dateRange']) {
+      <p class="filters__error" role="alert">La fecha «Desde» no puede ser posterior a «Hasta».</p>
+    }
+  </form>
+
+  @switch (viewState()) {
+    @case ('loading') {
+      <app-loading-spinner label="Cargando envíos…" />
+    }
+    @case ('error') {
+      <app-error-state [message]="error()?.userMessage ?? ''" (retry)="reload()" />
+    }
+    @default {
+      @if (rows().length === 0) {
+        @if (hasFilters()) {
+          <app-empty-state message="Ningún envío coincide con los filtros aplicados." />
+        } @else {
+          <app-empty-state message="No hay envíos nuevos por revisar." />
+        }
+      } @else {
+        <div class="card table-wrap">
+          <table class="submissions">
+            <caption class="visually-hidden">
+              Manuscritos enviados pendientes de pasar a revisión
+            </caption>
+            <thead>
+              <tr>
+                <th scope="col">Código</th>
+                <th scope="col">Título</th>
+                <th scope="col">Autor</th>
+                <th scope="col">Área</th>
+                <th scope="col">Enviado</th>
+                <th scope="col">Versión</th>
+                <th scope="col">Ronda</th>
+                <th scope="col"><span class="visually-hidden">Acciones</span></th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of rows(); track row.id) {
+                <tr>
+                  <td>
+                    <a [routerLink]="['/app/editor/submissions', row.id]">{{ row.code }}</a>
+                  </td>
+                  <td class="submissions__title">{{ row.title || 'Sin título' }}</td>
+                  <td>{{ row.corresponding_author || '—' }}</td>
+                  <td>{{ row.area || '—' }}</td>
+                  <td>
+                    @if (row.submitted_at) {
+                      {{ row.submitted_at | date: 'dd/MM/yyyy HH:mm' : offset }}
+                    } @else {
+                      —
+                    }
+                  </td>
+                  <td>
+                    <span class="badge badge--neutral">{{
+                      row.current_version > 0 ? 'v' + row.current_version : '—'
+                    }}</span>
+                  </td>
+                  <td><app-round-counter [round]="row.current_round" /></td>
+                  <td class="submissions__actions">
+                    <a [routerLink]="['/app/editor/submissions', row.id]"
+                      >Ver detalle<span class="visually-hidden"> de {{ row.code }}</span></a
+                    >
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        <app-pagination
+          [page]="currentPage()"
+          [pageSize]="pageSize"
+          [totalItems]="total()"
+          (pageChange)="goToPage($event)"
+        />
+      }
+    }
+  }
+</section>

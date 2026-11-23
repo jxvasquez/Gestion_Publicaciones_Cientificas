@@ -1,0 +1,105 @@
+.uploader {
+  display: grid;
+  gap: var(--gpc-space-3);
+  margin-block: var(--gpc-space-4);
+  padding: clamp(var(--gpc-space-3), 3vw, var(--gpc-space-6));
+  overflow-wrap: anywhere;
+}
+
+.uploader h2 {
+  margin: 0;
+  color: var(--gpc-primary-900);
+  font-size: var(--gpc-text-xl);
+}
+
+.uploader__current {
+  margin: 0;
+}
+
+.uploader__picker {
+  display: grid;
+  gap: var(--gpc-space-1);
+  min-inline-size: 0;
+}
+
+.uploader__picker label {
+  font-weight: var(--gpc-weight-semibold);
+}
+
+.uploader__picker input {
+  inline-size: 100%;
+  min-inline-size: 0;
+  font: inherit;
+}
+
+.uploader__picker input::file-selector-button {
+  margin-inline-end: var(--gpc-space-2);
+  padding: var(--gpc-space-2);
+  border: 1px solid var(--gpc-control-border);
+  border-radius: var(--gpc-radius);
+  background: var(--gpc-surface-alt);
+  color: var(--gpc-primary-900);
+  font: inherit;
+}
+
+.uploader__hint,
+.uploader__warning,
+.uploader__error {
+  margin: 0;
+  font-size: var(--gpc-text-sm);
+}
+
+.uploader__hint {
+  color: var(--gpc-text-muted);
+}
+
+.uploader__selected {
+  display: grid;
+  gap: var(--gpc-space-3);
+  padding: var(--gpc-space-3) var(--gpc-space-4);
+  border: 1px solid var(--gpc-border);
+  border-radius: var(--gpc-radius);
+  background: var(--gpc-primary-50);
+}
+
+.uploader__selected p {
+  margin: 0;
+}
+
+.uploader__warning {
+  padding: var(--gpc-space-2) var(--gpc-space-3);
+  border: 1px solid var(--gpc-warning-800);
+  border-radius: var(--gpc-radius);
+  background: var(--gpc-warning-100);
+  color: var(--gpc-warning-900);
+}
+
+.uploader__actions,
+.uploader__progress {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gpc-space-2);
+}
+
+.uploader__progress {
+  align-items: center;
+}
+
+.uploader__progress progress {
+  flex: 1 1 8rem;
+  block-size: var(--gpc-space-3);
+  accent-color: var(--gpc-primary-700);
+}
+
+.uploader__error {
+  color: var(--gpc-danger-700);
+}
+
+.uploader__success {
+  margin: 0;
+  padding: var(--gpc-space-2) var(--gpc-space-3);
+  border: 1px solid var(--gpc-success-700);
+  border-radius: var(--gpc-radius);
+  background: var(--gpc-success-100);
+  color: var(--gpc-success-900);
+}

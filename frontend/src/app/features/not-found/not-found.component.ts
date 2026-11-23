@@ -5,12 +5,7 @@ import { RouterLink } from '@angular/router';
 @Component({
   selector: 'app-not-found',
   imports: [RouterLink],
-  template: `
-    <section>
-      <h1>Página no encontrada</h1>
-      <p>El recurso solicitado no existe o ya no está disponible.</p>
-      <a routerLink="/catalog">Volver al catálogo</a>
-    </section>
-  `,
+  templateUrl: './not-found.component.html',
+  styleUrl: './not-found.component.scss',
 })
 export class NotFoundComponent {}

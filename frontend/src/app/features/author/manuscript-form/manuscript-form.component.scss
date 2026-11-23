@@ -1,0 +1,133 @@
+h1 {
+  margin-block: 0 var(--gpc-space-4);
+  color: var(--gpc-primary-900);
+}
+
+.manuscript-form {
+  display: grid;
+  gap: var(--gpc-space-4);
+}
+
+.card {
+  display: grid;
+  gap: var(--gpc-space-4);
+  margin: 0;
+  padding: clamp(var(--gpc-space-3), 3vw, var(--gpc-space-6));
+}
+
+.card > legend {
+  padding-inline: var(--gpc-space-2);
+  color: var(--gpc-primary-900);
+  font-size: var(--gpc-text-lg);
+  font-weight: var(--gpc-weight-bold);
+}
+
+.field {
+  display: grid;
+  gap: var(--gpc-space-1);
+  min-inline-size: 0;
+}
+
+.field label {
+  font-weight: var(--gpc-weight-semibold);
+}
+
+.field textarea {
+  resize: vertical;
+}
+
+.field-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
+  gap: var(--gpc-space-4);
+}
+
+.field__hint,
+.field__error {
+  margin: 0;
+  font-size: var(--gpc-text-sm);
+  overflow-wrap: anywhere;
+}
+
+.field__hint {
+  color: var(--gpc-text-muted);
+}
+
+.field__error,
+.roster-errors {
+  color: var(--gpc-danger-700);
+}
+
+.roster-errors {
+  margin: 0;
+  padding-inline-start: var(--gpc-space-4);
+  font-size: var(--gpc-text-sm);
+}
+
+.author {
+  display: grid;
+  gap: var(--gpc-space-4);
+  min-inline-size: 0;
+  margin: 0 0 var(--gpc-space-3);
+  padding: var(--gpc-space-3);
+  border: 1px solid var(--gpc-border);
+  border-radius: var(--gpc-radius);
+  background: var(--gpc-primary-50);
+}
+
+.author > legend {
+  padding-inline: var(--gpc-space-2);
+  color: var(--gpc-primary-900);
+  font-weight: var(--gpc-weight-semibold);
+}
+
+.author__footer,
+.form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--gpc-space-3);
+}
+
+.author__footer {
+  justify-content: space-between;
+}
+
+.author__responsible {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--gpc-space-2);
+  font-weight: var(--gpc-weight-semibold);
+}
+
+.manuscript-form fieldset > .btn {
+  justify-self: start;
+}
+
+.notice {
+  margin: 0 0 var(--gpc-space-4);
+  padding: var(--gpc-space-3) var(--gpc-space-4);
+  border: 1px solid;
+  border-radius: var(--gpc-radius);
+}
+
+.notice p,
+.notice ul {
+  margin: 0 0 var(--gpc-space-2);
+}
+
+.notice--warning {
+  border-color: var(--gpc-warning-800);
+  background: var(--gpc-warning-100);
+  color: var(--gpc-warning-900);
+}
+
+.notice--danger {
+  border-color: var(--gpc-danger-700);
+  background: var(--gpc-danger-100);
+  color: var(--gpc-danger-900);
+}
+
+.card .notice {
+  margin: 0;
+}

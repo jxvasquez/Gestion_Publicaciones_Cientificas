@@ -1,0 +1,50 @@
+.assign-dialog {
+  inline-size: min(30rem, calc(100% - var(--gpc-space-8)));
+  padding: clamp(var(--gpc-space-4), 4vw, var(--gpc-space-6));
+  overflow-wrap: anywhere;
+}
+
+.assign-dialog h2 {
+  margin: 0 0 var(--gpc-space-3);
+  color: var(--gpc-primary-900);
+  font-size: var(--gpc-text-xl);
+  line-height: var(--gpc-leading-tight);
+}
+
+.assign-dialog__body p,
+.assign-dialog__warning,
+.assign-dialog__error {
+  margin: 0 0 var(--gpc-space-3);
+}
+
+.assign-dialog__deadline,
+.assign-dialog__warning {
+  padding: var(--gpc-space-2) var(--gpc-space-3);
+  border: 1px solid;
+  border-inline-start-width: 4px;
+  border-radius: var(--gpc-radius);
+}
+
+.assign-dialog__deadline {
+  background: var(--gpc-success-100);
+  border-color: var(--gpc-success-700);
+  color: var(--gpc-success-900);
+}
+
+.assign-dialog__warning {
+  background: var(--gpc-warning-100);
+  border-color: var(--gpc-warning-800);
+  color: var(--gpc-warning-800);
+}
+
+.assign-dialog__error {
+  color: var(--gpc-danger-800);
+  font-size: var(--gpc-text-sm);
+}
+
+.assign-dialog__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--gpc-space-2);
+}

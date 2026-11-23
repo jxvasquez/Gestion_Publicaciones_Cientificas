@@ -1,0 +1,71 @@
+<section class="card uploader" aria-labelledby="pdf-uploader-title">
+  <h2 id="pdf-uploader-title">{{ texts().title }}</h2>
+
+  @if (target() === 'version') {
+    <p class="uploader__current">{{ texts().intro }}</p>
+  } @else if (current(); as draft) {
+    <p class="uploader__current">
+      Borrador actual: <strong>{{ draft.filename }}</strong> · {{ draft.size_bytes | fileSize }} ·
+      adjuntado el
+      {{ draft.uploaded_at | date: 'dd/MM/yyyy HH:mm' : offset }}
+    </p>
+  } @else {
+    <p class="uploader__current">Aún no hay un PDF adjunto.</p>
+  }
+
+  <div class="uploader__picker">
+    <label for="pdf-file">{{ texts().pickLabel }}</label>
+    <input
+      #picker
+      id="pdf-file"
+      type="file"
+      accept=".pdf,application/pdf"
+      [attr.aria-describedby]="problem() ? 'pdf-file-hint pdf-file-error' : 'pdf-file-hint'"
+      [attr.aria-invalid]="problem() ? 'true' : null"
+      [disabled]="uploading()"
+      (change)="pick($event)"
+    />
+    <p class="uploader__hint" id="pdf-file-hint">Solo archivos PDF, de hasta 50 MB.</p>
+  </div>
+
+  @if (problem()) {
+    <p class="uploader__error" id="pdf-file-error" role="alert">{{ problem() }}</p>
+  }
+
+  @if (selected(); as file) {
+    <div class="uploader__selected">
+      <p>
+        Archivo elegido: <strong>{{ file.name }}</strong> · {{ file.size | fileSize }}
+      </p>
+      @if (warning(); as note) {
+        <p class="uploader__warning" role="note">{{ note }}</p>
+      }
+      <div class="uploader__actions">
+        <button type="button" class="btn btn--success" [disabled]="uploading()" (click)="upload()">
+          {{ uploading() ? texts().busyLabel : texts().actionLabel }}
+        </button>
+        <button type="button" class="btn btn--ghost" (click)="cancel()">
+          {{ uploading() ? texts().cancelUploadLabel : 'Quitar selección' }}
+        </button>
+      </div>
+    </div>
+  }
+
+  @if (uploading()) {
+    <div class="uploader__progress">
+      <progress
+        max="100"
+        [value]="progress() ?? 0"
+        [attr.aria-label]="'Progreso de la carga del PDF'"
+      ></progress>
+      <span aria-live="polite">{{ progress() === null ? 'Subiendo…' : progress() + ' %' }}</span>
+    </div>
+  }
+
+  @if (uploadError()) {
+    <p class="uploader__error" role="alert">{{ uploadError() }}</p>
+  }
+  @if (success()) {
+    <p class="uploader__success" role="status">{{ success() }}</p>
+  }
+</section>

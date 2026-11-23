@@ -1,0 +1,57 @@
+<dialog
+  #dialog
+  class="correction-dialog"
+  [attr.aria-labelledby]="titleId"
+  [attr.aria-describedby]="descriptionId"
+  (cancel)="onCancelRequested($event)"
+>
+  <h2 [id]="titleId">Habilitar corrección</h2>
+
+  <div [id]="descriptionId" class="correction-dialog__body">
+    @if (verdict(); as current) {
+      <p>
+        Manuscrito <strong>{{ current.manuscript_code }}</strong
+        >: decisión <strong>{{ decisionLabel() }}</strong> registrada el
+        {{ current.decided_at | date: 'dd/MM/yyyy HH:mm' : offset }}.
+      </p>
+    }
+    <p>
+      La decisión anterior se conserva y no se modifica. El Editor podrá registrar una nueva
+      decisión una sola vez; usted no la toma.
+    </p>
+  </div>
+
+  <div class="correction-dialog__field">
+    <label [for]="reasonId">
+      Motivo
+      <span class="correction-dialog__hint">(obligatorio, {{ min }} a {{ max }} caracteres)</span>
+    </label>
+    <textarea
+      [id]="reasonId"
+      rows="4"
+      [maxlength]="max"
+      aria-required="true"
+      [attr.aria-invalid]="reasonError() ? 'true' : null"
+      [attr.aria-describedby]="reasonError() ? reasonErrorId : null"
+      [disabled]="busy()"
+      [ngModel]="reason()"
+      (ngModelChange)="reason.set($event)"
+    ></textarea>
+    @if (reasonError(); as message) {
+      <p class="correction-dialog__error" role="alert" [id]="reasonErrorId">{{ message }}</p>
+    }
+  </div>
+
+  @if (error()) {
+    <p class="correction-dialog__error" role="alert">{{ error() }}</p>
+  }
+
+  <div class="correction-dialog__actions">
+    <button type="button" class="btn btn--ghost" [disabled]="busy()" (click)="dismiss()">
+      Cancelar
+    </button>
+    <button type="button" class="btn btn--primary" [disabled]="busy()" (click)="confirm()">
+      {{ busy() ? 'Habilitando…' : 'Habilitar corrección' }}
+    </button>
+  </div>
+</dialog>

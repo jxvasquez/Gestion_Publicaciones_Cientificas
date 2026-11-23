@@ -1,0 +1,27 @@
+.not-found {
+  display: grid;
+  justify-items: center;
+  gap: var(--gpc-space-4);
+  inline-size: min(32rem, calc(100% - var(--gpc-space-8)));
+  margin: clamp(var(--gpc-space-6), 10vh, 5rem) auto;
+  padding: clamp(var(--gpc-space-4), 5vw, var(--gpc-space-8));
+  text-align: center;
+}
+
+.not-found h1,
+.not-found p {
+  margin: 0;
+}
+
+.not-found p {
+  color: var(--gpc-text-muted);
+}
+
+.not-found__illustration {
+  inline-size: 4rem;
+  block-size: 4rem;
+  padding: var(--gpc-space-3);
+  border-radius: var(--gpc-radius-lg);
+  background: var(--gpc-primary-100);
+  color: var(--gpc-primary-900);
+}

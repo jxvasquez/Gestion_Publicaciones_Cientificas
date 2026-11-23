@@ -1,0 +1,57 @@
+.withdraw-dialog {
+  inline-size: min(32rem, calc(100% - var(--gpc-space-8)));
+  padding: clamp(var(--gpc-space-4), 4vw, var(--gpc-space-6));
+  overflow-wrap: anywhere;
+}
+
+.withdraw-dialog h2 {
+  margin: 0 0 var(--gpc-space-3);
+  color: var(--gpc-primary-900);
+  font-size: var(--gpc-text-xl);
+  line-height: var(--gpc-leading-tight);
+}
+
+.withdraw-dialog__body p {
+  margin: 0 0 var(--gpc-space-3);
+}
+
+.withdraw-dialog__warning {
+  padding: var(--gpc-space-2) var(--gpc-space-3);
+  border: 1px solid var(--gpc-warning-800);
+  border-radius: var(--gpc-radius);
+  background: var(--gpc-warning-100);
+  color: var(--gpc-warning-900);
+}
+
+.withdraw-dialog__field {
+  display: grid;
+  gap: var(--gpc-space-1);
+  margin-block-end: var(--gpc-space-4);
+}
+
+.withdraw-dialog__field label {
+  font-weight: var(--gpc-weight-semibold);
+}
+
+.withdraw-dialog__hint {
+  color: var(--gpc-text-muted);
+  font-weight: var(--gpc-weight-normal);
+}
+
+.withdraw-dialog__field textarea {
+  resize: vertical;
+}
+
+.withdraw-dialog__error {
+  margin: 0;
+  color: var(--gpc-danger-700);
+  font-size: var(--gpc-text-sm);
+}
+
+.withdraw-dialog__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--gpc-space-2);
+  margin-block-start: var(--gpc-space-4);
+}

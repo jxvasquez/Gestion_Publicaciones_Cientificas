@@ -1,0 +1,68 @@
+<dialog
+  #dialog
+  class="leak-dialog"
+  [attr.aria-labelledby]="titleId"
+  [attr.aria-describedby]="descriptionId"
+  (cancel)="onCancelRequested($event)"
+>
+  <h2 [id]="titleId">Reportar una posible fuga de identidad</h2>
+
+  <div [id]="descriptionId" class="leak-dialog__body">
+    <p class="leak-dialog__confidential" role="note">
+      <strong>Reporte confidencial.</strong> Solo lo verá el Editor. El Autor no será informado ni
+      recibirá ningún dato suyo, y su evaluación no cambia.
+    </p>
+  </div>
+
+  <fieldset class="leak-dialog__field" [disabled]="busy()">
+    <legend>Tipo de reporte</legend>
+    @for (option of types; track option.value) {
+      <label class="leak-dialog__option">
+        <input
+          type="radio"
+          name="leak-report-type"
+          [value]="option.value"
+          [checked]="type() === option.value"
+          (change)="type.set(option.value)"
+        />
+        <span>
+          <strong>{{ option.label }}</strong>
+          <span class="leak-dialog__hint">{{ option.hint }}</span>
+        </span>
+      </label>
+    }
+  </fieldset>
+
+  <div class="leak-dialog__field">
+    <label [for]="descriptionFieldId">
+      Descripción <span class="leak-dialog__hint">(obligatoria)</span>
+    </label>
+    <textarea
+      [id]="descriptionFieldId"
+      rows="5"
+      [maxlength]="maxLength"
+      aria-required="true"
+      [attr.aria-invalid]="descriptionMissing() ? 'true' : null"
+      [attr.aria-describedby]="descriptionMissing() ? descriptionErrorId : null"
+      [disabled]="busy()"
+      [ngModel]="description()"
+      (ngModelChange)="description.set($event)"
+    ></textarea>
+    @if (descriptionMissing()) {
+      <p class="leak-dialog__error" role="alert" [id]="descriptionErrorId">Describa qué observó.</p>
+    }
+  </div>
+
+  @if (error()) {
+    <p class="leak-dialog__error" role="alert">{{ error() }}</p>
+  }
+
+  <div class="leak-dialog__actions">
+    <button type="button" class="btn btn--ghost" [disabled]="busy()" (click)="dismiss()">
+      Cancelar
+    </button>
+    <button type="button" class="btn btn--primary" [disabled]="busy()" (click)="confirm()">
+      {{ busy() ? 'Enviando…' : 'Enviar reporte confidencial' }}
+    </button>
+  </div>
+</dialog>

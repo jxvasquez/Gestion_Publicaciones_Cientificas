@@ -1,0 +1,135 @@
+<section aria-labelledby="evaluation-history-title">
+  <header class="list-header">
+    <h1 id="evaluation-history-title">Historial de evaluaciones</h1>
+    <p class="list-header__count" role="status">
+      @if (viewState() === 'ready') {
+        {{ total() }} {{ total() === 1 ? 'evaluación enviada' : 'evaluaciones enviadas' }}
+      }
+    </p>
+  </header>
+
+  <p class="note" role="note">
+    Aquí solo se muestran las evaluaciones que ya envió. Son de solo lectura y no incluyen
+    información de los autores.
+  </p>
+
+  @switch (viewState()) {
+    @case ('loading') {
+      <app-loading-spinner label="Cargando su historial…" />
+    }
+    @case ('error') {
+      <app-error-state [message]="error()?.userMessage ?? ''" (retry)="reload()" />
+    }
+    @default {
+      @if (rows().length === 0) {
+        <app-empty-state message="Todavía no ha enviado ninguna evaluación." />
+      } @else {
+        <div
+          class="card table-wrap"
+          role="region"
+          aria-label="Tabla de evaluaciones enviadas"
+          tabindex="0"
+        >
+          <table class="history">
+            <caption class="visually-hidden">
+              Evaluaciones enviadas
+            </caption>
+            <thead>
+              <tr>
+                <th scope="col">Manuscrito</th>
+                <th scope="col">Título</th>
+                <th scope="col">Área</th>
+                <th scope="col">Versión</th>
+                <th scope="col">Su recomendación</th>
+                <th scope="col">Enviada</th>
+                <th scope="col">Resultado editorial</th>
+                <th scope="col"><span class="visually-hidden">Acciones</span></th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of rows(); track row.id) {
+                <tr>
+                  <td>{{ row.manuscript_code }}</td>
+                  <td class="history__title">{{ row.manuscript_title || 'Sin título' }}</td>
+                  <td>{{ row.area }}</td>
+                  <td>
+                    v{{ row.version_number }}
+                    <span class="history__meta">Ronda {{ row.round_number }}</span>
+                  </td>
+                  <td>{{ recommendationLabel(row) }}</td>
+                  <td>{{ row.submitted_at | date: 'dd/MM/yyyy HH:mm' : offset }}</td>
+                  <td>
+                    @if (row.editorial_result; as result) {
+                      <app-status-badge [status]="result.decision" />
+                      <span class="history__meta">{{
+                        result.decided_at | date: 'dd/MM/yyyy' : offset
+                      }}</span>
+                    } @else {
+                      <span class="history__meta">Pendiente de decisión</span>
+                    }
+                  </td>
+                  <td>
+                    <button
+                      type="button"
+                      class="btn btn--ghost"
+                      [attr.aria-expanded]="openId() === row.id"
+                      [attr.aria-controls]="'detail-' + row.id"
+                      (click)="toggle(row)"
+                    >
+                      {{ openId() === row.id ? 'Ocultar' : 'Ver evaluación'
+                      }}<span class="visually-hidden"> {{ row.manuscript_code }}</span>
+                    </button>
+                  </td>
+                </tr>
+                @if (openId() === row.id) {
+                  <tr class="history__detail" [id]="'detail-' + row.id">
+                    <td colspan="8">
+                      @switch (stateOf(row.id)?.kind) {
+                        @case ('ready') {
+                          @if (detailOf(row.id); as detail) {
+                            <h2 class="history__detail-title">
+                              Evaluación de {{ detail.manuscript_code }}
+                            </h2>
+                            <dl class="scores">
+                              @for (criterion of criteria; track criterion.field) {
+                                <div class="scores__row">
+                                  <dt>{{ criterion.label }}</dt>
+                                  <dd>{{ detail[criterion.field] }} / {{ maxScore }}</dd>
+                                </div>
+                              }
+                            </dl>
+                            <h3>Comentarios para el Autor</h3>
+                            <p class="prose">{{ detail.comments_for_author }}</p>
+                          }
+                        }
+                        @case ('error') {
+                          <p class="history__error" role="alert">{{ errorOf(row.id) }}</p>
+                          <button type="button" class="btn btn--ghost" (click)="retryDetail(row)">
+                            Reintentar
+                          </button>
+                        }
+                        @default {
+                          <app-loading-spinner label="Cargando la evaluación…" />
+                        }
+                      }
+                    </td>
+                  </tr>
+                }
+              }
+            </tbody>
+          </table>
+        </div>
+        <app-pagination
+          [page]="currentPage()"
+          [pageSize]="pageSize"
+          [totalItems]="total()"
+          (pageChange)="goToPage($event)"
+        />
+      }
+    }
+  }
+
+  <p class="back">
+    <a routerLink="/app/reviewer/assignments">← Volver a mis asignaciones</a>
+  </p>
+</section>

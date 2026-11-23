@@ -51,60 +51,8 @@ export function formatRemaining(ms: number): string {
 @Component({
   selector: 'app-deadline-countdown',
   imports: [DatePipe],
-  template: `
-    <div
-      class="countdown"
-      [class.countdown--urgent]="urgent()"
-      [class.countdown--expired]="isExpired()"
-    >
-      @if (isExpired()) {
-        <p class="countdown__value" role="status">Plazo vencido</p>
-      } @else {
-        <p class="countdown__value" role="timer" aria-live="off" aria-atomic="true">
-          <span class="visually-hidden">Tiempo restante: </span>{{ label() }}
-        </p>
-      }
-      <p class="countdown__due">
-        Fecha límite:
-        <time [attr.datetime]="dueAt()">{{ dueAt() | date: 'dd/MM/yyyy HH:mm' : offset }}</time>
-        (hora de Ecuador)
-      </p>
-    </div>
-  `,
-  styles: `
-    .countdown {
-      display: inline-flex;
-      flex-direction: column;
-      gap: 0.125rem;
-      padding: 0.5rem 0.875rem;
-      border: 1px solid var(--gpc-border);
-      border-radius: var(--gpc-radius);
-      background: var(--gpc-surface-alt);
-    }
-    .countdown p {
-      margin: 0;
-    }
-    .countdown__value {
-      font-size: 1.25rem;
-      font-weight: 700;
-      font-variant-numeric: tabular-nums;
-    }
-    .countdown__due {
-      font-size: 0.8125rem;
-      color: var(--gpc-text-muted);
-    }
-    .countdown--urgent {
-      border-color: var(--gpc-warning-800);
-      background: var(--gpc-warning-100);
-    }
-    .countdown--expired {
-      border-color: var(--gpc-danger-700);
-      background: var(--gpc-danger-100);
-    }
-    .countdown--expired .countdown__value {
-      color: #9b1c1c;
-    }
-  `,
+  templateUrl: './deadline-countdown.component.html',
+  styleUrl: './deadline-countdown.component.scss',
 })
 export class DeadlineCountdownComponent {
   /** Fecha límite en ISO 8601, tal como la devuelve el backend. */

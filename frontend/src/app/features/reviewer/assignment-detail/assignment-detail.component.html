@@ -1,0 +1,140 @@
+<section aria-labelledby="assignment-detail-title">
+  <nav aria-label="Navegación de la asignación">
+    <a routerLink="/app/reviewer/assignments">← Volver a mis asignaciones</a>
+  </nav>
+
+  @if (loading()) {
+    <app-loading-spinner label="Cargando la asignación…" />
+  } @else if (error()) {
+    <app-error-state [message]="error()?.userMessage ?? ''" (retry)="load()" />
+  } @else if (assignment(); as a) {
+    <header class="detail-header">
+      <div>
+        <p class="detail-code">{{ a.manuscript.code }}</p>
+        <h1 id="assignment-detail-title">{{ a.manuscript.title || 'Sin título' }}</h1>
+      </div>
+      <div class="detail-badges">
+        <app-status-badge [status]="a.state" />
+        <app-round-counter [round]="a.round_number" />
+        <span class="badge badge--neutral">Versión v{{ a.version_number }}</span>
+      </div>
+    </header>
+
+    <p class="callout callout--info" role="note">
+      Revisión a doble ciego: no se muestra información de los autores.
+    </p>
+
+    @if (a.status === 'ACTIVE') {
+      <app-deadline-countdown
+        [dueAt]="a.due_at"
+        [serverOffsetMs]="serverOffsetMs()"
+        [overdue]="a.is_overdue"
+        (expired)="deadlinePassed.set(true)"
+      />
+    } @else if (a.completed_at) {
+      <p class="callout callout--success" role="status">
+        Evaluación enviada el {{ a.completed_at | date: 'dd/MM/yyyy HH:mm' : offset }}.
+      </p>
+    }
+
+    <section class="card" aria-labelledby="manuscript-title">
+      <h2 id="manuscript-title">Manuscrito</h2>
+      <dl class="data">
+        <dt>Área</dt>
+        <dd>{{ a.manuscript.area }}</dd>
+        <dt>Idioma</dt>
+        <dd>{{ a.manuscript.language }}</dd>
+        <dt>Ronda</dt>
+        <dd>{{ a.version.round_number }}</dd>
+        <dt>Versión</dt>
+        <dd>
+          v{{ a.version.version_number }}, enviada el
+          {{ a.version.submitted_at | date: 'dd/MM/yyyy HH:mm' : offset }}
+        </dd>
+        <dt>Asignada el</dt>
+        <dd>{{ a.assigned_at | date: 'dd/MM/yyyy HH:mm' : offset }}</dd>
+        <dt>Palabras clave</dt>
+        <dd>{{ a.manuscript.keywords.join(', ') || '—' }}</dd>
+      </dl>
+      <h3>Resumen</h3>
+      <p class="prose">{{ a.manuscript.abstract }}</p>
+    </section>
+
+    <section class="card" aria-labelledby="document-title">
+      <h2 id="document-title">Documento</h2>
+      @if (a.document_url) {
+        <p>PDF sanitizado, sin datos de autoría.</p>
+        @if (documentError()) {
+          <p class="document-error" role="alert">{{ documentError() }}</p>
+        }
+        <div class="actions">
+          <button
+            type="button"
+            class="btn btn--primary"
+            [disabled]="fetching()"
+            (click)="toggleViewer(a)"
+          >
+            {{ fetching() ? 'Cargando…' : shown() ? 'Ocultar documento' : 'Ver documento' }}
+          </button>
+          <button
+            type="button"
+            class="btn btn--ghost"
+            [disabled]="fetching()"
+            (click)="download(a)"
+          >
+            Descargar PDF
+          </button>
+        </div>
+        @if (document(); as doc) {
+          <app-pdf-viewer
+            [blob]="doc.blob"
+            [filename]="doc.filename"
+            frameTitle="Manuscrito sanitizado para revisión"
+          />
+        }
+      } @else {
+        <p class="callout callout--neutral" role="status">
+          El documento ya no está disponible para esta asignación.
+        </p>
+      }
+    </section>
+
+    <div class="actions">
+      @if (a.status === 'ACTIVE') {
+        @if (blocked()) {
+          <button type="button" class="btn btn--primary" disabled aria-describedby="blocked-note">
+            Evaluar manuscrito
+          </button>
+          <p id="blocked-note" class="document-error" role="status">
+            El plazo venció: ya no puede enviar la evaluación.
+          </p>
+        } @else {
+          <a
+            class="btn btn--primary"
+            [routerLink]="['/app/reviewer/assignments', a.id, 'evaluate']"
+          >
+            Evaluar manuscrito
+          </a>
+        }
+      } @else {
+        <a class="btn btn--ghost" routerLink="/app/reviewer/history">Ver mi historial</a>
+      }
+      @if (a.status === 'ACTIVE') {
+        <button type="button" class="btn btn--ghost" (click)="leakOpen.set(true)">
+          Reportar posible fuga de identidad
+        </button>
+      }
+    </div>
+
+    @if (leakNotice()) {
+      <p class="callout callout--success" role="status">{{ leakNotice() }}</p>
+    }
+
+    <app-identity-leak-dialog
+      [assignmentId]="a.id"
+      [open]="leakOpen()"
+      (reported)="onLeakReported()"
+      (cancelled)="leakOpen.set(false)"
+    />
+  }
+</section>

@@ -1,0 +1,50 @@
+.correction-dialog {
+  inline-size: min(34rem, calc(100% - var(--gpc-space-8)));
+  padding: clamp(var(--gpc-space-4), 4vw, var(--gpc-space-6));
+  overflow-wrap: anywhere;
+}
+
+.correction-dialog h2 {
+  margin: 0 0 var(--gpc-space-3);
+  color: var(--gpc-primary-900);
+  font-size: var(--gpc-text-xl);
+  line-height: var(--gpc-leading-tight);
+}
+
+.correction-dialog__body p {
+  margin: 0 0 var(--gpc-space-3);
+}
+
+.correction-dialog__field {
+  display: grid;
+  gap: var(--gpc-space-1);
+  margin-block-end: var(--gpc-space-4);
+}
+
+.correction-dialog__field label {
+  font-weight: var(--gpc-weight-semibold);
+}
+
+.correction-dialog__hint {
+  font-size: var(--gpc-text-sm);
+  font-weight: var(--gpc-weight-normal);
+  color: var(--gpc-text-muted);
+}
+
+.correction-dialog__field textarea {
+  inline-size: 100%;
+  resize: vertical;
+}
+
+.correction-dialog__error {
+  margin: 0 0 var(--gpc-space-3);
+  color: var(--gpc-danger-700);
+  font-size: var(--gpc-text-sm);
+}
+
+.correction-dialog__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--gpc-space-2);
+}

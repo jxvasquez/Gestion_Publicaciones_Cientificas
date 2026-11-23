@@ -1,0 +1,115 @@
+<section aria-labelledby="audit-log-list-title">
+  <header class="list-header">
+    <h1 id="audit-log-list-title">Auditoría</h1>
+    <p class="list-header__count" role="status">
+      @if (viewState() === 'ready') {
+        {{ total() }} {{ total() === 1 ? 'evento' : 'eventos' }}
+      }
+    </p>
+  </header>
+
+  <app-audit-filters [filters]="filters()" (searched)="search($event)" (cleared)="clear()" />
+
+  @switch (viewState()) {
+    @case ('loading') {
+      <app-loading-spinner label="Cargando eventos…" />
+    }
+    @case ('error') {
+      <app-error-state [message]="error()?.userMessage ?? ''" (retry)="reload()" />
+    }
+    @default {
+      @if (rows().length === 0) {
+        @if (filtered()) {
+          <app-empty-state message="Ningún evento coincide con los filtros aplicados." />
+        } @else {
+          <app-empty-state message="Aún no hay eventos de auditoría." />
+        }
+      } @else {
+        <div class="card table-wrap">
+          <table class="events">
+            <caption class="visually-hidden">
+              Eventos de auditoría, del más reciente al más antiguo
+            </caption>
+            <thead>
+              <tr>
+                <th scope="col">Fecha</th>
+                <th scope="col">Actor</th>
+                <th scope="col">Rol</th>
+                <th scope="col">Acción</th>
+                <th scope="col">Entidad</th>
+                <th scope="col">Manuscrito</th>
+                <th scope="col">Resultado</th>
+                <th scope="col">Hash</th>
+                <th scope="col" class="events__actions">Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of rows(); track row.id) {
+                <tr>
+                  <td class="events__date">
+                    {{ row.occurred_at | date: 'dd/MM/yyyy HH:mm:ss' : offset }}
+                  </td>
+                  <td>
+                    @if (row.actor_id) {
+                      <a
+                        class="events__id"
+                        [routerLink]="[]"
+                        [queryParams]="{ actor: row.actor_id, page: null }"
+                        queryParamsHandling="merge"
+                        [title]="row.actor_id"
+                        >{{ row.actor_id.slice(0, 8)
+                        }}<span class="visually-hidden">: filtrar por este actor</span></a
+                      >
+                    } @else {
+                      <span>Sistema</span>
+                    }
+                  </td>
+                  <td>{{ role(row) }}</td>
+                  <td>
+                    <span>{{ action(row) }}</span>
+                    <span class="events__code">{{ row.action }}</span>
+                  </td>
+                  <td>{{ row.entity_type }}</td>
+                  <td>
+                    @if (row.manuscript_id) {
+                      <a
+                        [routerLink]="[]"
+                        [queryParams]="{ manuscript: row.manuscript_id, page: null }"
+                        queryParamsHandling="merge"
+                        >{{ row.manuscript_code ?? row.manuscript_id.slice(0, 8)
+                        }}<span class="visually-hidden">: filtrar por este manuscrito</span></a
+                      >
+                    } @else {
+                      —
+                    }
+                  </td>
+                  <td>
+                    <span [class]="'result result--' + row.result.toLowerCase()">{{
+                      resultText(row)
+                    }}</span>
+                  </td>
+                  <td>
+                    <code class="events__hash" [title]="row.entry_hash">{{ hash(row) }}</code>
+                  </td>
+                  <td class="events__actions">
+                    <a [routerLink]="['/app/admin/audit', row.id]"
+                      >Ver detalle<span class="visually-hidden">
+                        del evento {{ row.action }}</span
+                      ></a
+                    >
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        <app-pagination
+          [page]="currentPage()"
+          [pageSize]="pageSize"
+          [totalItems]="total()"
+          (pageChange)="goToPage($event)"
+        />
+      }
+    }
+  }
+</section>

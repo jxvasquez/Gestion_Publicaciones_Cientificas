@@ -1,0 +1,71 @@
+.leak-dialog {
+  inline-size: min(34rem, calc(100% - var(--gpc-space-8)));
+  padding: clamp(var(--gpc-space-4), 4vw, var(--gpc-space-6));
+  overflow-wrap: anywhere;
+}
+.leak-dialog h2 {
+  margin: 0 0 var(--gpc-space-3);
+  color: var(--gpc-primary-900);
+  font-size: var(--gpc-text-xl);
+}
+.leak-dialog__confidential {
+  margin: 0 0 var(--gpc-space-4);
+  padding: var(--gpc-space-2) var(--gpc-space-3);
+  background: var(--gpc-primary-50);
+  border: 1px solid var(--gpc-primary-700);
+  border-radius: var(--gpc-radius);
+}
+fieldset.leak-dialog__field {
+  margin: 0 0 var(--gpc-space-4);
+  padding: 0;
+  border: 0;
+}
+fieldset.leak-dialog__field legend {
+  padding: 0;
+  margin-bottom: var(--gpc-space-1);
+  font-weight: var(--gpc-weight-semibold);
+  font-size: var(--gpc-text-sm);
+}
+.leak-dialog__option {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--gpc-space-2);
+  margin: var(--gpc-space-1) 0;
+}
+.leak-dialog__option span {
+  display: flex;
+  flex-direction: column;
+}
+div.leak-dialog__field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gpc-space-1);
+  margin-bottom: var(--gpc-space-4);
+}
+div.leak-dialog__field label {
+  font-weight: var(--gpc-weight-semibold);
+  font-size: var(--gpc-text-sm);
+}
+.leak-dialog__hint {
+  font-weight: var(--gpc-weight-normal);
+  font-size: var(--gpc-text-sm);
+  color: var(--gpc-text-muted);
+}
+.leak-dialog__field textarea {
+  inline-size: 100%;
+  resize: vertical;
+}
+.leak-dialog__field textarea[aria-invalid='true'] {
+  border-color: var(--gpc-danger-700);
+}
+.leak-dialog__error {
+  margin: 0 0 var(--gpc-space-3);
+  color: var(--gpc-danger-700);
+  font-size: var(--gpc-text-sm);
+}
+.leak-dialog__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--gpc-space-2);
+}

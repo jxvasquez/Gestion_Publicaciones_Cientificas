@@ -1,0 +1,138 @@
+<section aria-labelledby="version-history-title">
+  <nav aria-label="Navegación del manuscrito">
+    <a [routerLink]="['/app/author/manuscripts', id]">← Volver al manuscrito</a>
+  </nav>
+
+  <h1 id="version-history-title">Historial de versiones</h1>
+
+  @if (loading()) {
+    <app-loading-spinner label="Cargando historial…" />
+  } @else if (error()) {
+    <app-error-state [message]="error()?.userMessage ?? ''" (retry)="load()" />
+  } @else if (manuscript(); as m) {
+    <p class="history-subject">
+      <strong>{{ m.code }}</strong> · {{ m.title || 'Sin título' }}
+      <app-status-badge [status]="m.status" />
+      @if (!m.is_active) {
+        <app-status-badge status="WITHDRAWN" />
+      }
+    </p>
+
+    <p class="history-note" role="note">
+      Este historial es inmutable: cada versión conserva su PDF exacto y los metadatos tal como se
+      enviaron. Los registros anteriores nunca se modifican.
+    </p>
+
+    @if (downloadError()) {
+      <p class="history-error" role="alert">{{ downloadError() }}</p>
+    }
+
+    @if (entries().length === 0) {
+      <app-empty-state message="Aún no hay eventos registrados." />
+    } @else {
+      <ol class="timeline" aria-label="Línea de tiempo del manuscrito">
+        @for (entry of entries(); track $index) {
+          <li class="timeline__item">
+            <time class="timeline__date" [attr.datetime]="entry.occurred_at">
+              {{ entry.occurred_at | date: 'dd/MM/yyyy HH:mm' : offset }}
+            </time>
+
+            @if (entry.type === 'VERSION_SUBMITTED') {
+              <article
+                class="timeline__card timeline__card--version"
+                [attr.aria-label]="'Versión v' + entry.version_number"
+              >
+                <h2>
+                  Versión v{{ entry.version_number }}
+                  <app-round-counter [round]="entry.round_number" />
+                  @if (entry.version_number === m.current_version) {
+                    <span class="badge badge--success">Vigente</span>
+                  }
+                </h2>
+                <dl class="seal">
+                  <dt>Archivo</dt>
+                  <dd>
+                    {{ entry.original_filename }} · {{ entry.original_size_bytes | fileSize }}
+                  </dd>
+                  <dt>Sello de integridad del PDF</dt>
+                  <dd>
+                    <code>{{ entry.integrity_seal }}</code>
+                  </dd>
+                  <dt>Sello de los metadatos</dt>
+                  <dd>
+                    <code>sha256:{{ entry.metadata_sha256 }}</code>
+                  </dd>
+                </dl>
+                <button
+                  type="button"
+                  class="btn btn--primary"
+                  [disabled]="downloading() === entry.version_id"
+                  [attr.aria-label]="
+                    'Descargar el PDF exacto de la versión v' + entry.version_number
+                  "
+                  (click)="download(entry)"
+                >
+                  {{ downloading() === entry.version_id ? 'Descargando…' : 'Descargar PDF exacto' }}
+                </button>
+              </article>
+            } @else if (entry.type === 'ROUND_OPENED') {
+              <article class="timeline__card">
+                <h2>Ronda {{ entry.round_number }}</h2>
+                <p>
+                  @if (entry.closed_by_version_number !== null) {
+                    Cerrada con la versión v{{ entry.closed_by_version_number }}
+                    @if (entry.closed_at) {
+                      el {{ entry.closed_at | date: 'dd/MM/yyyy HH:mm' : offset }}
+                    }
+                    .
+                  } @else {
+                    Abierta: a la espera de la nueva versión.
+                  }
+                </p>
+              </article>
+            } @else if (entry.type === 'WITHDRAWN') {
+              <article class="timeline__card timeline__card--withdrawn">
+                <h2>Dado de baja</h2>
+                <p>El manuscrito se archivó; todo su historial se conserva.</p>
+                @if (entry.reason) {
+                  <p>Motivo: {{ entry.reason }}</p>
+                }
+              </article>
+            } @else if (entry.type === 'CREATED') {
+              <article class="timeline__card">
+                <h2>Borrador creado</h2>
+              </article>
+            } @else {
+              <article class="timeline__card">
+                <h2>Cambio de estado</h2>
+                <p>
+                  @if (entry.from_status) {
+                    <app-status-badge [status]="entry.from_status" /> →
+                  }
+                  <app-status-badge [status]="entry.to_status" />
+                </p>
+                @if (entry.version_number !== null) {
+                  <p>Versión v{{ entry.version_number }}</p>
+                }
+                @if (entry.reason) {
+                  <p>{{ entry.reason }}</p>
+                }
+              </article>
+            }
+          </li>
+        }
+      </ol>
+
+      @if (hasMore()) {
+        <button
+          type="button"
+          class="btn btn--ghost"
+          [disabled]="loadingMore()"
+          (click)="loadMore()"
+        >
+          {{ loadingMore() ? 'Cargando…' : 'Mostrar más eventos' }}
+        </button>
+      }
+    }
+  }
+</section>

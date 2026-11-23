@@ -1,0 +1,153 @@
+<section class="audit-detail" aria-labelledby="audit-log-detail-title">
+  <p class="audit-detail__back">
+    <a [routerLink]="['/app/admin/audit']">← Volver a la auditoría</a>
+  </p>
+  <h1 id="audit-log-detail-title">Detalle del evento</h1>
+
+  @switch (viewState()) {
+    @case ('loading') {
+      <app-loading-spinner label="Cargando el evento…" />
+    }
+    @case ('missing') {
+      <div class="card notice" role="alert">
+        <p>El evento solicitado no existe.</p>
+        <a [routerLink]="['/app/admin/audit']">Ir a la lista de eventos</a>
+      </div>
+    }
+    @case ('error') {
+      <app-error-state [message]="error()?.userMessage ?? ''" (retry)="reload()" />
+    }
+    @default {
+      @if (event(); as entry) {
+        <dl class="card facts">
+          <div>
+            <dt>Fecha</dt>
+            <dd>{{ entry.occurred_at | date: 'dd/MM/yyyy HH:mm:ss' : offset }}</dd>
+          </div>
+          <div>
+            <dt>Acción</dt>
+            <dd>
+              {{ action() }} <span class="facts__code">{{ entry.action }}</span>
+            </dd>
+          </div>
+          <div>
+            <dt>Resultado</dt>
+            <dd>{{ result() }}</dd>
+          </div>
+          <div>
+            <dt>Actor</dt>
+            <dd class="facts__mono">{{ entry.actor_id ?? 'Sistema' }}</dd>
+          </div>
+          <div>
+            <dt>Rol</dt>
+            <dd>{{ role() }}</dd>
+          </div>
+          <div>
+            <dt>Entidad</dt>
+            <dd>
+              {{ entry.entity_type }}
+              @if (entry.entity_id) {
+                <span class="facts__mono"> · {{ entry.entity_id }}</span>
+              }
+            </dd>
+          </div>
+          <div>
+            <dt>Manuscrito</dt>
+            <dd>
+              @if (entry.manuscript_id) {
+                <a
+                  [routerLink]="['/app/admin/audit']"
+                  [queryParams]="{ manuscript: entry.manuscript_id }"
+                  >{{ entry.manuscript_code ?? entry.manuscript_id }}</a
+                >
+              } @else {
+                —
+              }
+            </dd>
+          </div>
+          <div>
+            <dt>Solicitud</dt>
+            <dd class="facts__mono">{{ entry.request_id ?? '—' }}</dd>
+          </div>
+        </dl>
+
+        @if (detailKeys().length > 0) {
+          <h2>Datos del evento</h2>
+          <dl class="card facts" aria-label="Datos del evento">
+            @for (key of detailKeys(); track key) {
+              <div>
+                <dt>{{ label(key) }}</dt>
+                <dd>{{ value(key) }}</dd>
+              </div>
+            }
+          </dl>
+        }
+
+        @if (entry.verdict; as verdict) {
+          <h2>Veredicto</h2>
+          <dl class="card facts" aria-label="Veredicto">
+            <div>
+              <dt>Manuscrito</dt>
+              <dd>{{ verdict.manuscript_code }}</dd>
+            </div>
+            <div>
+              <dt>Decisión</dt>
+              <dd>{{ decision(verdict.decision) }}</dd>
+            </div>
+            <div>
+              <dt>Registrado</dt>
+              <dd>{{ verdict.decided_at | date: 'dd/MM/yyyy HH:mm' : offset }}</dd>
+            </div>
+          </dl>
+        }
+
+        @if (entry.can_authorize_correction === true) {
+          <div class="card correction">
+            <button
+              type="button"
+              class="btn btn--primary"
+              aria-haspopup="dialog"
+              (click)="requestCorrection()"
+            >
+              Habilitar corrección
+            </button>
+            <p class="correction__hint">
+              La decisión anterior se conserva; el Editor registrará una nueva.
+            </p>
+          </div>
+
+          <app-verdict-correction-dialog
+            [open]="correctionOpen()"
+            [verdict]="entry.verdict ?? null"
+            [busy]="correctionBusy()"
+            [error]="correctionError()"
+            (confirmed)="authorizeCorrection($event)"
+            (cancelled)="closeCorrection()"
+          />
+        }
+
+        @if (correctionDone()) {
+          <p class="correction__done" role="status">
+            Corrección habilitada. El Editor podrá registrar una nueva decisión; la anterior se
+            conserva.
+          </p>
+        }
+        @if (correctionNotice(); as message) {
+          <p class="correction__error" role="alert">{{ message }}</p>
+        }
+
+        <h2>Integridad</h2>
+        <dl class="card facts" aria-label="Integridad de la cadena">
+          <div>
+            <dt>Hash del evento</dt>
+            <dd class="facts__mono facts__hash">{{ entry.entry_hash }}</dd>
+          </div>
+          <div>
+            <dt>Hash anterior</dt>
+            <dd class="facts__mono facts__hash">{{ entry.previous_hash ?? '—' }}</dd>
+          </div>
+        </dl>
+      }
+    }
+  }
+</section>

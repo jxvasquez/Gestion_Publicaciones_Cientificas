@@ -1,0 +1,27 @@
+.forbidden {
+  display: grid;
+  justify-items: center;
+  gap: var(--gpc-space-4);
+  inline-size: min(32rem, calc(100% - var(--gpc-space-8)));
+  margin: clamp(var(--gpc-space-6), 10vh, 5rem) auto;
+  padding: clamp(var(--gpc-space-4), 5vw, var(--gpc-space-8));
+  text-align: center;
+}
+
+.forbidden h1,
+.forbidden p {
+  margin: 0;
+}
+
+.forbidden p {
+  color: var(--gpc-text-muted);
+}
+
+.forbidden__illustration {
+  inline-size: 4rem;
+  block-size: 4rem;
+  padding: var(--gpc-space-3);
+  border-radius: var(--gpc-radius-lg);
+  background: var(--gpc-danger-100);
+  color: var(--gpc-danger-800);
+}

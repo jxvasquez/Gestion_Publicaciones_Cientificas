@@ -1,0 +1,100 @@
+.list-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--gpc-space-3);
+}
+.list-header__count {
+  margin: 0;
+  color: var(--gpc-text-muted);
+}
+.note {
+  margin: var(--gpc-space-3) 0 var(--gpc-space-4);
+  padding: var(--gpc-space-3) var(--gpc-space-4);
+  background: var(--gpc-primary-50);
+  border: 1px solid var(--gpc-primary-700);
+  border-radius: var(--gpc-radius);
+}
+.history {
+  inline-size: 100%;
+  min-inline-size: 50rem;
+}
+.history th,
+.history td {
+  padding: var(--gpc-space-3) var(--gpc-space-3);
+  border-bottom: 1px solid var(--gpc-border);
+  text-align: start;
+  vertical-align: middle;
+}
+.history th {
+  background: var(--gpc-primary-100);
+  font-size: var(--gpc-text-sm);
+  color: var(--gpc-primary-900);
+}
+.history__title {
+  max-width: 20rem;
+  overflow-wrap: anywhere;
+}
+.history__meta {
+  display: block;
+  font-size: var(--gpc-text-sm);
+  color: var(--gpc-text-muted);
+}
+.history__detail td {
+  white-space: normal;
+  background: var(--gpc-surface);
+}
+.history__detail-title {
+  margin: 0 0 var(--gpc-space-2);
+  font-size: var(--gpc-text-base);
+}
+.history__detail h3 {
+  margin: var(--gpc-space-3) 0 var(--gpc-space-1);
+  font-size: var(--gpc-text-base);
+}
+.history__error {
+  margin: 0 0 var(--gpc-space-2);
+  color: var(--gpc-danger-700);
+}
+.scores {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gpc-space-2) var(--gpc-space-6);
+  margin: 0;
+}
+.scores__row {
+  display: flex;
+  gap: var(--gpc-space-2);
+}
+.scores dt {
+  font-weight: var(--gpc-weight-semibold);
+}
+.scores dd {
+  margin: 0;
+}
+.prose {
+  margin: 0;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+.back {
+  margin-top: var(--gpc-space-6);
+}
+
+.list-header h1 {
+  margin-block: 0;
+  color: var(--gpc-primary-900);
+}
+
+.history td:first-child {
+  white-space: nowrap;
+}
+
+.history td:last-child .btn {
+  white-space: nowrap;
+}
+
+.history__detail :is(.scores, .prose) {
+  max-inline-size: min(36rem, calc(100vw - 4rem));
+}

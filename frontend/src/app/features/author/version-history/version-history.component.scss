@@ -1,0 +1,118 @@
+h1 {
+  margin-block: var(--gpc-space-4);
+  color: var(--gpc-primary-900);
+  line-height: var(--gpc-leading-tight);
+}
+
+.history-subject {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--gpc-space-2);
+  overflow-wrap: anywhere;
+}
+
+.history-note {
+  padding: var(--gpc-space-3) var(--gpc-space-4);
+  border: 1px solid var(--gpc-primary-700);
+  border-radius: var(--gpc-radius);
+  background: var(--gpc-primary-50);
+  color: var(--gpc-primary-900);
+}
+
+.history-error {
+  color: var(--gpc-danger-700);
+}
+
+.timeline {
+  margin-block: var(--gpc-space-6);
+  padding: 0;
+  padding-inline-start: var(--gpc-space-4);
+  border-inline-start: 3px solid var(--gpc-primary-100);
+  list-style: none;
+}
+
+.timeline__item {
+  position: relative;
+  margin-block-end: var(--gpc-space-4);
+}
+
+.timeline__item::before {
+  position: absolute;
+  inset-block-start: var(--gpc-space-1);
+  inset-inline-start: calc(-1 * (var(--gpc-space-4) + 0.375rem + 1.5px));
+  inline-size: var(--gpc-space-3);
+  block-size: var(--gpc-space-3);
+  border-radius: var(--gpc-radius-pill);
+  background: var(--gpc-primary-700);
+  content: '';
+}
+
+.timeline__date {
+  display: block;
+  margin-block-end: var(--gpc-space-1);
+  color: var(--gpc-text-muted);
+  font-size: var(--gpc-text-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.timeline__card {
+  padding: var(--gpc-space-3) var(--gpc-space-4);
+  border: 1px solid var(--gpc-border);
+  border-radius: var(--gpc-radius-lg);
+  background: var(--gpc-surface-alt);
+  overflow-wrap: anywhere;
+}
+
+.timeline__card h2 {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--gpc-space-2);
+  margin: 0 0 var(--gpc-space-2);
+  color: var(--gpc-primary-900);
+  font-size: var(--gpc-text-lg);
+}
+
+.timeline__card p {
+  margin: 0 0 var(--gpc-space-1);
+}
+
+.timeline__card--version {
+  border-inline-start: 3px solid var(--gpc-primary-700);
+}
+
+.timeline__card--withdrawn {
+  background: var(--gpc-surface);
+}
+
+.seal {
+  display: grid;
+  grid-template-columns: minmax(0, max-content) minmax(0, 1fr);
+  gap: var(--gpc-space-1) var(--gpc-space-4);
+  margin: 0 0 var(--gpc-space-3);
+}
+
+.seal dt {
+  font-weight: var(--gpc-weight-semibold);
+}
+
+.seal dd {
+  margin: 0;
+}
+
+.seal code {
+  font-size: var(--gpc-text-sm);
+  overflow-wrap: anywhere;
+  user-select: all;
+}
+
+@media (max-width: 34rem) {
+  .seal {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .seal dd:not(:last-child) {
+    margin-block-end: var(--gpc-space-2);
+  }
+}

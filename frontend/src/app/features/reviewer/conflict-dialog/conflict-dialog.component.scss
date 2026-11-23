@@ -1,0 +1,54 @@
+.conflict-dialog {
+  inline-size: min(32rem, calc(100% - var(--gpc-space-8)));
+  padding: clamp(var(--gpc-space-4), 4vw, var(--gpc-space-6));
+  overflow-wrap: anywhere;
+}
+.conflict-dialog h2 {
+  margin: 0 0 var(--gpc-space-3);
+  color: var(--gpc-primary-900);
+  font-size: var(--gpc-text-xl);
+}
+.conflict-dialog__body p {
+  margin: 0 0 var(--gpc-space-2);
+}
+.conflict-dialog__body ul {
+  margin: 0 0 var(--gpc-space-3);
+  padding-left: var(--gpc-space-6);
+}
+.conflict-dialog__warning {
+  padding: var(--gpc-space-2) var(--gpc-space-3);
+  background: var(--gpc-warning-100);
+  border: 1px solid var(--gpc-warning-800);
+  border-radius: var(--gpc-radius);
+  color: var(--gpc-warning-800);
+}
+.conflict-dialog__field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gpc-space-1);
+  margin-bottom: var(--gpc-space-4);
+}
+.conflict-dialog__field label {
+  font-weight: var(--gpc-weight-semibold);
+  font-size: var(--gpc-text-sm);
+}
+.conflict-dialog__hint {
+  font-weight: var(--gpc-weight-normal);
+  font-size: var(--gpc-text-sm);
+  color: var(--gpc-text-muted);
+}
+.conflict-dialog__field textarea {
+  inline-size: 100%;
+  resize: vertical;
+}
+.conflict-dialog__error {
+  margin: 0 0 var(--gpc-space-3);
+  color: var(--gpc-danger-700);
+  font-size: var(--gpc-text-sm);
+}
+.conflict-dialog__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--gpc-space-2);
+}

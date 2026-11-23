@@ -1,0 +1,67 @@
+<dialog
+  #dialog
+  class="withdraw-dialog"
+  [attr.aria-labelledby]="titleId"
+  [attr.aria-describedby]="descriptionId"
+  (cancel)="onCancelRequested($event)"
+>
+  <h2 [id]="titleId">Dar de baja {{ manuscriptCode() || 'el manuscrito' }}</h2>
+
+  <div [id]="descriptionId" class="withdraw-dialog__body">
+    <p>
+      La baja lógica retira el manuscrito de los listados activos y del catálogo público.
+      <strong>No se borra nada:</strong> sus versiones, evaluaciones, historial y auditoría se
+      conservan, y podrá consultarlo en la vista de archivados.
+    </p>
+    @if (status() === 'UNDER_REVIEW') {
+      <p class="withdraw-dialog__warning" role="note">
+        El manuscrito está en revisión: dejará de poder evaluarse.
+      </p>
+    }
+    @if (status() === 'ACCEPTED') {
+      <p class="withdraw-dialog__warning" role="note">
+        El manuscrito está aceptado: el artículo dejará de mostrarse en el catálogo público.
+      </p>
+    }
+    <p>Esta acción no se puede deshacer desde la aplicación.</p>
+  </div>
+
+  <div class="withdraw-dialog__field">
+    <label [for]="reasonId">
+      Motivo de la baja
+      <span class="withdraw-dialog__hint">
+        ({{ reasonRequired() ? 'obligatorio' : 'opcional' }})
+      </span>
+    </label>
+    <textarea
+      [id]="reasonId"
+      rows="4"
+      [maxlength]="maxLength"
+      [attr.aria-required]="reasonRequired()"
+      [attr.aria-invalid]="reasonMissing() ? 'true' : null"
+      [attr.aria-describedby]="reasonMissing() ? reasonErrorId : null"
+      [disabled]="busy()"
+      [ngModel]="reason()"
+      (ngModelChange)="reason.set($event)"
+    ></textarea>
+    @if (reasonMissing()) {
+      <p class="withdraw-dialog__error" role="alert" [id]="reasonErrorId">
+        Indique el motivo de la baja: es obligatorio cuando el manuscrito está en revisión o ya fue
+        aceptado.
+      </p>
+    }
+  </div>
+
+  @if (error()) {
+    <p class="withdraw-dialog__error" role="alert">{{ error() }}</p>
+  }
+
+  <div class="withdraw-dialog__actions">
+    <button type="button" class="btn btn--ghost" [disabled]="busy()" (click)="dismiss()">
+      Cancelar
+    </button>
+    <button type="button" class="btn btn--danger" [disabled]="busy()" (click)="confirm()">
+      {{ busy() ? 'Dando de baja…' : 'Confirmar baja' }}
+    </button>
+  </div>
+</dialog>
