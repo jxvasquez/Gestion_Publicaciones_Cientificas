@@ -57,7 +57,8 @@ const STATUS_TONES: Record<string, BadgeTone> = {
  */
 @Component({
   selector: 'app-status-badge',
-  template: `<span [class]="'badge badge--' + tone()">{{ label() }}</span>`,
+  templateUrl: './status-badge.component.html',
+  styleUrl: './status-badge.component.scss',
 })
 export class StatusBadgeComponent {
   readonly status = input.required<string>();
