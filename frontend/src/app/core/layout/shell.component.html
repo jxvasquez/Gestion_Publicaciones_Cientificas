@@ -1,0 +1,50 @@
+<a class="skip-link" href="#main-content" (click)="$event.preventDefault(); mainContent.focus()">
+  Saltar al contenido principal
+</a>
+
+<div class="shell">
+  @if (feedback.feedback(); as current) {
+    <div
+      class="app-feedback"
+      role="alert"
+      [class.app-feedback--warning]="current.kind === 'warning'"
+    >
+      <p class="app-feedback__message">{{ current.message }}</p>
+      <button
+        type="button"
+        class="app-feedback__dismiss"
+        (click)="feedback.dismiss()"
+        aria-label="Cerrar el aviso"
+      >
+        ×
+      </button>
+    </div>
+  }
+
+  <app-header
+    [userName]="userName()"
+    [roles]="roles()"
+    [unreadCount]="unreadCount()"
+    (logout)="logout()"
+    (bellOpened)="openNotifications()"
+  />
+
+  <div class="shell__sidebar">
+    <app-side-nav [roles]="roles()" />
+  </div>
+
+  <div class="shell__body">
+    <details class="shell__mobile-nav">
+      <summary class="btn btn--ghost shell__menu-toggle">
+        <svg class="shell__menu-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <use href="icons/ui.svg#menu" />
+        </svg>
+        Menú de navegación
+      </summary>
+      <app-side-nav [roles]="roles()" />
+    </details>
+    <main #mainContent id="main-content" class="shell__content" tabindex="-1">
+      <router-outlet />
+    </main>
+  </div>
+</div>
