@@ -1,0 +1,29 @@
+<header class="app-header">
+  <a routerLink="/app/dashboard" class="app-header__title">
+    Gestión de Publicaciones Científicas
+  </a>
+  @if (roles().length > 0) {
+    <ul class="app-header__roles" aria-label="Roles activos">
+      @for (role of roles(); track role) {
+        <li>
+          <span class="badge badge--info">{{ roleLabels[role] }}</span>
+        </li>
+      }
+    </ul>
+  }
+  <div class="app-header__session">
+    <app-notification-bell [unreadCount]="unreadCount()" (opened)="bellOpened.emit()" />
+    @if (userName(); as name) {
+      <details class="app-header__account">
+        <summary class="btn btn--ghost app-header__account-toggle">Mi cuenta</summary>
+        <p class="app-header__user">{{ name }}</p>
+      </details>
+    }
+    <button type="button" class="btn btn--ghost" (click)="logout.emit()">
+      <svg class="app-header__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+        <use href="icons/ui.svg#logout" />
+      </svg>
+      Cerrar sesión
+    </button>
+  </div>
+</header>
