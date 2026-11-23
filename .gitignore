@@ -43,3 +43,5 @@ docs-site/api/favicon-32x32.png
 docs-site/api/LICENSE-swagger-ui.txt
 docs-site/diagrams/vendor/
 docs-site/diagrams/out/
+/.postman/
+/postman/
