@@ -1,0 +1,20 @@
+.bell {
+  justify-content: center;
+  min-inline-size: 2.5rem;
+  min-block-size: 2.5rem;
+  padding: var(--gpc-space-2);
+}
+
+.bell__icon {
+  inline-size: 1.25rem;
+  block-size: 1.25rem;
+  flex: none;
+}
+
+.bell__badge {
+  justify-content: center;
+  min-inline-size: 1.25rem;
+  padding-inline: var(--gpc-space-1);
+  background: var(--gpc-danger-700);
+  color: var(--gpc-surface-alt);
+}

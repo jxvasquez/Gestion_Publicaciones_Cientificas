@@ -1,0 +1,15 @@
+<button
+  type="button"
+  class="btn btn--ghost bell"
+  [attr.aria-label]="ariaLabel()"
+  (click)="opened.emit()"
+>
+  <svg class="bell__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+    <use href="icons/ui.svg#bell" />
+  </svg>
+  @if (unreadCount() > 0) {
+    <span class="badge bell__badge" aria-hidden="true">
+      {{ unreadCount() > 99 ? '99+' : unreadCount() }}
+    </span>
+  }
+</button>
