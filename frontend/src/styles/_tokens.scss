@@ -1,0 +1,75 @@
+:root {
+  /* Colores institucionales e informativos */
+  --gpc-primary-900: #172a4a;
+  --gpc-primary-700: #1d4e89;
+  --gpc-primary-100: #e4edf7;
+  --gpc-primary-50: #f2f6fb;
+
+  /* Éxito y guardado */
+  --gpc-success-900: #0f5132;
+  --gpc-success-700: #146c33;
+  --gpc-success-100: #e2f4e7;
+
+  /* Advertencias */
+  --gpc-warning-900: #713f12;
+  --gpc-warning-800: #8a4b0b;
+  --gpc-warning-700: #a16207;
+  --gpc-warning-100: #fdeed3;
+  --gpc-warning-50: #fefce8;
+
+  /* Errores y acciones destructivas */
+  --gpc-danger-900: #7f1d1d;
+  --gpc-danger-800: #9b1c1c;
+  --gpc-danger-700: #b3261e;
+  --gpc-danger-100: #fce8e6;
+  --gpc-danger-50: #fef2f2;
+
+  /* Texto, superficies y límites */
+  --gpc-text: #1f2937;
+  --gpc-text-muted: #4b5563;
+  --gpc-neutral-700: #374151;
+  --gpc-neutral-100: #e5e7eb;
+  --gpc-surface: #f7f8fa;
+  --gpc-surface-alt: #ffffff;
+  --gpc-workspace: #f1f5f9;
+  --gpc-sidebar-bg: #f8fafc;
+  --gpc-border: #d1d5db;
+  --gpc-sidebar-divider: #e2e8f0;
+  --gpc-control-border: #64748b;
+
+  /* Tipografía de interfaz y títulos editoriales */
+  --gpc-font-sans: system-ui, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --gpc-font-serif: Georgia, 'Times New Roman', serif;
+  --gpc-text-xs: 0.75rem;
+  --gpc-text-sm: 0.875rem;
+  --gpc-text-base: 1rem;
+  --gpc-text-lg: 1.125rem;
+  --gpc-text-xl: 1.25rem;
+  --gpc-text-2xl: 1.5rem;
+  --gpc-text-3xl: 2rem;
+  --gpc-leading-tight: 1.25;
+  --gpc-leading-base: 1.5;
+  --gpc-weight-normal: 400;
+  --gpc-weight-semibold: 600;
+  --gpc-weight-bold: 700;
+
+  /* Espaciado y geometría */
+  --gpc-space-1: 0.25rem;
+  --gpc-space-2: 0.5rem;
+  --gpc-space-3: 0.75rem;
+  --gpc-space-4: 1rem;
+  --gpc-space-6: 1.5rem;
+  --gpc-space-8: 2rem;
+  --gpc-radius: 8px;
+  --gpc-radius-lg: 12px;
+  --gpc-radius-pill: 999px;
+  --gpc-sidebar-width: 260px;
+  --gpc-header-height: 64px;
+
+  /* Elevación e interacción */
+  --gpc-shadow: 0 1px 3px rgba(23, 42, 74, 0.18);
+  --gpc-shadow-dialog: 0 8px 24px rgba(23, 42, 74, 0.16);
+  --gpc-focus-color: var(--gpc-primary-700);
+  --gpc-focus-ring: 3px solid var(--gpc-focus-color);
+  --gpc-transition-duration: 150ms;
+}
