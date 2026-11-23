@@ -6,7 +6,8 @@ import { Component, input } from '@angular/core';
  */
 @Component({
   selector: 'app-round-counter',
-  template: `<span class="badge badge--neutral">Ronda {{ round() }}</span>`,
+  templateUrl: './round-counter.component.html',
+  styleUrl: './round-counter.component.scss',
 })
 export class RoundCounterComponent {
   /** Número de ronda vigente del manuscrito (0 es la ronda de envío). */

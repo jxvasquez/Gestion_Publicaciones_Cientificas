@@ -1,0 +1,38 @@
+<article class="card kpi-card">
+  <header class="kpi-card__header">
+    <svg class="kpi-card__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      @switch (icon()) {
+        @case ('author') {
+          <use href="icons/ui.svg#author" />
+        }
+        @case ('reviewer') {
+          <use href="icons/ui.svg#reviewer" />
+        }
+        @case ('editor') {
+          <use href="icons/ui.svg#editor" />
+        }
+        @case ('admin') {
+          <use href="icons/ui.svg#admin" />
+        }
+      }
+    </svg>
+    <h2 class="kpi-card__title">{{ title() }}</h2>
+  </header>
+
+  @if (counts().length > 0) {
+    <dl class="kpi-card__metrics">
+      @for (metric of counts(); track $index) {
+        <div class="kpi-card__metric">
+          <dt>{{ metric.label }}</dt>
+          <dd><span class="badge badge--info">{{ metric.value }}</span></dd>
+        </div>
+      }
+    </dl>
+  } @else {
+    <app-empty-state message="Todavía no hay métricas disponibles." />
+  }
+
+  <div class="kpi-card__actions">
+    <ng-content />
+  </div>
+</article>

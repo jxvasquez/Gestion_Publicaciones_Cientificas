@@ -1,0 +1,34 @@
+.pagination {
+  display: grid;
+  grid-template-columns: 1fr minmax(0, auto) 1fr;
+  align-items: center;
+  gap: var(--gpc-space-3);
+  padding-block: var(--gpc-space-3);
+}
+
+.pagination__previous {
+  justify-self: end;
+}
+
+.pagination__status {
+  color: var(--gpc-text-muted);
+  font-size: var(--gpc-text-sm);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+.pagination__next {
+  justify-self: start;
+}
+
+@media (max-width: 30rem) {
+  .pagination {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .pagination__status {
+    grid-column: 1 / -1;
+    grid-row: 1;
+  }
+}

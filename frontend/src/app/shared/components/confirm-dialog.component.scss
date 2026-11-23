@@ -1,0 +1,23 @@
+.confirm-dialog {
+  inline-size: min(28rem, calc(100% - var(--gpc-space-8)));
+  padding: clamp(var(--gpc-space-4), 4vw, var(--gpc-space-6));
+  overflow-wrap: anywhere;
+}
+
+.confirm-dialog__title {
+  margin: 0 0 var(--gpc-space-2);
+  color: var(--gpc-primary-900);
+  font-size: var(--gpc-text-xl);
+  line-height: var(--gpc-leading-tight);
+}
+
+.confirm-dialog__message {
+  margin: 0 0 var(--gpc-space-6);
+}
+
+.confirm-dialog__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--gpc-space-2);
+}

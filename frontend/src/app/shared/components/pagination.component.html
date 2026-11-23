@@ -1,0 +1,23 @@
+@if (totalPages() > 1) {
+  <nav class="pagination" aria-label="Paginación de resultados">
+    <button
+      type="button"
+      class="btn btn--ghost pagination__previous"
+      [disabled]="isFirst()"
+      (click)="goTo(page() - 1)"
+    >
+      Anterior
+    </button>
+    <span class="pagination__status" aria-live="polite">
+      Página {{ page() }} de {{ totalPages() }} · {{ totalItems() }} elementos
+    </span>
+    <button
+      type="button"
+      class="btn btn--ghost pagination__next"
+      [disabled]="isLast()"
+      (click)="goTo(page() + 1)"
+    >
+      Siguiente
+    </button>
+  </nav>
+}

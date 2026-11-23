@@ -1,0 +1,19 @@
+@if (objectUrl(); as url) {
+  <div class="pdf-viewer">
+    <div class="pdf-viewer__actions">
+      <button type="button" class="btn btn--primary" (click)="download(url)">Descargar</button>
+      <button type="button" class="btn btn--ghost" (click)="openInNewTab(url)">
+        Abrir en pestaña nueva
+      </button>
+    </div>
+    <iframe
+      class="pdf-viewer__frame"
+      [title]="frameTitle()"
+      [src]="url | safeUrl"
+      sandbox="allow-same-origin"
+      loading="lazy"
+    ></iframe>
+  </div>
+} @else {
+  <p class="pdf-viewer__empty">{{ emptyLabel() }}</p>
+}

@@ -20,50 +20,8 @@ let nextDialogId = 0;
  */
 @Component({
   selector: 'app-confirm-dialog',
-  template: `
-    <dialog
-      #dialog
-      class="confirm-dialog"
-      [attr.aria-labelledby]="titleId"
-      (cancel)="onCancelRequested($event)"
-    >
-      <h2 class="confirm-dialog__title" [id]="titleId">{{ title() }}</h2>
-      <p class="confirm-dialog__message">{{ message() }}</p>
-      <div class="confirm-dialog__actions">
-        <button type="button" class="btn btn--ghost" (click)="dismiss()">
-          {{ cancelLabel() }}
-        </button>
-        <button type="button" [class]="confirmClass()" (click)="confirm()">
-          {{ confirmLabel() }}
-        </button>
-      </div>
-    </dialog>
-  `,
-  styles: `
-    .confirm-dialog {
-      width: min(28rem, calc(100vw - 2rem));
-      padding: 1.5rem;
-      border: 1px solid var(--gpc-border);
-      border-radius: var(--gpc-radius);
-      box-shadow: var(--gpc-shadow);
-    }
-    .confirm-dialog::backdrop {
-      background: rgba(23, 42, 74, 0.45);
-    }
-    .confirm-dialog__title {
-      margin: 0 0 0.5rem;
-      font-size: 1.125rem;
-    }
-    .confirm-dialog__message {
-      margin: 0 0 1.25rem;
-      color: var(--gpc-text);
-    }
-    .confirm-dialog__actions {
-      display: flex;
-      justify-content: flex-end;
-      gap: 0.5rem;
-    }
-  `,
+  templateUrl: './confirm-dialog.component.html',
+  styleUrl: './confirm-dialog.component.scss',
 })
 export class ConfirmDialogComponent {
   /** Título del diálogo. */

@@ -7,44 +7,8 @@ import { Component, computed, input, output } from '@angular/core';
  */
 @Component({
   selector: 'app-pagination',
-  template: `
-    @if (totalPages() > 1) {
-      <nav class="pagination" aria-label="Paginación de resultados">
-        <button
-          type="button"
-          class="btn btn--ghost"
-          [disabled]="isFirst()"
-          (click)="goTo(page() - 1)"
-        >
-          Anterior
-        </button>
-        <span class="pagination__status" aria-live="polite">
-          Página {{ page() }} de {{ totalPages() }} · {{ totalItems() }} elementos
-        </span>
-        <button
-          type="button"
-          class="btn btn--ghost"
-          [disabled]="isLast()"
-          (click)="goTo(page() + 1)"
-        >
-          Siguiente
-        </button>
-      </nav>
-    }
-  `,
-  styles: `
-    .pagination {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 0.75rem;
-      padding: 0.75rem 0;
-    }
-    .pagination__status {
-      color: var(--gpc-text-muted);
-      font-variant-numeric: tabular-nums;
-    }
-  `,
+  templateUrl: './pagination.component.html',
+  styleUrl: './pagination.component.scss',
 })
 export class PaginationComponent {
   /** Página actual (base 1). */

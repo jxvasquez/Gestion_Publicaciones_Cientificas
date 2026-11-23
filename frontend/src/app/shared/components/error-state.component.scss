@@ -1,0 +1,22 @@
+.error-state {
+  display: grid;
+  justify-items: center;
+  gap: var(--gpc-space-3);
+  padding: var(--gpc-space-6) var(--gpc-space-4);
+  border: 1px solid var(--gpc-danger-700);
+  border-radius: var(--gpc-radius-lg);
+  background: var(--gpc-danger-100);
+  color: var(--gpc-danger-800);
+  text-align: center;
+}
+
+.error-state__icon {
+  inline-size: 1.75rem;
+  block-size: 1.75rem;
+}
+
+.error-state__message {
+  margin: 0;
+  font-weight: var(--gpc-weight-semibold);
+  overflow-wrap: anywhere;
+}

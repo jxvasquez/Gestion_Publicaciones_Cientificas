@@ -1,0 +1,64 @@
+:host {
+  display: block;
+}
+
+.kpi-card {
+  display: grid;
+  gap: var(--gpc-space-4);
+  padding: var(--gpc-space-4);
+}
+
+.kpi-card__header {
+  display: flex;
+  align-items: center;
+  gap: var(--gpc-space-3);
+}
+
+.kpi-card__icon {
+  flex: none;
+  inline-size: 2rem;
+  block-size: 2rem;
+  padding: var(--gpc-space-1);
+  border-radius: var(--gpc-radius);
+  background: var(--gpc-primary-100);
+  color: var(--gpc-primary-900);
+}
+
+.kpi-card__title {
+  margin: 0;
+  font-size: var(--gpc-text-xl);
+  line-height: var(--gpc-leading-tight);
+  overflow-wrap: anywhere;
+}
+
+.kpi-card__metrics {
+  display: grid;
+  gap: var(--gpc-space-2);
+  margin: 0;
+}
+
+.kpi-card__metric {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--gpc-space-2);
+}
+
+.kpi-card__metric dd {
+  margin: 0;
+}
+
+.kpi-card__metric dt {
+  overflow-wrap: anywhere;
+}
+
+.kpi-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gpc-space-2);
+}
+
+.kpi-card__actions:empty {
+  display: none;
+}

@@ -1,0 +1,11 @@
+<div class="error-state">
+  <svg class="error-state__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+    <use href="icons/ui.svg#alert" />
+  </svg>
+  <p class="error-state__message" role="alert">{{ message() }}</p>
+  @if (retryLabel()) {
+    <button type="button" class="btn btn--primary" (click)="retry.emit()">
+      {{ retryLabel() }}
+    </button>
+  }
+</div>

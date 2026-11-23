@@ -1,0 +1,17 @@
+<dialog
+  #dialog
+  class="confirm-dialog"
+  [attr.aria-labelledby]="titleId"
+  (cancel)="onCancelRequested($event)"
+>
+  <h2 class="confirm-dialog__title" [id]="titleId">{{ title() }}</h2>
+  <p class="confirm-dialog__message">{{ message() }}</p>
+  <div class="confirm-dialog__actions">
+    <button type="button" class="btn btn--ghost" (click)="dismiss()">
+      {{ cancelLabel() }}
+    </button>
+    <button type="button" [class]="confirmClass()" (click)="confirm()">
+      {{ confirmLabel() }}
+    </button>
+  </div>
+</dialog>

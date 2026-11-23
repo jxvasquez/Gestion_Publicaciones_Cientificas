@@ -76,6 +76,7 @@ test.describe('Flujo 10 — fuga de identidad', () => {
     ]) {
       await authorPage.goto(path);
       await authorPage.waitForLoadState('networkidle');
+      await authorPage.locator('summary').filter({ hasText: 'Mi cuenta' }).click();
       const seen = await visibleText(authorPage);
       // Control positivo: la página sí cargó (muestra al propio Autor), así que la ausencia es real.
       expect(seen).toContain('Marcela');

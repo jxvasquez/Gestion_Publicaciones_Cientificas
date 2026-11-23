@@ -1,0 +1,11 @@
+<div class="empty-state">
+  <svg class="empty-state__illustration" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+    <use href="icons/ui.svg#empty-state" />
+  </svg>
+  <p class="empty-state__message" role="status">{{ message() }}</p>
+  @if (actionLabel()) {
+    <button type="button" class="btn btn--primary" (click)="action.emit()">
+      {{ actionLabel() }}
+    </button>
+  }
+</div>
