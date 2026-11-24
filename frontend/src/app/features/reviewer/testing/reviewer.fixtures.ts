@@ -7,6 +7,20 @@ import {
   ReviewerHistoryRow,
 } from '../../../core/models/reviewer.model';
 
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/** Instante ISO relativo al reloj actual: `days` positivo es futuro, negativo es pasado. */
+export function isoFromNow(days: number): string {
+  return new Date(Date.now() + days * DAY_MS).toISOString();
+}
+
+/** Formatea un instante ISO como `dd/MM/yyyy HH:mm` en hora local, igual que la interfaz. */
+export function formatLocalDateTime(iso: string): string {
+  const d = new Date(iso);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
 /** Datos de ejemplo del módulo Revisor para las pruebas. */
 export function buildAssignmentRow(
   overrides: Partial<ReviewerAssignmentRow> = {},
@@ -19,7 +33,7 @@ export function buildAssignmentRow(
     version_number: 1,
     round_number: 0,
     assigned_at: '2026-10-21T15:00:00Z',
-    due_at: '2026-11-10T15:00:00Z',
+    due_at: isoFromNow(7),
     status: 'ACTIVE',
     state: 'PENDING',
     is_overdue: false,

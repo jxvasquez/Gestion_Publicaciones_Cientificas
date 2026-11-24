@@ -17,6 +17,7 @@ import {
   buildAssignmentDetail,
   buildCompleteEvaluation,
   buildReviewerEvaluation,
+  isoFromNow,
 } from '../testing/reviewer.fixtures';
 import { EvaluationFormComponent } from './evaluation-form.component';
 
@@ -72,7 +73,7 @@ describe('EvaluationFormComponent', () => {
   const open = async (
     evaluation: ReviewerEvaluation = buildReviewerEvaluation(),
     etag = '"0"',
-    detail: ReviewerAssignmentDetail = buildAssignmentDetail({ due_at: '2026-11-10T15:00:00Z' }),
+    detail: ReviewerAssignmentDetail = buildAssignmentDetail({ due_at: isoFromNow(7) }),
   ) => {
     const harness = await RouterTestingHarness.create();
     const component = await harness.navigateByUrl(PAGE_URL, EvaluationFormComponent);

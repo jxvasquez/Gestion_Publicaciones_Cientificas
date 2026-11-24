@@ -12,7 +12,11 @@ import { vi } from 'vitest';
 import { API_BASE_URL } from '../../../core/http/api-base-url.token';
 import { ReviewerAssignmentDetail } from '../../../core/models/reviewer.model';
 import { errorEnvelope } from '../../author/testing/manuscript.fixtures';
-import { buildAssignmentDetail } from '../testing/reviewer.fixtures';
+import {
+  buildAssignmentDetail,
+  formatLocalDateTime,
+  isoFromNow,
+} from '../testing/reviewer.fixtures';
 import { AssignmentDetailComponent } from './assignment-detail.component';
 
 const DETAIL = '/api/v1/reviewer/assignments/a-1/';
@@ -47,7 +51,7 @@ describe('AssignmentDetailComponent', () => {
   const detailRequest = (): TestRequest => http.expectOne((r) => r.url === DETAIL);
 
   const open = async (
-    detail: ReviewerAssignmentDetail = buildAssignmentDetail({ due_at: '2026-11-10T15:00:00Z' }),
+    detail: ReviewerAssignmentDetail = buildAssignmentDetail({ due_at: isoFromNow(7) }),
   ) => {
     const harness = await RouterTestingHarness.create();
     await harness.navigateByUrl(PAGE_URL, AssignmentDetailComponent);
@@ -72,7 +76,8 @@ describe('AssignmentDetailComponent', () => {
 
   describe('contenido', () => {
     it('muestra código, título, resumen, área, ronda, versión y plazo', async () => {
-      const { element } = await open();
+      const dueAt = isoFromNow(7);
+      const { element } = await open(buildAssignmentDetail({ due_at: dueAt }));
 
       expect(text(element.querySelector('.detail-code'))).toBe('GPC-2026-000001');
       expect(text(element.querySelector('h1'))).toBe('Efecto del clima en cultivos andinos');
@@ -83,7 +88,9 @@ describe('AssignmentDetailComponent', () => {
       expect(data).toContain('v1, enviada el 20/10/2026 10:30');
       expect(text(element.querySelector('.detail-badges'))).toContain('Ronda 0');
       expect(text(element.querySelector('.detail-badges'))).toContain('Versión v1');
-      expect(text(element.querySelector('app-deadline-countdown'))).toContain('10/11/2026 10:00');
+      expect(text(element.querySelector('app-deadline-countdown'))).toContain(
+        formatLocalDateTime(dueAt),
+      );
     });
 
     it('declara el doble ciego y no contiene campos de autoría', async () => {
