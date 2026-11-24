@@ -14,11 +14,19 @@ export function isoFromNow(days: number): string {
   return new Date(Date.now() + days * DAY_MS).toISOString();
 }
 
-/** Formatea un instante ISO como `dd/MM/yyyy HH:mm` en hora local, igual que la interfaz. */
+/** Formatea un instante ISO como `dd/MM/yyyy HH:mm` en hora de Ecuador, igual que la interfaz. */
 export function formatLocalDateTime(iso: string): string {
-  const d = new Date(iso);
-  const pad = (n: number) => String(n).padStart(2, '0');
-  return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'America/Guayaquil',
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(new Date(iso));
+  const get = (type: Intl.DateTimeFormatPartTypes) => parts.find((p) => p.type === type)?.value;
+  return `${get('day')}/${get('month')}/${get('year')} ${get('hour')}:${get('minute')}`;
 }
 
 /** Datos de ejemplo del módulo Revisor para las pruebas. */
