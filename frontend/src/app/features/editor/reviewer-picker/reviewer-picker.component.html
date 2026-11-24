@@ -10,15 +10,15 @@
     }
     @default {
       @if (reviewers().length === 0) {
-        <div class="picker__empty" role="status">
-          @for (line of explanation(); track $index; let first = $first) {
-            @if (first) {
-              <p><strong>No hay Revisores elegibles.</strong> {{ line }}</p>
-            } @else {
-              <ul class="picker__causes">
-                <li>{{ line }}</li>
-              </ul>
-            }
+        @let reasons = explanation();
+        <div class="picker__empty">
+          <app-empty-state [message]="'No hay Revisores elegibles. ' + (reasons[0] ?? '')" />
+          @if (reasons.length > 1) {
+            <ul class="picker__causes">
+              @for (reason of reasons.slice(1); track $index) {
+                <li>{{ reason }}</li>
+              }
+            </ul>
           }
         </div>
       } @else {
@@ -43,7 +43,7 @@
         </div>
 
         @if (visible().length === 0) {
-          <p class="picker__empty" role="status">Ningún Revisor coincide con la búsqueda.</p>
+          <app-empty-state message="Ningún Revisor coincide con la búsqueda." />
         } @else {
           <ul class="picker__list">
             @for (reviewer of visible(); track reviewer.id) {

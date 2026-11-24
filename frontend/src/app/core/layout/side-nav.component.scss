@@ -16,11 +16,18 @@
 
 .side-nav__group {
   display: flex;
+  min-inline-size: 0;
+  max-inline-size: 100%;
   flex-direction: column;
   gap: 0.125rem;
   margin: 0;
   padding: 0;
   list-style: none;
+}
+
+.side-nav__group li {
+  min-inline-size: 0;
+  max-inline-size: 100%;
 }
 
 .side-nav__link {

@@ -10,6 +10,7 @@ import {
   isAtCapacity,
 } from '../../../core/models/editor.model';
 import { EditorService } from '../../../core/services/editor.service';
+import { EmptyStateComponent } from '../../../shared/components/empty-state.component';
 import { ErrorStateComponent } from '../../../shared/components/error-state.component';
 import { LoadingSpinnerComponent } from '../../../shared/components/loading-spinner.component';
 
@@ -79,7 +80,7 @@ export function explainNoReviewers(
  */
 @Component({
   selector: 'app-reviewer-picker',
-  imports: [FormsModule, LoadingSpinnerComponent, ErrorStateComponent],
+  imports: [FormsModule, LoadingSpinnerComponent, EmptyStateComponent, ErrorStateComponent],
   templateUrl: './reviewer-picker.component.html',
   styleUrl: './reviewer-picker.component.scss',
 })

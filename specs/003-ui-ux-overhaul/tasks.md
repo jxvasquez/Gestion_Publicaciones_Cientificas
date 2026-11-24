@@ -176,17 +176,79 @@ Para todas las tablas de esta fase, mantener columnas, encabezados semánticos, 
 
 **Objetivo**. Verificar compilación, regresión, aislamiento doble ciego, coherencia y contraste de toda la entrega.
 
-- [ ] T059 Revisar el diff con `git diff --check` y contrastar los archivos modificados con `specs/003-ui-ux-overhaul/plan.md`. Revisar especialmente `frontend/src/app/app.routes.ts`, `frontend/src/app/core/auth/auth.guard.ts`, `frontend/src/app/core/auth/roles.guard.ts`, `frontend/src/app/core/auth/unsaved-changes.guard.ts` y `frontend/src/app/core/services/dashboard.service.ts`. Revisar también el diff de `frontend/src/app/core/services/` y `backend/`. Confirmar que los cambios a decoradores son de presentación y que el backend, las políticas de acceso y los contratos de API quedan intactos.
-- [ ] T060 Desde `frontend/`, ejecutar `npx tsc -p tsconfig.app.json --noEmit`, `npx tsc -p tsconfig.spec.json --noEmit` y `npx ng build --configuration production` usando `frontend/tsconfig.app.json`, `frontend/tsconfig.spec.json` y `frontend/angular.json`. Verificar todas las plantillas, los presupuestos de Angular y la publicación de `frontend/public/icons/ui.svg`.
-- [ ] T061 Desde `frontend/`, ejecutar `npx ng test --watch=false` con el runner vigente de `frontend/angular.json` y `frontend/package.json`. Verificar las suites existentes y comparar con la línea base de T001, incluidos shell, sesión, permisos, panel, catálogo y gestión.
-- [ ] T062 Desde la raíz, ejecutar `python3 scripts/check_frontend_build.py` sobre el build de producción generado en T060, conforme a `.github/workflows/ci.yml`. Verificar el código de salida y el artefacto de `frontend/dist/gpc-frontend/`.
-- [ ] T063 [US4] Desde la raíz, ejecutar `./scripts/e2e.sh` mediante `scripts/e2e.sh`. Confirmar sesión y ciclo editorial con `frontend/e2e/01-sesion.e2e.ts`, `frontend/e2e/02-ciclo-completo.e2e.ts` y `frontend/e2e/03-correccion.e2e.ts`, y doble ciego con `frontend/e2e/04-fuga-de-identidad.e2e.ts`. Comparar solicitudes y resultados con T002 y verificar catálogo anónimo, avisos y permiso de acceso al PDF. Usar dos cuentas distintas con roles múltiples para comprobar que las respuestas, el DOM y el árbol accesible no revelen datos restringidos.
-- [ ] T064 [US5] Examinar los resultados de `frontend/e2e/05-accesibilidad.e2e.ts`, `frontend/e2e/06-teclado.e2e.ts` y `frontend/e2e/07-responsive.e2e.ts` en T063. Exigir cero infracciones A/AA en las vistas automatizadas y completar la matriz de `specs/003-ui-ux-overhaul/plan.md` a 320, 768 y 1366 px con 403/404, estados de carga/error/vacío, nombre largo, menús, tablas y diálogos. Verificar Tab, Escape, retorno del foco, lector de pantalla, texto ampliado, movimiento reducido y ausencia de desbordamiento global.
-- [ ] T065 [US5] Medir colores computados de primer plano y fondo en las vistas de `specs/003-ui-ux-overhaul/plan.md` y en los patrones de `frontend/src/styles/_tokens.scss` y `frontend/src/styles.scss`. Registrar ratios por vista y estado, incluidos reposo, hover, foco, activo, error y badges. Confirmar 4.5:1 para texto normal, 3:1 para texto grande y 3:1 frente a colores adyacentes para elementos no textuales aplicables. Completar las mediciones que axe no cubra y corroborar que los estados y acciones siguen siendo distinguibles sin depender del color.
+- [x] T059 Revisar el diff con `git diff --check` y contrastar los archivos modificados con `specs/003-ui-ux-overhaul/plan.md`. Revisar especialmente `frontend/src/app/app.routes.ts`, `frontend/src/app/core/auth/auth.guard.ts`, `frontend/src/app/core/auth/roles.guard.ts`, `frontend/src/app/core/auth/unsaved-changes.guard.ts` y `frontend/src/app/core/services/dashboard.service.ts`. Revisar también el diff de `frontend/src/app/core/services/` y `backend/`. Confirmar que los cambios a decoradores son de presentación y que el backend, las políticas de acceso y los contratos de API quedan intactos.
+- [x] T060 Desde `frontend/`, ejecutar `npx tsc -p tsconfig.app.json --noEmit`, `npx tsc -p tsconfig.spec.json --noEmit` y `npx ng build --configuration production` usando `frontend/tsconfig.app.json`, `frontend/tsconfig.spec.json` y `frontend/angular.json`. Verificar todas las plantillas, los presupuestos de Angular y la publicación de `frontend/public/icons/ui.svg`.
+- [x] T061 Desde `frontend/`, ejecutar `npx ng test --watch=false` con el runner vigente de `frontend/angular.json` y `frontend/package.json`. Verificar las suites existentes y comparar con la línea base de T001, incluidos shell, sesión, permisos, panel, catálogo y gestión.
+- [x] T062 Desde la raíz, ejecutar `python3 scripts/check_frontend_build.py` sobre el build de producción generado en T060, conforme a `.github/workflows/ci.yml`. Verificar el código de salida y el artefacto de `frontend/dist/gpc-frontend/`.
+- [x] T063 [US4] Desde la raíz, ejecutar `./scripts/e2e.sh` mediante `scripts/e2e.sh`. Confirmar sesión y ciclo editorial con `frontend/e2e/01-sesion.e2e.ts`, `frontend/e2e/02-ciclo-completo.e2e.ts` y `frontend/e2e/03-correccion.e2e.ts`, y doble ciego con `frontend/e2e/04-fuga-de-identidad.e2e.ts`. Comparar solicitudes y resultados con T002 y verificar catálogo anónimo, avisos y permiso de acceso al PDF. Usar dos cuentas distintas con roles múltiples para comprobar que las respuestas, el DOM y el árbol accesible no revelen datos restringidos.
+- [x] T064 [US5] Examinar los resultados de `frontend/e2e/05-accesibilidad.e2e.ts`, `frontend/e2e/06-teclado.e2e.ts` y `frontend/e2e/07-responsive.e2e.ts` en T063. Exigir cero infracciones A/AA en las vistas automatizadas y completar la matriz de `specs/003-ui-ux-overhaul/plan.md` a 320, 768 y 1366 px con 403/404, estados de carga/error/vacío, nombre largo, menús, tablas y diálogos. Verificar Tab, Escape, retorno del foco, lector de pantalla, texto ampliado, movimiento reducido y ausencia de desbordamiento global.
+- [x] T065 [US5] Medir colores computados de primer plano y fondo en las vistas de `specs/003-ui-ux-overhaul/plan.md` y en los patrones de `frontend/src/styles/_tokens.scss` y `frontend/src/styles.scss`. Registrar ratios por vista y estado, incluidos reposo, hover, foco, activo, error y badges. Confirmar 4.5:1 para texto normal, 3:1 para texto grande y 3:1 frente a colores adyacentes para elementos no textuales aplicables. Completar las mediciones que axe no cubra y corroborar que los estados y acciones siguen siendo distinguibles sin depender del color.
 
-- [ ] T066 [US1] Comprobar en `frontend/src/app/core/layout/shell.component.html`, `frontend/src/app/core/layout/header.component.html` y `frontend/src/app/core/layout/notification-bell.component.html` la navegación con uno, varios y cero roles habilitados. Verificar enlaces permitidos, 403 por acceso directo no autorizado, ausencia de selector de rol, nombre íntegro y campana con cero, conteo positivo y más de 99 avisos. Comparar lo mostrado con el conteo exacto accesible.
-- [ ] T067 [US3] Validar `frontend/src/app/features/catalog/catalog-search/catalog-search.component.html`, `frontend/src/app/features/catalog/catalog-list/catalog-list.component.html` y `frontend/src/app/features/catalog/catalog-detail/catalog-detail.component.html` en sesión anónima. Comparar filtros combinados, orden, paginación y recuperación por URL con T002. Comprobar carga, error, catálogo vacío, acción de limpiar filtros y acceso a ficha y PDF de los artículos admitidos.
-- [ ] T068 [US5] Recorrer el inventario completo de `specs/003-ui-ux-overhaul/plan.md` y comprobar la aplicación de `frontend/src/styles/_tokens.scss` y de los patrones de `frontend/src/styles.scss`. Confirmar que listados y búsquedas sin datos tienen estado ilustrado distinguible de carga y error. Registrar resultados para SC-001 a SC-006 en la revisión de implementación.
+- [x] T066 [US1] Comprobar en `frontend/src/app/core/layout/shell.component.html`, `frontend/src/app/core/layout/header.component.html` y `frontend/src/app/core/layout/notification-bell.component.html` la navegación con uno, varios y cero roles habilitados. Verificar enlaces permitidos, 403 por acceso directo no autorizado, ausencia de selector de rol, nombre íntegro y campana con cero, conteo positivo y más de 99 avisos. Comparar lo mostrado con el conteo exacto accesible.
+- [x] T067 [US3] Validar `frontend/src/app/features/catalog/catalog-search/catalog-search.component.html`, `frontend/src/app/features/catalog/catalog-list/catalog-list.component.html` y `frontend/src/app/features/catalog/catalog-detail/catalog-detail.component.html` en sesión anónima. Comparar filtros combinados, orden, paginación y recuperación por URL con T002. Comprobar carga, error, catálogo vacío, acción de limpiar filtros y acceso a ficha y PDF de los artículos admitidos.
+- [x] T068 [US5] Recorrer el inventario completo de `specs/003-ui-ux-overhaul/plan.md` y comprobar la aplicación de `frontend/src/styles/_tokens.scss` y de los patrones de `frontend/src/styles.scss`. Confirmar que listados y búsquedas sin datos tienen estado ilustrado distinguible de carga y error. Registrar resultados para SC-001 a SC-006 en la revisión de implementación.
+
+### Resultados de verificación
+
+- **T059 y T068**. Se cotejaron los 52 componentes del inventario, con plantilla y estilo externos. Los cuerpos de las 51 clases previas coinciden con la línea base. El backend, los guards, las rutas, los servicios y los modelos conservan su implementación. Los listados reutilizan el estado ilustrado y distinguen carga, error y vacío. Se completaron los estados vacíos de elegibilidad, búsqueda, versiones e historial del Editor.
+- **T060 y T062**. Node 22.23.5. Pasaron ambas comprobaciones de tipos, la compilación de producción y `check_frontend_build.py`. El paquete inicial fue de 303,79 kB, por debajo del presupuesto. Angular publicó el sprite sin diferencias respecto al original.
+- **T061**. Pasaron 1291 de 1317 pruebas con el reloj real. Los 26 fallos fueron los mismos de T001 en las tres suites del Revisor. Las 206 pruebas del módulo pasaron al usar un reloj Vitest temporal del 27 de octubre de 2026. Ese ajuste se aplicó solo a la verificación.
+- **T063**. Pasaron las 34 pruebas E2E en la corrida final. Se compararon 38 combinaciones de solicitudes de T002 por método, ruta, parámetros, forma del cuerpo, conteo y código de respuesta. En el segundo intento de ingreso, la traza registró la solicitud y la prueba verificó el 401. Un caso adicional en el stack aislado verificó el doble ciego con dos cuentas distintas Autor–Revisor, revisando respuestas, DOM, árbol accesible y acceso al PDF según el rol.
+- **T064**. Chromium recorrió 25 combinaciones de vista y rol a 320, 768 y 1366 px. Axe no presentó infracciones en los casos medidos. Las verificaciones complementarias incluyeron 403/404, carga/error/vacío, menús abiertos, nombre largo, diálogo con Escape y retorno de foco, movimiento reducido y cuatro vistas con texto al 200 %. Se corrigieron el reflujo y el acceso por teclado al desplazamiento de la tabla de autores del Editor. En una sesión virtual aislada, el registro de Orca confirmó los anuncios de «Identificador institucional», «Contraseña» e «Ingresar». Las otras vistas se comprobaron con axe, teclado o árbol accesible según el escenario.
+- **T066**. Con datos simulados se comprobó un rol, cuatro roles y cero roles, la ausencia de selector, el nombre largo, las rutas visibles y el 403. La campana mostró cero sin insignia, 3 y `99+`, con 100 como conteo accesible exacto.
+- **T067**. El E2E confirmó consulta y PDF públicos y 404 tras la baja. Con respuestas simuladas se verificaron los siete filtros, orden, paginación y recuperación tras recarga, carga, 503, vacío, limpiar filtros y PDF no disponible.
+
+| Criterio | Evidencia |
+| --- | --- |
+| SC-001 | Navegación, permisos y campana verificados en T063 y T066. |
+| SC-002 | Los specs del panel conservan conteos positivos, cero y datos ausentes, secciones sanas ante fallo parcial, reintento y una petición por carga. |
+| SC-003 | Catálogo real y escenarios de filtros, orden y paginación verificados en T063 y T067. |
+| SC-004 | Ciclo editorial, auditoría, sesión y doble ciego verificados en T061 y T063. |
+| SC-005 | E2E, reflujo, teclado, Orca y mediciones de contraste verificados en T064 y T065. |
+| SC-006 | Inventario de componentes y estados ilustrados verificados en T059, T064, T067 y T068. |
+
+#### T065 — Contraste por vista y estado
+
+Se registraron 2639 mediciones de estilos computados en 87 escenarios. El mínimo de texto observado fue 5,93:1, el de los bordes funcionales fue 4,34:1 y el de los anillos enfocados fue 8,39:1. La tabla indica el menor contraste observado entre los tres anchos para texto y bordes funcionales. Se indica primero el color frontal. El divisor decorativo se excluyó de los bordes funcionales.
+
+| Vista | Texto mínimo | Borde funcional mínimo |
+| --- | --- | --- |
+| Público · Inicio | `#4b5563` / `#ffffff` · 7,56:1 | `#64748b` / `#ffffff` · 4,76:1 |
+| Público · Catálogo | `#4b5563` / `#f1f5f9` · 6,90:1 | `#64748b` / `#ffffff` · 4,76:1 |
+| Público · Ficha | `#4b5563` / `#ffffff` · 7,56:1 | `#64748b` / `#ffffff` · 4,76:1 |
+| Público · 404 | `#4b5563` / `#ffffff` · 7,56:1 | — |
+| Autor · 403 | `#4b5563` / `#ffffff` · 7,56:1 | — |
+| Autor · Panel multirrol | `#4b5563` / `#f8fafc` · 7,22:1 | `#64748b` / `#f1f5f9` · 4,34:1 |
+| Autor · Avisos | `#4b5563` / `#f1f5f9` · 6,90:1 | `#64748b` / `#f1f5f9` · 4,34:1 |
+| Autor · Manuscritos | `#4b5563` / `#f8fafc` · 7,22:1 | `#64748b` / `#f1f5f9` · 4,34:1 |
+| Autor · Alta | `#ffffff` / `#146c33` · 6,52:1 | `#64748b` / `#f1f5f9` · 4,34:1 |
+| Autor · Detalle | `#ffffff` / `#b3261e` · 6,54:1 | `#64748b` / `#f1f5f9` · 4,34:1 |
+| Autor · Edición | `#ffffff` / `#146c33` · 6,52:1 | `#64748b` / `#f1f5f9` · 4,34:1 |
+| Autor · Historial | `#4b5563` / `#f1f5f9` · 6,90:1 | `#64748b` / `#f1f5f9` · 4,34:1 |
+| Editor · Panel | `#4b5563` / `#f8fafc` · 7,22:1 | `#64748b` / `#f1f5f9` · 4,34:1 |
+| Editor · Envíos | `#4b5563` / `#f1f5f9` · 6,90:1 | `#64748b` / `#f1f5f9` · 4,34:1 |
+| Editor · Detalle | `#4b5563` / `#f1f5f9` · 6,90:1 | `#64748b` / `#f1f5f9` · 4,34:1 |
+| Editor · Vencidas | `#8a4b0b` / `#fdeed3` · 5,93:1 | `#64748b` / `#f1f5f9` · 4,34:1 |
+| Editor · Incidentes | `#8a4b0b` / `#fdeed3` · 5,93:1 | `#64748b` / `#f1f5f9` · 4,34:1 |
+| Revisor · Panel | `#4b5563` / `#f8fafc` · 7,22:1 | `#64748b` / `#f1f5f9` · 4,34:1 |
+| Revisor · Asignaciones | `#4b5563` / `#f1f5f9` · 6,90:1 | `#64748b` / `#f1f5f9` · 4,34:1 |
+| Revisor · Detalle | `#4b5563` / `#f8fafc` · 7,22:1 | `#64748b` / `#f1f5f9` · 4,34:1 |
+| Revisor · Evaluar | `#4b5563` / `#f8fafc` · 7,22:1 | `#64748b` / `#f1f5f9` · 4,34:1 |
+| Revisor · Historial | `#4b5563` / `#f1f5f9` · 6,90:1 | `#64748b` / `#f1f5f9` · 4,34:1 |
+| Admin · Panel | `#4b5563` / `#f8fafc` · 7,22:1 | `#64748b` / `#f1f5f9` · 4,34:1 |
+| Admin · Auditoría | `#4b5563` / `#f1f5f9` · 6,90:1 | `#64748b` / `#f1f5f9` · 4,34:1 |
+| Admin · Evento | `#4b5563` / `#f8fafc` · 7,22:1 | `#64748b` / `#f1f5f9` · 4,34:1 |
+
+| Estado | Elemento | Colores | Ratio |
+| --- | --- | --- | --- |
+| Hover | Botón Ingresar | `#ffffff` / `#172a4a` | 14,32:1 |
+| Foco | Campo de identificación, motivo de corrección y menú de cuenta | `#1d4e89` / `#ffffff` | 8,39:1 |
+| Activo | Texto del enlace Panel | `#172a4a` / `#e4edf7` | 12,11:1 |
+| Activo | Acento de navegación contra el fondo activo | `#1d4e89` / `#e4edf7` | 7,09:1 |
+| Error | Mensaje del catálogo | `#9b1c1c` / `#fce8e6` | 6,92:1 |
+| Badge de advertencia | Incidente abierto | `#8a4b0b` / `#fdeed3` | 5,93:1 |
+
+Los estados conservan etiquetas de texto y la ruta activa usa un indicador lateral y `aria-current`.
 
 ## Dependencias y orden de ejecución
 

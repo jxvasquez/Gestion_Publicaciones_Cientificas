@@ -38,7 +38,12 @@ test.describe('Flujo 1 — sesión y panel multirrol', () => {
     const wrong = await page.getByRole('alert').filter({ hasText: /./ }).first().innerText();
 
     await page.getByLabel('Identificador institucional').fill('no-existe-e2e');
+    const secondLogin = page.waitForResponse(
+      (response) =>
+        response.url().endsWith('/api/v1/auth/login/') && response.request().method() === 'POST',
+    );
     await page.getByRole('button', { name: 'Ingresar' }).click();
+    expect((await secondLogin).status()).toBe(401);
     await expect(page.getByRole('alert').filter({ hasText: wrong })).toBeVisible();
     await expect(page).toHaveURL(/\/login$/);
   });

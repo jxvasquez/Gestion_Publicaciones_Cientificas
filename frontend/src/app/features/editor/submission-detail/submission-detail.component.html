@@ -134,7 +134,7 @@
 
     <section class="card" aria-labelledby="authors-title">
       <h2 id="authors-title">Autores</h2>
-      <div class="table-wrap">
+      <div class="table-wrap" tabindex="0" role="region" aria-label="Tabla de autores">
         <table class="plain">
           <caption class="visually-hidden">
             Autores del envío con su contacto y filiación
@@ -170,7 +170,7 @@
         <p class="callout callout--danger" role="alert">{{ message }}</p>
       }
       @if (m.versions.length === 0) {
-        <p>Aún no hay versiones formales.</p>
+        <app-empty-state message="Aún no hay versiones formales." />
       } @else {
         <ul class="versions">
           @for (version of m.versions; track version.id) {
@@ -208,7 +208,7 @@
     <section class="card" aria-labelledby="history-title">
       <h2 id="history-title">Historial</h2>
       @if (m.history.length === 0) {
-        <p>Aún no hay eventos registrados.</p>
+        <app-empty-state message="Aún no hay eventos registrados." />
       } @else {
         <ol class="timeline" aria-label="Historial del envío">
           @for (entry of m.history; track $index) {

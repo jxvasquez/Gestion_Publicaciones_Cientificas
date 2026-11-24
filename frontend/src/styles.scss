@@ -18,6 +18,7 @@ body {
   line-height: var(--gpc-leading-base);
   color: var(--gpc-text);
   background: var(--gpc-surface);
+  overflow-wrap: anywhere;
 }
 
 a {
@@ -135,6 +136,7 @@ a {
 /* Botones compartidos */
 .btn {
   display: inline-flex;
+  max-inline-size: 100%;
   align-items: center;
   gap: var(--gpc-space-2);
   padding: var(--gpc-space-2) var(--gpc-space-4);

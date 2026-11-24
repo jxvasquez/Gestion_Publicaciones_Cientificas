@@ -13,6 +13,7 @@ import {
 import { EditorService } from '../../../core/services/editor.service';
 import { ManuscriptService } from '../../../core/services/manuscript.service';
 import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialog.component';
+import { EmptyStateComponent } from '../../../shared/components/empty-state.component';
 import { ErrorStateComponent } from '../../../shared/components/error-state.component';
 import { LoadingSpinnerComponent } from '../../../shared/components/loading-spinner.component';
 import { RoundCounterComponent } from '../../../shared/components/round-counter.component';
@@ -60,6 +61,7 @@ const INSTITUTIONAL_OFFSET = '-0500';
     DatePipe,
     RouterLink,
     LoadingSpinnerComponent,
+    EmptyStateComponent,
     ErrorStateComponent,
     StatusBadgeComponent,
     RoundCounterComponent,
