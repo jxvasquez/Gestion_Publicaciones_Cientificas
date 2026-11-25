@@ -358,7 +358,7 @@ description: "Tareas de implementación de la asignación automática por carrer
 - [ ] T132 [P] Agregar a la tabla 1.1 de `.spec-kit/specify.md` las decisiones que reemplazan D-02, D-04, RN-04, RN-05, RN-12, CA-HU-11-01, CA-HU-15-01, CA-HU-15-03, CA-HU-16-06 y la fase 2, con enlace a `specs/004-auto-assign-ranking-rubric/spec.md`.
 - [x] T133 [P] Ampliar `backend/tests/performance/test_query_scaling.py` con `/areas/`, `/reviewer/standing/`, sus ajustes, `/admin/incidents/`, `/admin/reviewers/`, `/admin/areas/` y `eligible_candidates()`. Con 2 y con 9 filas, el número de consultas no cambia.
 - [ ] T134 Repetir el inventario de T004 y registrar en `specs/004-auto-assign-ranking-rubric/tasks.md` que solo quedan referencias heredadas justificadas: migraciones, el comando de transición, etiquetas de auditoría y de estados históricos, y ADR.
-- [ ] T135 Ejecutar el comando de T001 con cobertura y confirmar el mínimo del 80 % en servicios y permisos de `backend/.coveragerc`, además de `makemigrations --check --dry-run`. Registrar los resultados frente a la línea base.
+- [x] T135 Ejecutar el comando de T001 con cobertura y confirmar el mínimo del 80 % en servicios y permisos de `backend/.coveragerc`, además de `makemigrations --check --dry-run`. Registrar los resultados frente a la línea base.
 - [x] T136 Desde `frontend/`, ejecutar `npx tsc -p tsconfig.app.json --noEmit`, `npx tsc -p tsconfig.spec.json --noEmit`, `npx ng build --configuration production` y `npx ng test --watch=false`. Desde la raíz, ejecutar `python3 scripts/check_frontend_build.py`. Confirmar los presupuestos de `frontend/angular.json` y la publicación del símbolo `areas` de `frontend/public/icons/ui.svg`.
 - [ ] T137 Ejecutar `./scripts/e2e.sh` completo. Con axe, exigir cero infracciones A/AA. Medir el contraste de los estados nuevos (opciones de la rúbrica, contador, deltas, `CHANGES_REQUESTED`, `TIE_BREAKER` y tablas del Administrador) en reposo, hover, foco, activo y error. Registrar los ratios por vista con el formato de 003.
 - [ ] T138 Recorrer los escenarios A a M de `specs/004-auto-assign-ranking-rubric/quickstart.md` en el entorno de desarrollo. Medir con al menos cinco revisores de prueba el tiempo de llenado de la rúbrica para SC-008. Registrar los resultados por criterio de éxito.
@@ -478,7 +478,8 @@ Task: "T107 Comando de transición y docker-compose.yml"
 
 - Backend: 1421 pruebas pasan (12 omitidas); migraciones aplicadas sobre datos heredados; `makemigrations --check` limpio. Con xdist hay 19 pruebas inestables heredadas de la línea base (pasan en serie con `API_DOCS_ENABLED=true`).
 - Frontend: `tsc` app y spec limpios, 76 archivos / 1198 pruebas en verde con `TZ=UTC npx ng test --watch=false`, build de producción y `scripts/check_frontend_build.py` correctos (T136).
-- Pendientes: T002–T004 (registro de líneas base e inventario), T124–T132 (E2E, scripts, docs), T134, T135 (cobertura lanzada, sin leer), T137–T139. `graphify` no está instalado en este entorno.
+- Cobertura (T135): servicios y permisos 95 % (mínimo por archivo 85 %, umbral 80 %); `makemigrations --check --dry-run` sin cambios; 1432 pruebas pasan con xdist (la de 50 MB es inestable en paralelo y pasa en serie).
+- Pendientes: T002–T004 (registro de líneas base e inventario), T124–T132 (E2E, scripts, docs), T134, T137–T139. `graphify` no está instalado en este entorno.
 
 Completar durante la implementación: línea base (T001 a T004), suite tras la fase 2 (T031), inventario final (T134), backend (T135), frontend (T136), E2E, accesibilidad y contraste (T137) y escenarios manuales (T138).
 
