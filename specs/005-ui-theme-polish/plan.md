@@ -227,7 +227,13 @@ Se cuentan los rellenos `.btn--primary`, `.btn--success` y `.btn--danger` visibl
 | Formulario de evaluación (borrador desactualizado) | «Conservar mi texto» y «Enviar evaluación» | «Enviar evaluación» |
 | Incidentes | Dos rellenos rojos por reporte | Ninguna; la confirmación sigue en rojo |
 | Carreras | «Crear», un rojo por fila activa y «Guardar» en línea | «Crear» |
-| Padrón, auditoría, detalle del evento, avisos, catálogo, ficha, inicio de sesión y panel | Una o ninguna | Sin cambios de jerarquía |
+| Listado de manuscritos (vacío o con error) | «Nuevo manuscrito» más «Registrar mi primer manuscrito», «Limpiar filtros» o «Reintentar» | «Nuevo manuscrito». Las acciones de los estados compartidos con borde |
+| Catálogo (sin coincidencias o con error) | «Buscar» más «Limpiar filtros» o «Reintentar» | «Buscar» |
+| Auditoría (con error) | «Filtrar» más «Reintentar» | «Filtrar» |
+| Carreras (con error) | «Crear carrera» más «Reintentar» | «Crear carrera» |
+| Padrón, detalle del evento, avisos, ficha, inicio de sesión y panel | Una o ninguna | Sin cambios de jerarquía |
+
+Las filas de estados vacío y de error se resuelven en `shared/components/empty-state.component.html` y `error-state.component.html`, cuya acción pasa a `.btn--ghost` (T059).
 
 ### Presentación y accesibilidad
 

@@ -31,10 +31,10 @@ description: "Tareas de implementación del tema claro y oscuro descansado y del
 
 **Purpose**: registrar el comportamiento previo y los puntos que la funcionalidad va a cambiar.
 
-- [ ] T001 Registrar la línea base del frontend sobre `9297dbe`. Desde `frontend/`, ejecutar `npx tsc -p tsconfig.app.json --noEmit`, `npx tsc -p tsconfig.spec.json --noEmit`, `npx ng build --configuration production` y `TZ=UTC npx ng test --watch=false`. Desde la raíz, ejecutar `python3 scripts/check_frontend_build.py`. Anotar en «Resultados de verificación» el tamaño del paquete inicial, los avisos de presupuesto por hoja de componente de `frontend/angular.json` y las pruebas aprobadas.
-- [ ] T002 [P] Registrar la línea base E2E con `./scripts/e2e.sh` y `frontend/playwright.config.ts`: número de pruebas, duración y hallazgos de `frontend/e2e/05-accesibilidad.e2e.ts`, `06-teclado.e2e.ts` y `07-responsive.e2e.ts`. Anotar en `specs/005-ui-theme-polish/tasks.md` los selectores que cambiarán según R-10 de [plan.md](plan.md).
-- [ ] T003 [P] Inventariar los colores fuera de los tokens con `grep -rnE "color: var\(--gpc-surface-alt\)" frontend/src`, `grep -rnE "#[0-9a-fA-F]{3,8}\b|rgba?\(|rgb\(" frontend/src --include=*.scss | grep -v _tokens.scss` y la comparación de `grep -rhoE "var\(--gpc-[a-z0-9-]+" frontend/src | sort -u` con los tokens declarados en `frontend/src/styles/_tokens.scss`. Registrar la lista por archivo y confirmar R-03 y R-04.
-- [ ] T004 [P] Inventariar las acciones destacadas con `grep -rnE "btn--(primary|success|danger)" frontend/src/app --include=*.html` y confirmar o corregir la tabla «Inventario de acciones destacadas» de [plan.md](plan.md#inventario-de-acciones-destacadas) antes de la fase 8.
+- [x] T001 Registrar la línea base del frontend sobre `9297dbe`. Desde `frontend/`, ejecutar `npx tsc -p tsconfig.app.json --noEmit`, `npx tsc -p tsconfig.spec.json --noEmit`, `npx ng build --configuration production` y `TZ=UTC npx ng test --watch=false`. Desde la raíz, ejecutar `python3 scripts/check_frontend_build.py`. Anotar en «Resultados de verificación» el tamaño del paquete inicial, los avisos de presupuesto por hoja de componente de `frontend/angular.json` y las pruebas aprobadas.
+- [x] T002 [P] Registrar la línea base E2E con `./scripts/e2e.sh` y `frontend/playwright.config.ts`: número de pruebas, duración y hallazgos de `frontend/e2e/05-accesibilidad.e2e.ts`, `06-teclado.e2e.ts` y `07-responsive.e2e.ts`. Anotar en `specs/005-ui-theme-polish/tasks.md` los selectores que cambiarán según R-10 de [plan.md](plan.md).
+- [x] T003 [P] Inventariar los colores fuera de los tokens con `grep -rnE "color: var\(--gpc-surface-alt\)" frontend/src`, `grep -rnE "#[0-9a-fA-F]{3,8}\b|rgba?\(|rgb\(" frontend/src --include=*.scss | grep -v _tokens.scss` y la comparación de `grep -rhoE "var\(--gpc-[a-z0-9-]+" frontend/src | sort -u` con los tokens declarados en `frontend/src/styles/_tokens.scss`. Registrar la lista por archivo y confirmar R-03 y R-04.
+- [x] T004 [P] Inventariar las acciones destacadas con `grep -rnE "btn--(primary|success|danger)" frontend/src/app --include=*.html` y confirmar o corregir la tabla «Inventario de acciones destacadas» de [plan.md](plan.md#inventario-de-acciones-destacadas) antes de la fase 8.
 
 ---
 
@@ -221,7 +221,7 @@ description: "Tareas de implementación del tema claro y oscuro descansado y del
 - [ ] T056 [US6] Mover los filtros de `frontend/src/app/features/author/manuscript-list/manuscript-list.component.html` al panel «Filtros» con `[open]` enlazado a `hasFilters()` o al error de fechas. Agregar `activeFilterCount()` en `manuscript-list.component.ts` y ajustar la jerarquía de «Filtrar» y «Limpiar».
 - [ ] T057 [US6] Mover los campos de `frontend/src/app/features/admin/audit-filters/audit-filters.component.html` al panel «Filtros», con conteo y apertura en `audit-filters.component.ts`, y «Limpiar» compacto.
 - [ ] T058 [US6] En `frontend/src/app/features/catalog/catalog-search/catalog-search.component.html`, `.ts` y `.scss`, dejar visible el buscador con «Buscar» y mover los filtros avanzados al panel «Filtros», con conteo y apertura desde la URL.
-- [ ] T059 [P] [US6] Ajustar la jerarquía de `frontend/src/app/features/author/version-history/version-history.component.html`, `frontend/src/app/shared/components/pdf-viewer.component.html`, `frontend/src/app/features/reviewer/evaluation-form/evaluation-form.component.html`, `frontend/src/app/features/author/manuscript-form/manuscript-form.component.html` y `frontend/src/app/features/reviewer/assignment-detail/assignment-detail.component.html` según el inventario de acciones.
+- [ ] T059 [P] [US6] Ajustar la jerarquía de `frontend/src/app/features/author/version-history/version-history.component.html`, `frontend/src/app/shared/components/pdf-viewer.component.html`, `frontend/src/app/features/reviewer/evaluation-form/evaluation-form.component.html`, `frontend/src/app/features/author/manuscript-form/manuscript-form.component.html` y `frontend/src/app/features/reviewer/assignment-detail/assignment-detail.component.html` según el inventario de acciones. Pasar a `.btn--ghost` la acción de `frontend/src/app/shared/components/empty-state.component.html` y `error-state.component.html`.
 - [ ] T060 [P] [US6] Ajustar las acciones por fila y por reporte de `frontend/src/app/features/admin/area-catalog/area-catalog.component.html`, `frontend/src/app/features/admin/reviewer-roster/reviewer-roster.component.html` y `frontend/src/app/features/admin/incident-list/incident-list.component.html` según FR-018.
 
 **Checkpoint**: el conteo de T054 pasa en las 23 pantallas y ninguna acción ni destino desapareció.
@@ -333,10 +333,19 @@ Task: "T040 remainingFraction() y barra en frontend/src/app/features/reviewer/de
 
 ### Líneas base (T001 a T004)
 
-- **Frontend (T001):** pendiente. Medición previa del 2026-11-25 sobre `9297dbe`: `TZ=UTC npx ng test --watch=false` con 76 archivos y 1198 pruebas en verde. Faltan `tsc`, el build de producción, los presupuestos y `scripts/check_frontend_build.py`.
-- **E2E (T002):** pendiente. Referencia de 004: 39 pruebas en verde en 2,3 min, con cero infracciones axe en tema claro.
-- **Colores fuera de los tokens (T003):** pendiente. Esperado según R-03 y R-04.
-- **Acciones destacadas (T004):** pendiente. Esperado según el inventario de [plan.md](plan.md#inventario-de-acciones-destacadas).
+Medidas el 2026-11-25 sobre `45ffaeb`, cuyo árbol de `frontend/` y `scripts/` es idéntico al de `9297dbe` (solo agrega los documentos de 005).
+
+- **Frontend (T001):** `tsc` de app y de specs limpios. Build de producción correcto, paquete inicial de 306,45 kB (85,94 kB transferidos): `chunk-DJUT-jL5.js` 196,75 kB, `main` 104,43 kB y `styles` 5,27 kB. Cero avisos de presupuesto, ni del paquete inicial ni de hojas de componente. `TZ=UTC npx ng test --watch=false` con 76 archivos y 1198 pruebas en verde. `scripts/check_frontend_build.py` sin fallos (55 archivos en el build).
+- **E2E (T002):** `./scripts/e2e.sh` desde un stack nuevo, 39 pruebas en verde en 2,3 min (190 s con la construcción), salida 0. `05-accesibilidad` sin hallazgos axe en público, Autor, Revisor y Administrador (solo tema claro). `06-teclado` y `07-responsive` sin hallazgos. El stack se borró al terminar.
+- **Selectores que cambiarán (R-10):**
+  - `support/ui.ts`: `filterAudit()` (usado en `02-ciclo-completo:227` y `03-correccion:164,193`), `standingMetric()` y `activeSlots()` (usados en `02-ciclo-completo:107,108,139`).
+  - «Dar de baja» directo en `02-ciclo-completo:199`, `05-accesibilidad:72` y `06-teclado:92`.
+  - `04-fuga-de-identidad:129` abre el `summary` «Mi cuenta», que se conserva.
+- **Colores fuera de los tokens (T003):** confirma R-03 y R-04.
+  - `color: var(--gpc-surface-alt)` como texto sobre relleno: `styles.scss:66` (`.skip-link`), `:155`, `:164` y `:173` (`.btn--primary`, `--success`, `--danger`), `notification-bell.component.scss:19` y `notification-list.component.scss:49`.
+  - Literales: `styles.scss:117` (telón de diálogos); `evaluation-form.component.scss:152,157,158,162,178` (respaldos `#c9ced6`, `#1d4f91`, `#eaf1fb`, `#4a5260`); `reviewer-standing.component.scss:13` (`#c9ced6`).
+  - Tokens usados y no declarados: `--gpc-info-border`, `--gpc-info-bg` y `--gpc-focus`, todos en `evaluation-form.component.scss`. Ningún otro.
+- **Acciones destacadas (T004):** la tabla del plan se confirmó y se corrigió. Faltaban las acciones primarias de `EmptyStateComponent` y `ErrorStateComponent`, que coinciden con otra primaria en el listado de manuscritos (vacío o con error), el catálogo (sin coincidencias o con error), la auditoría (con error) y las carreras (con error). Se agregaron cuatro filas a la tabla y los dos componentes compartidos a T059. En el resto, las primarias de una misma vista son excluyentes (`@switch`), viven en diálogos o van en tarjetas distintas.
 
 ### Contraste de la paleta (T011 y T025)
 
