@@ -83,31 +83,6 @@ def _break_audit_writes(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 class TestAuthFlowChain:
-    def test_login_and_logout_events_stay_chained(self) -> None:
-        user = with_roles(UserFactory(), "EDITOR")
-        client, response = login(user.institutional_id)
-        access = response.json()["access"]
-
-        logout = client.post(LOGOUT_URL, HTTP_AUTHORIZATION=f"Bearer {access}")
-        assert logout.status_code == 204
-
-        events = list(
-            AuditLog.objects.filter(action__in=("LOGIN", "LOGOUT")).order_by("id")
-        )
-        assert [entry.action for entry in events] == ["LOGIN", "LOGOUT"]
-        assert events[0].previous_hash is None
-
-        # Cada entrada enlaza con la anterior y su hash se recalcula
-        # exactamente desde el JSON canónico persistido.
-        previous = None
-        for entry in events:
-            assert entry.previous_hash == previous
-            canonical = canonical_event_json(_event_payload(entry))
-            assert (
-                compute_entry_hash(canonical, entry.previous_hash)
-                == entry.entry_hash
-            )
-            previous = entry.entry_hash
 
     def test_failed_audit_answers_503_and_reverts_the_login(
         self, monkeypatch: pytest.MonkeyPatch

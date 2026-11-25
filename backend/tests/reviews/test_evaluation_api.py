@@ -40,12 +40,12 @@ pytestmark = pytest.mark.django_db
 
 BASE = "/api/v1/reviewer/assignments/"
 FULL = {
-    "originality_score": 4,
-    "methodology_score": 3,
-    "clarity_score": 5,
-    "relevance_score": 4,
-    "ethics_score": 5,
-    "recommendation": "ACCEPT",
+    "scientific_contribution": 4,
+    "methodological_rigor": 4,
+    "literature_grounding": 5,
+    "results_conclusions": 4,
+    "academic_writing": 5,
+    "recommendation": "ACCEPTED",
     "comments_for_author": "Buen trabajo, con matices menores.",
     "confidential_comments": "Nota solo para el editor.",
 }
@@ -121,14 +121,6 @@ class TestAccess:
 
         assert response.status_code == 401
 
-    @pytest.mark.parametrize("role", ["AUTHOR", "EDITOR", "ADMIN"])
-    @pytest.mark.parametrize("method", ["get", "put", "post"])
-    def test_other_roles_answer_403(self, assignment, role, method) -> None:
-        suffix = "submit/" if method == "post" else ""
-
-        response = getattr(client_for(actor(role)), method)(url(assignment, suffix))
-
-        assert response.status_code == 403
 
     @pytest.mark.parametrize("method", ["get", "put", "post"])
     def test_a_foreign_assignment_answers_404_even_without_a_header(
@@ -174,7 +166,7 @@ class TestRead:
         body = response.json()
         assert response["ETag"] == '"0"'
         assert body["id"] is None and body["status"] == "DRAFT"
-        assert body["recommendation"] is None and body["originality_score"] is None
+        assert body["recommendation"] is None and body["scientific_contribution"] is None
         assert body["conflict_declared"] is False
         assert not Evaluation.objects.filter(assignment=assignment).exists()
 
@@ -185,7 +177,7 @@ class TestRead:
 
         assert response["ETag"] == '"1"'
         assert response.json()["comments_for_author"] == FULL["comments_for_author"]
-        assert response.json()["confidential_comments"] == FULL["confidential_comments"]
+        assert "confidential_comments" not in response.json()
 
     def test_the_body_is_an_allowlist_without_identity(self, reviewer, assignment) -> None:
         complete_draft(assignment)
@@ -193,9 +185,9 @@ class TestRead:
         body = client_for(reviewer).get(url(assignment)).json()
 
         assert set(body) == {
-            "id", "status", "originality_score", "methodology_score", "clarity_score",
-            "relevance_score", "ethics_score", "recommendation", "comments_for_author",
-            "confidential_comments", "conflict_declared", "submitted_at",
+            "id", "status", "scientific_contribution", "methodological_rigor", "literature_grounding",
+            "results_conclusions", "academic_writing", "recommendation", "comments_for_author",
+            "rubric_version", "conflict_declared", "submitted_at",
         }
 
     def test_a_completed_assignment_shows_the_final_evaluation(self, reviewer, assignment) -> None:
@@ -212,24 +204,15 @@ class TestRead:
 
         assert client_for(reviewer).get(url(assignment)).status_code == 404
 
-    def test_the_draft_is_private_to_the_reviewer(self, reviewer, assignment) -> None:
-        complete_draft(assignment)
-        editor = actor("EDITOR")
-
-        listed = client_for(editor).get(
-            f"/api/v1/editor/manuscripts/{assignment.manuscript_id}/evaluations/"
-        )
-
-        assert listed.status_code == 200 and listed.json()["count"] == 0
 
 
 class TestSaveDraft:
     def test_the_first_put_creates_the_draft(self, reviewer, assignment) -> None:
-        response = put(reviewer, assignment, {"clarity_score": 4})
+        response = put(reviewer, assignment, {"literature_grounding": 4})
 
         assert response.status_code == 200
         body = response.json()
-        assert body["status"] == "DRAFT" and body["clarity_score"] == 4
+        assert body["status"] == "DRAFT" and body["literature_grounding"] == 4
         assert body["id"] == str(draft_of(assignment).pk)
         assert response["ETag"] == '"1"'
         assert draft_of(assignment).reviewer_id == reviewer.pk
@@ -246,12 +229,12 @@ class TestSaveDraft:
     ) -> None:
         put(reviewer, assignment, FULL)
 
-        response = put(reviewer, assignment, {"clarity_score": 2}, lock=1)
+        response = put(reviewer, assignment, {"literature_grounding": 2}, lock=1)
 
         assert response.status_code == 200 and response["ETag"] == '"2"'
         draft = draft_of(assignment)
-        assert draft.clarity_score == 2
-        assert draft.originality_score == FULL["originality_score"]
+        assert draft.literature_grounding == 2
+        assert draft.scientific_contribution == FULL["scientific_contribution"]
         assert draft.comments_for_author == FULL["comments_for_author"]
 
     def test_null_clears_a_field_and_blank_text_is_no_text(self, reviewer, assignment) -> None:
@@ -260,19 +243,19 @@ class TestSaveDraft:
         put(
             reviewer,
             assignment,
-            {"clarity_score": None, "comments_for_author": "   ", "confidential_comments": ""},
+            {"literature_grounding": None, "comments_for_author": "   ", "confidential_comments": ""},
             lock=1,
         )
 
         draft = draft_of(assignment)
-        assert draft.clarity_score is None
+        assert draft.literature_grounding is None
         assert draft.comments_for_author is None and draft.confidential_comments is None
 
     @pytest.mark.parametrize("score", [1, 5])
     def test_scores_at_the_bounds_are_accepted(self, reviewer, assignment, score) -> None:
-        assert put(reviewer, assignment, {"ethics_score": score}).status_code == 200
+        assert put(reviewer, assignment, {"academic_writing": score}).status_code == 200
 
-    @pytest.mark.parametrize("field", ["originality_score", "ethics_score"])
+    @pytest.mark.parametrize("field", ["scientific_contribution", "academic_writing"])
     @pytest.mark.parametrize("score", [0, 6, -1, "alto", 2.5])
     def test_a_score_outside_one_to_five_answers_400(self, reviewer, assignment, field, score) -> None:
         response = put(reviewer, assignment, {field: score})
@@ -307,24 +290,24 @@ class TestSaveDraft:
     def test_a_stale_lock_answers_409_and_keeps_the_winning_edit(
         self, reviewer, assignment
     ) -> None:
-        put(reviewer, assignment, {"clarity_score": 3})
-        put(reviewer, assignment, {"clarity_score": 4}, lock=1)
+        put(reviewer, assignment, {"literature_grounding": 3})
+        put(reviewer, assignment, {"literature_grounding": 4}, lock=1)
 
-        stale = put(reviewer, assignment, {"clarity_score": 1}, lock=1)
+        stale = put(reviewer, assignment, {"literature_grounding": 1}, lock=1)
 
         assert stale.status_code == 409 and error_code(stale) == "VERSION_CONFLICT"
         assert stale.json()["error"]["details"] == {"lock_version": 2}
-        assert draft_of(assignment).clarity_score == 4
+        assert draft_of(assignment).literature_grounding == 4
 
     def test_two_tabs_starting_from_the_empty_draft_do_not_overwrite_each_other(
         self, reviewer, assignment
     ) -> None:
-        assert put(reviewer, assignment, {"clarity_score": 3}, lock=0).status_code == 200
+        assert put(reviewer, assignment, {"literature_grounding": 3}, lock=0).status_code == 200
 
-        second = put(reviewer, assignment, {"clarity_score": 1}, lock=0)
+        second = put(reviewer, assignment, {"literature_grounding": 1}, lock=0)
 
         assert second.status_code == 409
-        assert draft_of(assignment).clarity_score == 3
+        assert draft_of(assignment).literature_grounding == 3
 
     def test_a_put_with_a_nonzero_lock_before_any_draft_answers_409(
         self, reviewer, assignment
@@ -335,17 +318,17 @@ class TestSaveDraft:
         complete_draft(assignment)
         Evaluation.objects.filter(assignment=assignment).update(conflict_declared=True)
 
-        response = put(reviewer, assignment, {"clarity_score": 1}, lock=1)
+        response = put(reviewer, assignment, {"literature_grounding": 1}, lock=1)
 
         assert response.status_code == 409 and error_code(response) == "STATE_CONFLICT"
-        assert draft_of(assignment).clarity_score == FULL["clarity_score"]
+        assert draft_of(assignment).literature_grounding == FULL["literature_grounding"]
 
 
 class TestDeadline:
     def test_a_draft_cannot_be_saved_after_the_deadline(self, reviewer, assignment) -> None:
         set_deadline(assignment, timedelta(days=-1))
 
-        response = put(reviewer, assignment, {"clarity_score": 3})
+        response = put(reviewer, assignment, {"literature_grounding": 3})
 
         assert response.status_code == 410
         assert not Evaluation.objects.filter(assignment=assignment).exists()
@@ -412,7 +395,7 @@ class TestSubmit:
         assert response.status_code == 200
         body = response.json()
         assert body["status"] == "FINAL" and body["submitted_at"]
-        assert body["recommendation"] == "ACCEPT"
+        assert body["recommendation"] == "ACCEPTED"
         assert response["ETag"] == '"2"'
         evaluation = draft_of(assignment)
         assert evaluation.status == "FINAL" and evaluation.lock_version == 2
@@ -421,12 +404,12 @@ class TestSubmit:
         assert assignment.lock_version == 1
 
     def test_the_whole_flow_through_the_api(self, reviewer, assignment) -> None:
-        assert put(reviewer, assignment, {"clarity_score": 2}).status_code == 200
+        assert put(reviewer, assignment, {"literature_grounding": 2}).status_code == 200
         assert put(reviewer, assignment, FULL, lock=1).status_code == 200
 
         response = submit(reviewer, assignment, lock=2)
 
-        assert response.status_code == 200 and response.json()["clarity_score"] == 5
+        assert response.status_code == 200 and response.json()["literature_grounding"] == 5
 
     def test_confidential_comments_are_optional(self, reviewer, assignment) -> None:
         complete_draft(assignment, confidential_comments=None)
@@ -443,21 +426,12 @@ class TestSubmit:
         assert (after.status, after.lock_version) == (before.status, before.lock_version)
         assert not Verdict.objects.exists()
 
-    def test_the_editor_reads_it_once_final(self, reviewer, assignment) -> None:
-        complete_draft(assignment)
-        submit(reviewer, assignment, lock=1)
-
-        listed = client_for(actor("EDITOR")).get(
-            f"/api/v1/editor/manuscripts/{assignment.manuscript_id}/evaluations/"
-        )
-
-        assert listed.json()["count"] == 1
 
     @pytest.mark.parametrize(
         "missing",
         [
-            "originality_score", "methodology_score", "clarity_score", "relevance_score",
-            "ethics_score", "recommendation", "comments_for_author",
+            "scientific_contribution", "methodological_rigor", "literature_grounding", "results_conclusions",
+            "academic_writing", "recommendation", "comments_for_author",
         ],
     )
     def test_an_incomplete_draft_answers_400_and_stays_a_draft(
@@ -489,8 +463,8 @@ class TestSubmit:
 
         assert response.status_code == 400
         assert set(response.json()["error"]["details"]) == {
-            "originality_score", "methodology_score", "clarity_score", "relevance_score",
-            "ethics_score", "recommendation", "comments_for_author",
+            "scientific_contribution", "methodological_rigor", "literature_grounding", "results_conclusions",
+            "academic_writing", "recommendation", "comments_for_author",
         }
 
     def test_the_header_is_mandatory(self, reviewer, assignment) -> None:
@@ -553,33 +527,6 @@ class TestSubmit:
         assignment.refresh_from_db()
         assert assignment.status == "ACTIVE" and assignment.completed_at is None
 
-    def test_the_editor_event_is_sent_after_the_commit_with_identifiers_only(
-        self, reviewer, assignment, django_capture_on_commit_callbacks
-    ) -> None:
-        complete_draft(assignment)
-        received: list[dict] = []
-
-        def listener(sender, **kwargs) -> None:
-            kwargs.pop("signal", None)
-            received.append(kwargs)
-
-        evaluation_submitted.connect(listener, weak=False)
-        try:
-            response = submit(
-                reviewer, assignment, lock=1, capture=django_capture_on_commit_callbacks
-            )
-        finally:
-            evaluation_submitted.disconnect(listener)
-
-        assert response.status_code == 200
-        assert received == [
-            {
-                "evaluation_id": draft_of(assignment).pk,
-                "assignment_id": assignment.pk,
-                "manuscript_id": assignment.manuscript_id,
-                "reviewer_id": reviewer.pk,
-            }
-        ]
 
     def test_no_event_is_sent_when_the_submission_fails(
         self, reviewer, assignment, django_capture_on_commit_callbacks
@@ -605,10 +552,10 @@ class TestFinalIsImmutable:
         return assignment
 
     def test_a_put_after_the_submission_answers_409(self, reviewer, finished) -> None:
-        response = put(reviewer, finished, {"clarity_score": 1}, lock=2)
+        response = put(reviewer, finished, {"literature_grounding": 1}, lock=2)
 
         assert response.status_code == 409 and error_code(response) == "STATE_CONFLICT"
-        assert draft_of(finished).clarity_score == FULL["clarity_score"]
+        assert draft_of(finished).literature_grounding == FULL["literature_grounding"]
 
     def test_a_second_submission_answers_409_and_is_not_audited_twice(
         self, reviewer, finished

@@ -15,9 +15,8 @@ the actor's active roles — the panel never asks to choose a role:
 Section data providers are registered per role. The domain modules
 fill their own sections as their models arrive — author with the
 publications module (TSK-32 onwards), reviewer with the reviews module
-(TSK-60 onwards), editor with the editor module (TSK-47 onwards) and
-admin with the audit module (TSK-73 onwards). Until then every section
-renders with empty data, already composed by this service.
+(ranking and load of the reviewer) and admin with the audit and review
+modules (open incidents and manuscripts awaiting reviewers).
 """
 
 from __future__ import annotations
@@ -44,36 +43,23 @@ def build_author_section(user) -> dict[str, Any]:
 
 
 def build_reviewer_section(user) -> dict[str, Any]:
-    """REVIEWER section data: pending assignments and deadlines.
+    """REVIEWER section data: ranking score, load and compliance (FR-033, FR-038)."""
+    from apps.reviews.services.standing import reviewer_dashboard
 
-    The assignment data arrive with the reviews module (TSK-60
-    onwards).
-    """
-    return {}
-
-
-def build_editor_section(user) -> dict[str, Any]:
-    """EDITOR section data: new submissions and expired assignments.
-
-    The submission data arrive with the editor module (TSK-47
-    onwards).
-    """
-    return {}
+    return reviewer_dashboard(user)
 
 
 def build_admin_section(user) -> dict[str, Any]:
-    """ADMIN section data: audit overview and correction grants.
+    """ADMIN section data: open incidents and manuscripts awaiting reviewers (FR-038)."""
+    from apps.reviews.services.standing import admin_dashboard
 
-    The audit data arrive with the admin module (TSK-73 onwards).
-    """
-    return {}
+    return admin_dashboard(user)
 
 
 #: Section data providers by active role code.
 SECTION_BUILDERS: dict[str, Callable[[Any], dict[str, Any]]] = {
     Role.Code.AUTHOR: build_author_section,
     Role.Code.REVIEWER: build_reviewer_section,
-    Role.Code.EDITOR: build_editor_section,
     Role.Code.ADMIN: build_admin_section,
 }
 

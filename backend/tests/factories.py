@@ -16,7 +16,16 @@ from datetime import timedelta
 
 from django.contrib.auth.hashers import make_password
 from django.utils import timezone
-from factory import Faker, LazyAttribute, LazyFunction, SelfAttribute, Sequence, SubFactory
+from factory import (
+    Faker,
+    LazyAttribute,
+    LazyFunction,
+    SelfAttribute,
+    Sequence,
+    SubFactory,
+    Trait,
+    post_generation,
+)
 from factory.django import DjangoModelFactory
 
 from apps.publications.models import (
@@ -28,8 +37,9 @@ from apps.publications.models import (
     StatusEvent,
     Verdict,
 )
-from apps.reviews.models import ASSIGNMENT_DAYS, Assignment, Evaluation, IncidentReport
-from apps.users.models import ReviewerProfile, Role, User, UserRole
+from apps.reviews.models import Assignment, Evaluation, IncidentReport
+from apps.reviews.policy import ASSIGNMENT_DAYS
+from apps.users.models import AcademicArea, ReviewerProfile, Role, User, UserRole
 
 #: Plain password of every account built by :class:`UserFactory`.
 FACTORY_PASSWORD = "institucional-123"
@@ -49,6 +59,23 @@ class UserFactory(DjangoModelFactory):
     # Hash persistido directamente en el INSERT: sin post-generación
     # y sin segundo save.
     password = LazyFunction(lambda: make_password(FACTORY_PASSWORD))
+
+
+class AcademicAreaFactory(DjangoModelFactory):
+    """A career of the catalog; ``code`` is reused so tests share one row per career."""
+
+    class Meta:
+        model = AcademicArea
+        django_get_or_create = ("code",)
+
+    code = "agronomia"
+    name = LazyAttribute(lambda o: o.code.replace("-", " ").capitalize())
+    is_active = True
+
+
+def area(code: str = "agronomia", name: str | None = None, **extra) -> AcademicArea:
+    """The career with ``code`` (created on demand)."""
+    return AcademicAreaFactory(code=code, **({"name": name} if name else {}), **extra)
 
 
 class UserRoleFactory(DjangoModelFactory):
@@ -77,9 +104,16 @@ class ManuscriptFactory(DjangoModelFactory):
     title = "Efecto del clima en cultivos andinos"
     abstract = "Resumen del estudio."
     keywords = LazyFunction(lambda: ["clima", "cultivos"])
-    area = "Agronomía"
     language = "es"
     created_by = SubFactory(UserFactory)
+
+    @post_generation
+    def areas(self, create, extracted, **kwargs):
+        """Careers of the manuscript: ``areas=[...]`` (codes or rows); one by default."""
+        if not create:
+            return
+        wanted = extracted if extracted is not None else ["agronomia"]
+        self.areas.set([a if isinstance(a, AcademicArea) else area(a) for a in wanted])
 
 
 class ManuscriptAuthorFactory(DjangoModelFactory):
@@ -145,7 +179,7 @@ class StatusEventFactory(DjangoModelFactory):
 
 
 class ReviewerProfileFactory(DjangoModelFactory):
-    """Availability and expertise of a reviewer; the role is granted apart.
+    """Careers, availability and ranking of a reviewer; the role is granted apart.
 
     The account needs an active ``REVIEWER`` role (``UserRoleFactory``)
     to be eligible for an assignment.
@@ -155,9 +189,16 @@ class ReviewerProfileFactory(DjangoModelFactory):
         model = ReviewerProfile
 
     user = SubFactory(UserFactory)
-    expertise_areas = LazyFunction(lambda: ["Agronomía"])
     is_available = True
-    max_active_assignments = 3
+    ranking_score = 100
+
+    @post_generation
+    def areas(self, create, extracted, **kwargs):
+        """Careers of the reviewer: ``areas=[...]`` (codes or rows); one by default."""
+        if not create:
+            return
+        wanted = extracted if extracted is not None else ["agronomia"]
+        self.areas.set([a if isinstance(a, AcademicArea) else area(a) for a in wanted])
 
 
 class AssignmentFactory(DjangoModelFactory):
@@ -170,12 +211,16 @@ class AssignmentFactory(DjangoModelFactory):
     class Meta:
         model = Assignment
 
-    manuscript = SubFactory(ManuscriptFactory, status=Manuscript.Status.UNDER_REVIEW)
+    manuscript = SubFactory(
+        ManuscriptFactory, status=Manuscript.Status.UNDER_REVIEW, current_version=1
+    )
     version = SubFactory(
         ManuscriptVersionFactory, manuscript=SelfAttribute("..manuscript")
     )
     reviewer = SubFactory(UserFactory)
-    assigned_by = SubFactory(UserFactory)
+    slot = 1
+    # `None` es el sistema, que es quien asigna.
+    assigned_by = None
     assigned_at = LazyFunction(timezone.now)
     due_at = LazyAttribute(lambda o: o.assigned_at + timedelta(days=ASSIGNMENT_DAYS))
 
@@ -191,19 +236,35 @@ class EvaluationFactory(DjangoModelFactory):
     version = SelfAttribute("assignment.version")
     reviewer = SelfAttribute("assignment.reviewer")
     status = Evaluation.Status.DRAFT
+    rubric_version = 2
+
+    class Params:
+        # Evaluación heredada (rúbrica 1): sus criterios y dictámenes anteriores.
+        legacy = Trait(
+            rubric_version=1,
+            recommendation=Evaluation.Recommendation.ACCEPT,
+            originality_score=4,
+            methodology_score=4,
+            clarity_score=4,
+            relevance_score=4,
+            ethics_score=5,
+        )
 
 
 class FinalEvaluationFactory(EvaluationFactory):
-    """A complete ``FINAL`` evaluation; immutable once created."""
+    """A complete ``FINAL`` evaluation of the rubric 2; immutable once created.
+
+    ``legacy=True`` builds a rubric 1 evaluation instead.
+    """
 
     status = Evaluation.Status.FINAL
-    recommendation = Evaluation.Recommendation.ACCEPT
+    recommendation = Evaluation.Recommendation.ACCEPTED
     comments_for_author = "Comentarios para el autor."
-    originality_score = 4
-    methodology_score = 4
-    clarity_score = 4
-    relevance_score = 4
-    ethics_score = 5
+    scientific_contribution = 4
+    methodological_rigor = 4
+    literature_grounding = 4
+    results_conclusions = 4
+    academic_writing = 5
     submitted_at = LazyFunction(timezone.now)
 
 
@@ -224,19 +285,31 @@ class IncidentReportFactory(DjangoModelFactory):
 
 
 class VerdictFactory(DjangoModelFactory):
-    """A normal ``ACCEPTED`` verdict over a final evaluation.
+    """A normal ``ACCEPTED`` verdict issued by the system (consensus).
 
-    It writes only the row: no status change, round or catalog entry.
-    Go through ``register_verdict`` to exercise the real flow.
+    It writes only the row: no status change, round, catalog entry or
+    ``VerdictEvaluation``. Go through ``decide_version`` to exercise the
+    real flow; pass ``origin='EDITOR_LEGACY'`` and ``decided_by`` for a
+    legacy verdict that points to its single evaluation.
     """
 
     class Meta:
         model = Verdict
 
-    evaluation = SubFactory(FinalEvaluationFactory)
-    manuscript = SelfAttribute("evaluation.manuscript")
-    version = SelfAttribute("evaluation.version")
-    editor = SubFactory(UserFactory)
+    class Params:
+        legacy = Trait(
+            origin=Verdict.Origin.EDITOR_LEGACY,
+            decided_by=SubFactory(UserFactory),
+            evaluation=SubFactory(FinalEvaluationFactory),
+            manuscript=SelfAttribute("evaluation.manuscript"),
+            version=SelfAttribute("evaluation.version"),
+        )
+
+    evaluation = None
+    manuscript = SubFactory(ManuscriptFactory, status=Manuscript.Status.ACCEPTED)
+    version = SubFactory(ManuscriptVersionFactory, manuscript=SelfAttribute("..manuscript"))
+    decided_by = None
+    origin = Verdict.Origin.CONSENSUS
     decision = Verdict.Decision.ACCEPTED
 
 
@@ -251,3 +324,79 @@ class CatalogEntryFactory(DjangoModelFactory):
         ManuscriptVersionFactory, manuscript=SelfAttribute("..manuscript")
     )
     public_file_path = LazyAttribute(lambda o: f"{o.manuscript.pk}/{o.version.pk}.pdf")
+
+
+# --- Constructores de estado (sin Editor) ----------------------------------------------
+
+
+def reviewer_account(*, areas=("agronomia",), ranking_score: int = 100, available: bool = True, **user):
+    """An active reviewer: account, ``REVIEWER`` role and profile with its careers."""
+    account = UserFactory(**user)
+    UserRoleFactory(user=account, role_code=Role.Code.REVIEWER)
+    ReviewerProfileFactory(
+        user=account, areas=list(areas), ranking_score=ranking_score, is_available=available
+    )
+    return account
+
+
+def submitted(*, areas=("agronomia",), **fields) -> Manuscript:
+    """A formally submitted manuscript: ``SUBMITTED`` with its version 1 and round 0."""
+    manuscript = ManuscriptFactory(status=Manuscript.Status.SUBMITTED, areas=list(areas), **fields)
+    manuscript.current_version = 1
+    manuscript.save(update_fields=["current_version"])
+    ManuscriptVersionFactory(manuscript=manuscript)
+    CorrectionRoundFactory(manuscript=manuscript, round_number=0)
+    return manuscript
+
+
+def under_review_with_slots(*, reviewers=2, areas=("agronomia",), **fields):
+    """An ``UNDER_REVIEW`` manuscript with ``reviewers`` live assignments in slots 1, 2...
+
+    Returns ``(manuscript, [assignments])``.
+    """
+    manuscript = submitted(areas=areas, **fields)
+    manuscript.status = Manuscript.Status.UNDER_REVIEW
+    manuscript.save(update_fields=["status"])
+    version = manuscript.versions.get()
+    assignments = [
+        AssignmentFactory(
+            manuscript=manuscript,
+            version=version,
+            reviewer=reviewer_account(areas=areas),
+            slot=slot,
+        )
+        for slot in range(1, reviewers + 1)
+    ]
+    return manuscript, assignments
+
+
+def tie_breaker(*, areas=("agronomia",), **fields):
+    """A ``TIE_BREAKER`` manuscript: slot 1 accepts, slot 2 rejects, slot 3 still pending."""
+    manuscript, assignments = under_review_with_slots(areas=areas, **fields)
+    manuscript.status = Manuscript.Status.TIE_BREAKER
+    manuscript.save(update_fields=["status"])
+    for assignment, recommendation in zip(
+        assignments, (Evaluation.Recommendation.ACCEPTED, Evaluation.Recommendation.REJECTED)
+    ):
+        assignment.status = Assignment.Status.COMPLETED
+        assignment.save(update_fields=["status"])
+        FinalEvaluationFactory(assignment=assignment, recommendation=recommendation)
+    return manuscript, assignments
+
+
+def changes_requested(*, areas=("agronomia",), **fields) -> Manuscript:
+    """A ``CHANGES_REQUESTED`` manuscript with its open round 1."""
+    manuscript = submitted(areas=areas, **fields)
+    manuscript.status = Manuscript.Status.CHANGES_REQUESTED
+    manuscript.current_round = 1
+    manuscript.save(update_fields=["status", "current_round"])
+    CorrectionRoundFactory(manuscript=manuscript, round_number=1)
+    return manuscript
+
+
+def accepted(*, areas=("agronomia",), **fields) -> Manuscript:
+    """An ``ACCEPTED`` manuscript (no catalog entry, no verdict)."""
+    manuscript = submitted(areas=areas, **fields)
+    manuscript.status = Manuscript.Status.ACCEPTED
+    manuscript.save(update_fields=["status"])
+    return manuscript

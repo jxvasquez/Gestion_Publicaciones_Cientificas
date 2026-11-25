@@ -82,7 +82,6 @@ class TestManuscriptCode:
                         title="Otro",
                         abstract="x",
                         keywords=["x"],
-                        area="x",
                         language="es",
                         created_by=owner,
                     )

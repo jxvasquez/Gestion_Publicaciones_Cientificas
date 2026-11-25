@@ -6,13 +6,11 @@ serializers, never on one serializer with conditional ``exclude``:
 * :class:`AuthorManuscriptSerializer` — the author's own manuscript: its
   authors, state, round, version and the editable metadata. It never
   carries the reviewer's identity, confidential comments or scores.
-* :class:`AuthorEvaluationFeedbackSerializer` — the only view of an
-  evaluation the author gets: the comments written for them, the
-  verdict and the editor's observations. It appears as ``feedback`` in
-  the author's manuscript, and only once the editor registered a
-  verdict: a final evaluation alone is not shown.
-* :class:`EditorManuscriptSerializer` — the editor's read-only view,
-  with the authors' contact data and the versions.
+* :class:`AuthorEvaluationFeedbackSerializer` — the only view of the
+  evaluations the author gets: the decision and the comments each
+  reviewer wrote for them, labelled «Revisor N». It appears as
+  ``feedback`` in the author's manuscript, and only once the verdict
+  exists: a final evaluation alone is not shown.
 """
 
 from __future__ import annotations
@@ -27,7 +25,7 @@ from apps.publications.services.manuscripts import (
     REQUIRED_METADATA,
     validate_author_roster,
 )
-from apps.users.serializers import SessionUserSerializer
+from apps.users.serializers import AcademicAreaSerializer
 
 #: ISO 639-1 language code (plan section 1.8).
 LANGUAGE_PATTERN = re.compile(r"^[a-z]{2}$")
@@ -43,7 +41,7 @@ class ManuscriptAuthorSerializer(serializers.ModelSerializer):
 
 
 class ManuscriptVersionSummarySerializer(serializers.ModelSerializer):
-    """Version row of the editor's view: file name, size and integrity seal."""
+    """Version row: file name, size and integrity seal."""
 
     class Meta:
         model = ManuscriptVersion
@@ -59,16 +57,26 @@ class ManuscriptVersionSummarySerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
 
-class AuthorEvaluationFeedbackSerializer(serializers.Serializer):
-    """What the author may read of an evaluation (CA double-blind).
+class FeedbackReviewSerializer(serializers.Serializer):
+    """The comments of one reviewer, identified only by the slot label."""
 
-    Allowlist of three fields: the reviewer's identity, the confidential
-    comments and the scores are never part of it.
+    label = serializers.CharField(read_only=True)
+    comments_for_author = serializers.CharField(read_only=True)
+
+
+class AuthorEvaluationFeedbackSerializer(serializers.Serializer):
+    """What the author may read of the evaluations (double blind).
+
+    Allowlist: the decision, its date and origin, the observations and one
+    ``{label, comments_for_author}`` per reviewer. Identities, scores,
+    individual recommendations and the ranking never belong to it.
     """
 
-    comments_for_author = serializers.CharField(read_only=True)
     decision = serializers.CharField(read_only=True)
+    decided_at = serializers.DateTimeField(read_only=True)
+    origin = serializers.CharField(read_only=True)
     observations = serializers.CharField(read_only=True, allow_null=True)
+    reviews = FeedbackReviewSerializer(many=True, read_only=True)
 
 
 def draft_file_summary(manuscript: Manuscript) -> dict | None:
@@ -93,6 +101,13 @@ class AuthorManuscriptSerializer(serializers.ModelSerializer):
         required=False,
         allow_empty=True,
     )
+    # Se escribe como lista de códigos; se lee como `[{code, name}]` (ver `to_representation`).
+    areas = serializers.ListField(
+        child=serializers.SlugField(max_length=80),
+        required=False,
+        allow_empty=True,
+        write_only=True,
+    )
     draft_file = serializers.SerializerMethodField()
     feedback = serializers.SerializerMethodField()
 
@@ -104,7 +119,7 @@ class AuthorManuscriptSerializer(serializers.ModelSerializer):
             "title",
             "abstract",
             "keywords",
-            "area",
+            "areas",
             "language",
             "status",
             "current_round",
@@ -134,30 +149,51 @@ class AuthorManuscriptSerializer(serializers.ModelSerializer):
             # Un borrador se guarda parcialmente (CA-HU-04-01).
             "title": {"required": False, "allow_blank": True},
             "abstract": {"required": False, "allow_blank": True},
-            "area": {"required": False, "allow_blank": True},
             "language": {"required": False, "allow_blank": True},
         }
 
     def get_draft_file(self, obj: Manuscript) -> dict | None:
         return draft_file_summary(obj)
 
+    def to_representation(self, instance: Manuscript) -> dict:
+        data = super().to_representation(instance)
+        data["areas"] = AcademicAreaSerializer(instance.areas.all(), many=True).data
+        return data
+
     def get_feedback(self, obj: Manuscript) -> dict | None:
         """What the author may read of the latest verdict; ``None`` before any.
 
-        The allowlist serializer receives only the three fields it
-        declares: the reviewer's identity, the confidential comments, the
-        scores and the editor's internal justification never reach it.
-        The queryset prefetches ``verdicts`` with their evaluation.
+        The allowlist serializer receives only the fields it declares. The
+        queryset prefetches ``verdicts__evaluations__evaluation`` and
+        ``verdicts__evaluation``. A legacy verdict has one review labelled
+        «Revisor 1»; a new one has one per considered evaluation, by slot.
         """
         verdicts = list(obj.verdicts.all())
         if not verdicts:
             return None
         latest = verdicts[-1]
+        links = list(latest.evaluations.all())
+        if links:
+            reviews = [
+                {
+                    "label": f"Revisor {link.slot}",
+                    "comments_for_author": link.evaluation.comments_for_author,
+                }
+                for link in links
+            ]
+        elif latest.evaluation is not None:
+            reviews = [
+                {"label": "Revisor 1", "comments_for_author": latest.evaluation.comments_for_author}
+            ]
+        else:
+            reviews = []
         return AuthorEvaluationFeedbackSerializer(
             {
-                "comments_for_author": latest.evaluation.comments_for_author,
                 "decision": latest.decision,
+                "decided_at": latest.created_at,
+                "origin": latest.origin,
                 "observations": latest.observations,
+                "reviews": reviews,
             }
         ).data
 
@@ -179,9 +215,9 @@ class AuthorManuscriptSerializer(serializers.ModelSerializer):
         return value
 
     def validate(self, attrs: dict) -> dict:
-        """A manuscript under correction keeps its required metadata complete."""
+        """A manuscript with changes requested keeps its required metadata complete."""
         instance = self.instance
-        if instance is not None and instance.status == Manuscript.Status.REQUIRES_CORRECTIONS:
+        if instance is not None and instance.status == Manuscript.Status.CHANGES_REQUESTED:
             errors = {
                 field: ["Este campo no puede quedar vacío."]
                 for field in REQUIRED_METADATA
@@ -190,45 +226,6 @@ class AuthorManuscriptSerializer(serializers.ModelSerializer):
             if errors:
                 raise serializers.ValidationError(errors)
         return attrs
-
-
-class EditorManuscriptSerializer(serializers.ModelSerializer):
-    """Read-only editor view: metadata, authors with contact and versions."""
-
-    authors = ManuscriptAuthorSerializer(many=True, read_only=True)
-    versions = ManuscriptVersionSummarySerializer(many=True, read_only=True)
-    created_by = SessionUserSerializer(read_only=True)
-
-    class Meta:
-        model = Manuscript
-        fields = (
-            "id",
-            "code",
-            "title",
-            "abstract",
-            "keywords",
-            "area",
-            "language",
-            "status",
-            "current_round",
-            "current_version",
-            "is_active",
-            "withdrawn_at",
-            "withdrawal_reason",
-            "created_by",
-            "authors",
-            "versions",
-            "created_at",
-            "updated_at",
-        )
-        read_only_fields = fields
-
-
-def manuscript_serializer_class(manuscript: Manuscript, user) -> type[serializers.ModelSerializer]:
-    """The owner reads the author view; anyone else reaches it as editor."""
-    if manuscript.created_by_id == user.id:
-        return AuthorManuscriptSerializer
-    return EditorManuscriptSerializer
 
 
 class SubmissionSerializer(serializers.Serializer):

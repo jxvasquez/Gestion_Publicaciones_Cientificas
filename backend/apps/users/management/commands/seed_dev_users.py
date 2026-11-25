@@ -14,15 +14,15 @@ from apps.users.services.provisioning import provision_user
 #: producción incluso en desarrollo, así que `DEBUG` no basta como señal).
 GUARD = "ALLOW_DEV_USERS"
 DEFAULT_PASSWORD = "Gpc-dev-2026"
-AREAS = ["Agronomía", "Ingeniería", "Medicina", "Educación", "Derecho"]
+AREAS = ["Ingeniería en Computación", "Ingeniería Agropecuaria", "Derecho"]
 
 #: identificador, nombre, apellido y roles (el perfil de revisor se crea con el rol REVIEWER)
 DEV_USERS: tuple[tuple[str, str, str, tuple[str, ...]], ...] = (
     ("autor", "Ana", "Autora Prueba", ("AUTHOR",)),
     ("autor2", "Andrés", "Autor Dos", ("AUTHOR",)),
-    ("editor", "Esteban", "Editor Prueba", ("EDITOR",)),
     ("revisor", "Rosa", "Revisora Prueba", ("REVIEWER",)),
     ("revisor2", "Ramiro", "Revisor Dos", ("REVIEWER",)),
+    ("revisor3", "Rebeca", "Revisora Tres", ("REVIEWER",)),
     ("admin", "Adriana", "Administradora Prueba", ("ADMIN",)),
     ("autor.revisor", "Elena", "Autora y Revisora", ("AUTHOR", "REVIEWER")),
 )
@@ -32,7 +32,7 @@ class Command(BaseCommand):
     """Crea (o actualiza la contraseña de) las cuentas de prueba. Nunca en producción."""
 
     help = (
-        "Crea cuentas de prueba (autor, editor, revisor, admin y una multirrol) con una "
+        "Crea cuentas de prueba (autor, revisor, admin y una multirrol) con una "
         f"contraseña conocida. Exige {GUARD}=1 o DEBUG; no lo use en el piloto real."
     )
 
@@ -56,7 +56,7 @@ class Command(BaseCommand):
                 email=f"{identifier}@dev.unl.edu.ec",
                 roles=roles,
                 password=password,  # siempre: así repetir el comando restablece la contraseña
-                expertise_areas=AREAS,
+                areas=AREAS,
             )
             self.stdout.write(f"{result.user.institutional_id:<16}{', '.join(roles):<20}{result.user.email}")
         self.stdout.write(self.style.SUCCESS(f"\n{len(DEV_USERS)} cuentas listas. Contraseña de todas: {password}"))

@@ -159,7 +159,7 @@ class TestReviewerSerializers:
         "title",
         "abstract",
         "keywords",
-        "area",
+        "areas",
         "language",
         "current_round",
         "current_version",

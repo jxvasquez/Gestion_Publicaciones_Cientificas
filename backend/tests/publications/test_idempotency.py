@@ -19,6 +19,8 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import timedelta
 
 import pytest
+
+from tests.factories import area
 from django.db import IntegrityError, connection, transaction
 from django.utils import timezone
 from freezegun import freeze_time
@@ -368,9 +370,10 @@ class TestSubmitIdempotency:
         assert submit(owner, manuscript, key="completar").status_code == 400
         assert stored_rows().count() == 0
 
+        area("agronomia")
         client_for(owner).patch(
             detail_url(manuscript),
-            {"title": "T", "abstract": "A", "keywords": ["k"], "area": "X", "language": "es"},
+            {"title": "T", "abstract": "A", "keywords": ["k"], "areas": ["agronomia"], "language": "es"},
             format="json", HTTP_IF_MATCH='"0"',
         )
         uploaded = client_for(owner).post(

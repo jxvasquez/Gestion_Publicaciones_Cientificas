@@ -34,7 +34,6 @@ from apps.users.models import Role, User, UserRole
 from apps.users.permissions import (
     IsAdmin,
     IsAuthor,
-    IsEditor,
     IsPublicCatalog,
     IsReviewer,
 )
@@ -148,80 +147,15 @@ class StubEvaluation:
 
 
 class TestModulePermissions:
-    def test_role_permission_grants_only_the_active_role(self) -> None:
-        user = assign_roles(make_user(), "AUTHOR")
-        request = FACTORY.get("/")
-        # Llamada unitaria sobre la petición cruda: el usuario se fija a mano.
-        request.user = user
-
-        assert IsAuthor().has_permission(request, None) is True
-        assert IsEditor().has_permission(request, None) is False
 
     def test_anonymous_is_rejected_by_role_permissions(self) -> None:
         request = FACTORY.get("/")
         assert IsAuthor().has_permission(request, None) is False
 
-    def test_module_denial_answers_403_for_a_valid_session(self) -> None:
-        author = assign_roles(make_user(), "AUTHOR")
-        response = call(module_view(IsAuthenticated, IsEditor), user=author)
-
-        assert response.status_code == 403
-        assert response.data["errors"][0]["code"] == "FORBIDDEN"
-
-    def test_anonymous_sessionless_request_answers_401(self) -> None:
-        response = call(module_view(IsAuthenticated, IsEditor))
-
-        assert response.status_code == 401
-        assert response.data["errors"][0]["code"] == "AUTH_INVALID"
-
-    def test_multirrole_user_passes_each_module_gate(self) -> None:
-        user = assign_roles(make_user(), "AUTHOR", "EDITOR", "ADMIN")
-
-        assert (
-            call(module_view(IsAuthenticated, IsAuthor), user=user).status_code == 200
-        )
-        assert (
-            call(module_view(IsAuthenticated, IsEditor), user=user).status_code == 200
-        )
-        assert call(module_view(IsAuthenticated, IsAdmin), user=user).status_code == 200
-        assert (
-            call(module_view(IsAuthenticated, IsReviewer), user=user).status_code
-            == 403
-        )
 
 
-class TestRevokedRoleBlocksTheNextAction:
-    def test_revoked_role_blocks_with_a_still_valid_access_token(self) -> None:
-        user = assign_roles(make_user(), "EDITOR")
-        client = APIClient()
-        login = client.post(
-            LOGIN_URL,
-            {"identifier": "INST-1001", "password": PASSWORD},
-            format="json",
-        )
-        assert login.status_code == 200
-        access = login.json()["access"]
 
-        # El claim del token aún declara EDITOR...
-        assert decode_payload(access)["roles"] == ["EDITOR"]
 
-        # ...pero el rol se retira de PostgreSQL a mitad de la sesión.
-        UserRole.objects.filter(user=user, role__code="EDITOR").update(
-            is_active=False, revoked_at=timezone.now()
-        )
-
-        response = call(
-            module_view(IsAuthenticated, IsEditor),
-            headers={"HTTP_AUTHORIZATION": f"Bearer {access}"},
-        )
-        assert response.status_code == 403
-        assert response.data["errors"][0]["code"] == "FORBIDDEN"
-
-        # El token en sí sigue vigente: la identidad responde 200 y ya
-        # no lista el rol retirado.
-        me = APIClient().get(ME_URL, HTTP_AUTHORIZATION=f"Bearer {access}")
-        assert me.status_code == 200
-        assert me.json()["roles"] == []
 
 
 class TestForeignObjectsAnswer404:

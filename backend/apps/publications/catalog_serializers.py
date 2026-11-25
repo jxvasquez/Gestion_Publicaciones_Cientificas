@@ -2,7 +2,7 @@
 
 ``PublicCatalogSerializer`` is an allowlist for anonymous visitors: the
 article's code, title, authors with their affiliations (never their
-e-mail), abstract, keywords, area, language, publication date and the
+e-mail), abstract, keywords, careers (areas), language, publication date and the
 accepted version. It cannot reach evaluations, reviewers, history,
 verdict justifications, audit, the private file name or any internal id.
 """
@@ -10,6 +10,8 @@ verdict justifications, audit, the private file name or any internal id.
 from __future__ import annotations
 
 from rest_framework import serializers
+
+from apps.users.serializers import AcademicAreaSerializer
 
 from apps.publications.models import CatalogEntry, ManuscriptAuthor
 
@@ -30,7 +32,7 @@ class PublicCatalogSerializer(serializers.ModelSerializer):
     title = serializers.CharField(source="manuscript.title", read_only=True)
     abstract = serializers.CharField(source="manuscript.abstract", read_only=True)
     keywords = serializers.ListField(source="manuscript.keywords", read_only=True)
-    area = serializers.CharField(source="manuscript.area", read_only=True)
+    areas = AcademicAreaSerializer(source="manuscript.areas", many=True, read_only=True)
     language = serializers.CharField(source="manuscript.language", read_only=True)
     version_number = serializers.IntegerField(source="version.version_number", read_only=True)
     authors = serializers.SerializerMethodField()
@@ -44,7 +46,7 @@ class PublicCatalogSerializer(serializers.ModelSerializer):
             "authors",
             "abstract",
             "keywords",
-            "area",
+            "areas",
             "language",
             "published_at",
             "version_number",

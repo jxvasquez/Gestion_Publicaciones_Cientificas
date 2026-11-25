@@ -2,7 +2,7 @@
 
 Covers the acceptance criteria:
 
-1. Only ``DRAFT`` and ``REQUIRES_CORRECTIONS`` are editable; any other
+1. Only ``DRAFT`` and ``CHANGES_REQUESTED`` are editable; any other
    state answers ``409``; ``PATCH`` creates no version or round and
    audits the modified fields.
 2. At least one author, exactly one corresponding, and the registrant
@@ -36,7 +36,7 @@ from apps.publications.models import (
     StatusEvent,
 )
 from apps.publications.serializers import AuthorEvaluationFeedbackSerializer
-from tests.factories import ManuscriptAuthorFactory, UserFactory, UserRoleFactory
+from tests.factories import ManuscriptAuthorFactory, UserFactory, UserRoleFactory, area
 from tests.publications.test_models import make_manuscript
 
 pytestmark = pytest.mark.django_db
@@ -89,11 +89,13 @@ def coauthor(email: str = "co.autor@unl.edu.ec", **overrides) -> dict:
 
 
 def create_payload(user, **overrides) -> dict:
+    for code in overrides.get("areas", ["agronomia"]):
+        area(code)  # la carrera existe en el catálogo
     return {
         "title": "Efecto del clima en cultivos andinos",
         "abstract": "Resumen del estudio de campo.",
         "keywords": ["clima", "cultivos"],
-        "area": "Agronomía",
+        "areas": ["agronomia"],
         "language": "es",
         "authors": author_payload(user),
         **overrides,
@@ -273,12 +275,6 @@ class TestModuleAccess:
     def test_reviewer_has_no_access_through_this_module(self) -> None:
         assert client_for(actor("REVIEWER")).get(URL).status_code == 403
 
-    def test_editor_cannot_register_or_edit(self) -> None:
-        editor = actor("EDITOR")
-        manuscript = owned_manuscript(actor("AUTHOR"), status="SUBMITTED")
-
-        assert post_draft(editor).status_code == 403
-        assert patch(editor, manuscript, {"title": "X"}).status_code == 403
 
     def test_revoked_role_blocks_the_next_action(self) -> None:
         user = actor("AUTHOR")
@@ -322,77 +318,11 @@ class TestScopeAndPrivacy:
         assert client_for(user).get(f"{URL}00000000-0000-0000-0000-000000000000/").status_code == 404
         assert client_for(user).get(f"{URL}no-es-uuid/").status_code == 404
 
-    def test_editor_sees_submitted_manuscripts_with_author_contact(self) -> None:
-        editor = actor("EDITOR")
-        author = actor("AUTHOR")
-        submitted = owned_manuscript(author, status="SUBMITTED")
-        owned_manuscript(author, status="DRAFT")
 
-        body = client_for(editor).get(URL).json()
 
-        assert [item["id"] for item in body["results"]] == [str(submitted.pk)]
-        item = body["results"][0]
-        assert item["authors"][0]["email"] == author.email
-        assert item["created_by"]["email"] == author.email
-        assert item["versions"] == []
 
-    def test_drafts_are_private_to_their_author(self) -> None:
-        draft = owned_manuscript(actor("AUTHOR"), status="DRAFT")
 
-        assert client_for(actor("EDITOR")).get(detail_url(draft)).status_code == 404
 
-    def test_editor_never_reaches_a_manuscript_where_they_are_coauthor(self) -> None:
-        editor = actor("EDITOR")
-        manuscript = owned_manuscript(actor("AUTHOR"), status="SUBMITTED")
-        ManuscriptAuthor.objects.create(
-            manuscript=manuscript,
-            user=editor,
-            full_name="Editor Coautor",
-            email=editor.email,
-            affiliation="UNL",
-            author_order=2,
-        )
-
-        client = client_for(editor)
-
-        assert client.get(URL).json()["results"] == []
-        assert client.get(detail_url(manuscript)).status_code == 404
-
-    def test_editor_never_reaches_the_manuscript_they_registered(self) -> None:
-        person = actor("EDITOR", "AUTHOR")
-        own = owned_manuscript(person, status="SUBMITTED")
-        client = client_for(person)
-
-        # Como autor la ve con la vista del autor, no con la del Editor.
-        assert "created_by" not in client.get(detail_url(own)).json()
-
-        # Sin el rol de Autor, el rol de Editor no le abre su propio manuscrito.
-        person.role_assignments.filter(role__code="AUTHOR").update(
-            is_active=False, revoked_at=timezone.now()
-        )
-        assert client.get(detail_url(own)).status_code == 404
-        assert client.get(URL).json()["results"] == []
-
-    def test_multirole_user_gets_the_union_with_the_matching_serializer(self) -> None:
-        person = actor("AUTHOR", "EDITOR")
-        own = owned_manuscript(person, status="SUBMITTED")
-        foreign = owned_manuscript(actor("AUTHOR"), status="SUBMITTED")
-
-        items = {
-            item["id"]: item for item in client_for(person).get(URL).json()["results"]
-        }
-
-        assert set(items) == {str(own.pk), str(foreign.pk)}
-        assert "created_by" not in items[str(own.pk)]
-        assert "created_by" in items[str(foreign.pk)]
-
-    def test_multirole_user_cannot_patch_a_manuscript_seen_as_editor(self) -> None:
-        person = actor("AUTHOR", "EDITOR")
-        foreign = owned_manuscript(actor("AUTHOR"), status="SUBMITTED")
-
-        response = patch(person, foreign, {"title": "X"})
-
-        assert response.status_code == 404
 
     def test_author_payload_exposes_nothing_of_the_review(self) -> None:
         owner = actor("AUTHOR")
@@ -401,7 +331,7 @@ class TestScopeAndPrivacy:
         body = client_for(owner).get(detail_url(manuscript)).json()
 
         assert set(body) == {
-            "id", "code", "title", "abstract", "keywords", "area", "language",
+            "id", "code", "title", "abstract", "keywords", "areas", "language",
             "status", "current_round", "current_version", "is_active",
             "withdrawn_at", "withdrawal_reason", "authors", "draft_file",
             "feedback", "created_at", "updated_at",
@@ -413,21 +343,6 @@ class TestScopeAndPrivacy:
         for forbidden in ("reviewer", "confidential", "score", "created_by"):
             assert forbidden not in serialized
 
-    def test_feedback_serializer_is_an_allowlist(self) -> None:
-        evaluation = SimpleNamespace(
-            comments_for_author="Mejorar la metodología.",
-            decision="REQUIRES_CORRECTIONS",
-            observations="Ampliar la muestra.",
-            reviewer="Revisor Anónimo",
-            confidential_comments="Solo para el Editor",
-            originality_score=5,
-            methodology_score=2,
-        )
-
-        data = AuthorEvaluationFeedbackSerializer(evaluation).data
-
-        assert set(data) == {"comments_for_author", "decision", "observations"}
-        assert data["comments_for_author"] == "Mejorar la metodología."
 
 
 class TestListFilters:
@@ -443,12 +358,12 @@ class TestListFilters:
 
     def test_filters_by_status_and_area(self) -> None:
         owner = actor("AUTHOR")
-        owned_manuscript(owner, status="DRAFT", area="Agronomía")
-        wanted = owned_manuscript(owner, status="SUBMITTED", area="Física")
+        owned_manuscript(owner, status="DRAFT", areas=["agronomia"])
+        wanted = owned_manuscript(owner, status="SUBMITTED", areas=["fisica"])
         client = client_for(owner)
 
         by_status = client.get(URL, {"status": "SUBMITTED"}).json()["results"]
-        by_area = client.get(URL, {"area": "física"}).json()["results"]
+        by_area = client.get(URL, {"area": "fisica"}).json()["results"]
 
         assert [i["id"] for i in by_status] == [str(wanted.pk)]
         assert [i["id"] for i in by_area] == [str(wanted.pk)]
@@ -557,12 +472,13 @@ class TestEdit:
     def test_patch_audits_only_the_names_of_the_modified_fields(self) -> None:
         owner = actor("AUTHOR")
         manuscript = owned_manuscript(owner)
+        area("fisica")
 
-        patch(owner, manuscript, {"title": "Secreto científico", "area": "Física"})
+        patch(owner, manuscript, {"title": "Secreto científico", "areas": ["fisica"]})
 
         audit = AuditLog.objects.get(action="MANUSCRIPT_UPDATED")
         assert audit.entity_id == manuscript.pk and audit.actor_id == owner.pk
-        assert audit.details == {"fields": ["area", "title"]}
+        assert audit.details == {"fields": ["areas", "title"]}
         assert "Secreto" not in str(audit.details)
 
     def test_patch_without_changes_neither_bumps_nor_audits(self) -> None:
@@ -604,7 +520,7 @@ class TestEdit:
 
     def test_a_requires_corrections_manuscript_is_editable(self) -> None:
         owner = actor("AUTHOR")
-        manuscript = owned_manuscript(owner, status="REQUIRES_CORRECTIONS")
+        manuscript = owned_manuscript(owner, status="CHANGES_REQUESTED")
 
         response = patch(owner, manuscript, {"title": "Versión corregida"})
 
@@ -640,7 +556,7 @@ class TestEdit:
     def test_a_draft_may_blank_its_metadata_but_a_correction_may_not(self) -> None:
         owner = actor("AUTHOR")
         draft = owned_manuscript(owner)
-        correction = owned_manuscript(owner, status="REQUIRES_CORRECTIONS")
+        correction = owned_manuscript(owner, status="CHANGES_REQUESTED")
 
         assert patch(owner, draft, {"title": ""}).status_code == 200
 

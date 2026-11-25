@@ -13,7 +13,7 @@ snapshot and the three SHA-256 seals (plan sections 4.2-4.5).
   and the directories this call created are removed; a directory that
   already existed is never touched.
 * :func:`submit_new_version` is ``POST /api/v1/manuscripts/{id}/versions/``:
-  from ``REQUIRES_CORRECTIONS``, it creates the next consecutive
+  from ``CHANGES_REQUESTED``, it creates the next consecutive
   version, ties it to the current round (closing it), moves the
   manuscript back to ``SUBMITTED`` and keeps every previous version
   untouched. A submission that changes neither the PDF nor the metadata
@@ -49,6 +49,7 @@ from apps.publications.services.snapshot import (
     build_metadata_snapshot,
     canonical_json,
     metadata_sha256,
+    normalized_snapshot,
 )
 from apps.publications.services.storage import (
     allocate_version_dir,
@@ -67,8 +68,8 @@ logger = logging.getLogger(__name__)
 
 T = TypeVar("T")
 
-NOT_REQUIRES_CORRECTIONS_MESSAGE = (
-    "Solo se puede enviar una nueva versión cuando el manuscrito requiere correcciones."
+NOT_CHANGES_REQUESTED_MESSAGE = (
+    "Solo se puede enviar una nueva versión cuando se solicitaron cambios al manuscrito."
 )
 NO_CHANGES_MESSAGE = (
     "La nueva versión no cambia ni el PDF ni los metadatos; debe existir al menos una corrección."
@@ -106,13 +107,14 @@ class Rollback:
 def record_audit(
     action: str,
     manuscript_id: UUID,
-    user: User,
+    user: User | None,
     context: dict,
     *,
     result: str = AuditLog.Result.SUCCESS,
-    actor_role: str = Role.Code.AUTHOR,
+    actor_role: str | None = Role.Code.AUTHOR,
     **extra: Any,
 ) -> None:
+    """Append an audit event of a manuscript; ``user`` is ``None`` when the system acts."""
     AuditService.record(
         action=action,
         entity_type="MANUSCRIPT",
@@ -128,12 +130,12 @@ def record_audit(
 def audit_refusal(
     action: str,
     manuscript_id: UUID,
-    user: User,
+    user: User | None,
     context: dict,
     reason: str,
     *,
     result: str = AuditLog.Result.FAILURE,
-    actor_role: str = Role.Code.AUTHOR,
+    actor_role: str | None = Role.Code.AUTHOR,
 ) -> None:
     """Leave a ``FAILURE`` (or ``DENIED``) event; it is written after the rollback, on its own."""
     try:
@@ -155,11 +157,11 @@ def run_formal_write(
     *,
     action: str,
     manuscript_id: UUID,
-    user: User,
+    user: User | None,
     context: dict,
     work: Callable[[Rollback], T],
     idempotency: IdempotencyScope | None = None,
-    actor_role: str = Role.Code.AUTHOR,
+    actor_role: str | None = Role.Code.AUTHOR,
 ) -> T:
     """Run ``work`` in one transaction with the all-or-nothing guarantee.
 
@@ -246,11 +248,11 @@ def create_formal_version(
     )
 
 
-def ensure_requires_corrections(manuscript: Manuscript) -> None:
-    """A new version only exists as the answer to a correction request (``409``)."""
-    if not manuscript.is_active or manuscript.status != Manuscript.Status.REQUIRES_CORRECTIONS:
+def ensure_changes_requested(manuscript: Manuscript) -> None:
+    """A new version only exists as the answer to a change request (``409``)."""
+    if not manuscript.is_active or manuscript.status != Manuscript.Status.CHANGES_REQUESTED:
         raise DomainError(
-            NOT_REQUIRES_CORRECTIONS_MESSAGE,
+            NOT_CHANGES_REQUESTED_MESSAGE,
             code=ErrorCode.STATE_CONFLICT,
             details={"status": manuscript.status, "is_active": manuscript.is_active},
         )
@@ -265,6 +267,16 @@ def _notify_after_commit(manuscript_id: UUID, version_id: UUID, user_id: UUID) -
     ):
         if isinstance(error, Exception):
             logger.error("Un receptor de la nueva versión falló (%s): %s", receiver, error)
+
+
+def assign_after_commit(manuscript_id: UUID) -> None:
+    """Cover the two initial slots of the new version (automatic assignment)."""
+    from apps.reviews.services.assignments import fill_review_slots
+
+    try:
+        fill_review_slots(manuscript_id)
+    except Exception:  # noqa: BLE001 - el ciclo programado reintenta; el envío ya está confirmado
+        logger.exception("No se pudo asignar revisores al manuscrito %s", manuscript_id)
 
 
 def submit_new_version(
@@ -290,7 +302,7 @@ def submit_new_version(
                 .select_related("created_by")
                 .get(pk=manuscript_id)
             )
-            ensure_requires_corrections(manuscript)
+            ensure_changes_requested(manuscript)
 
             errors = missing_metadata(manuscript)
             if errors:
@@ -306,7 +318,13 @@ def submit_new_version(
             snapshot = build_metadata_snapshot(manuscript)
             canonical = canonical_json(snapshot)
             pdf_changed = sha256_of_file(staged) != previous.original_sha256
-            metadata_changed = metadata_sha256(canonical) != previous.metadata_sha256
+            # La instantánea heredada guarda `area` (texto): se normaliza a su carrera.
+            previous_digest = (
+                metadata_sha256(canonical_json(normalized_snapshot(previous.metadata_snapshot)))
+                if "area" in previous.metadata_snapshot
+                else previous.metadata_sha256
+            )
+            metadata_changed = metadata_sha256(canonical) != previous_digest
             if not (pdf_changed or metadata_changed):
                 raise DomainError(
                     NO_CHANGES_MESSAGE,
@@ -353,7 +371,7 @@ def submit_new_version(
             )
             StatusEvent.objects.create(
                 manuscript=manuscript,
-                from_status=Manuscript.Status.REQUIRES_CORRECTIONS,
+                from_status=Manuscript.Status.CHANGES_REQUESTED,
                 to_status=Manuscript.Status.SUBMITTED,
                 actor=user,
                 metadata={
@@ -380,6 +398,7 @@ def submit_new_version(
             transaction.on_commit(
                 lambda: _notify_after_commit(manuscript.pk, version.pk, user.pk)
             )
+            transaction.on_commit(lambda: assign_after_commit(manuscript.pk))
             return Submission(manuscript=manuscript, version=version, round=current_round)
 
         return run_formal_write(

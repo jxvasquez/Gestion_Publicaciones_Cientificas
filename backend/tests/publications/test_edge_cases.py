@@ -60,7 +60,7 @@ class TestSeveralVersionsInOneRound:
         assert send(owner, corrected, key="v2").status_code == 201
         closed_at = CorrectionRound.objects.get(manuscript=corrected, round_number=1).closed_at
         # Vuelve a pedirse una corrección sin abrir ronda nueva: la ronda 1 ya está cerrada.
-        Manuscript.objects.filter(pk=corrected.pk).update(status="REQUIRES_CORRECTIONS")
+        Manuscript.objects.filter(pk=corrected.pk).update(status="CHANGES_REQUESTED")
 
         response = send(owner, corrected, pdf_file(THIRD_PDF), key="v3")
 
@@ -74,7 +74,7 @@ class TestSeveralVersionsInOneRound:
 
     def test_the_history_lists_both_versions_under_the_same_round(self, owner, corrected, send) -> None:
         send(owner, corrected, key="v2")
-        Manuscript.objects.filter(pk=corrected.pk).update(status="REQUIRES_CORRECTIONS")
+        Manuscript.objects.filter(pk=corrected.pk).update(status="CHANGES_REQUESTED")
         send(owner, corrected, pdf_file(THIRD_PDF), key="v3")
 
         entries = client_for(owner).get(history_url(corrected)).json()["results"]
@@ -105,7 +105,7 @@ class TestRetryThatReachesTheTransaction:
     ) -> None:
         first = send(owner, corrected, key="v2")
         monkeypatch.setattr(IdempotencyScope, "find", lambda self: None)
-        monkeypatch.setattr(views_module, "ensure_requires_corrections", lambda *args, **kwargs: None)
+        monkeypatch.setattr(views_module, "ensure_changes_requested", lambda *args, **kwargs: None)
 
         second = send(owner, corrected, key="v2")
 
@@ -208,7 +208,7 @@ class TestDefensiveBranches:
     def test_a_user_with_no_manuscript_role_has_an_empty_scope(self) -> None:
         ManuscriptFactory()
 
-        scope = Manuscript.objects.visible_to(UserFactory(), as_author=False, as_editor=False)
+        scope = Manuscript.objects.visible_to(UserFactory(), as_author=False)
 
         assert list(scope) == []
 

@@ -8,7 +8,7 @@ It merges what the system has recorded and never rewrites it:
 * ``ROUND_OPENED`` — each correction round and the version that closed it.
 
 An interrupted submission leaves no row, so it never appears. Entries
-carry no actor, no file path and nothing of the sanitized copy: they
+carry no person, no file path and nothing of the sanitized copy: they
 are safe to show to every role that can reach the manuscript.
 Assignments, evaluations and verdicts join this timeline when their
 apps exist (TSK-46 onwards).
@@ -23,6 +23,9 @@ from apps.publications.models import Manuscript
 # Orden a igualdad de instante: el envío escribe versión, ronda y evento
 # de estado en la misma transacción.
 _RANK = {"VERSION_SUBMITTED": 0, "ROUND_OPENED": 1, "STATUS": 2}
+
+#: Label of the transitions the system wrote (empty actor).
+SYSTEM_ACTOR = "Sistema"
 
 
 def _status_entry(event) -> tuple[Any, ...]:
@@ -41,6 +44,9 @@ def _status_entry(event) -> tuple[Any, ...]:
         "version_number": event.metadata.get("version_number"),
         "round_number": event.metadata.get("round_number"),
     }
+    if kind == "STATUS_CHANGED" and event.actor_id is None:
+        # Transiciones del sistema (asignación, consenso, desempate): sin persona.
+        entry["actor"] = SYSTEM_ACTOR
     return event.created_at, _RANK["STATUS"], event.pk, entry
 
 

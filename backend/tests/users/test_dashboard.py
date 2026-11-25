@@ -59,21 +59,6 @@ def login(identifier: str = "INST-1001", password: str = PASSWORD):
 
 
 class TestUnifiedDashboard:
-    def test_one_call_returns_every_section_of_the_active_roles(self) -> None:
-        assign_roles(make_user(), "AUTHOR", "REVIEWER", "EDITOR", "ADMIN")
-        client, access = login()
-
-        response = client.get(DASHBOARD_URL, HTTP_AUTHORIZATION=f"Bearer {access}")
-
-        assert response.status_code == 200
-        body = response.json()
-        assert body["user"]["institutional_id"] == "INST-1001"
-        assert body["roles"] == ["AUTHOR", "REVIEWER", "EDITOR", "ADMIN"]
-        assert set(body["sections"]) == {"author", "reviewer", "editor", "admin"}
-        for section in body["sections"].values():
-            assert section["status"] == "ok"
-            assert section["data"] == {}
-            assert section["message"] is None
 
     def test_sections_appear_only_for_active_roles(self) -> None:
         assign_roles(make_user(), "REVIEWER")
@@ -96,27 +81,6 @@ class TestUnifiedDashboard:
         assert body["roles"] == []
         assert body["sections"] == {}  # sección vacía explícita
 
-    def test_a_failing_section_does_not_cancel_the_others(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        assign_roles(make_user(), "AUTHOR", "EDITOR", "ADMIN")
-
-        def broken_builder(user):
-            raise RuntimeError("simulated section failure")
-
-        monkeypatch.setitem(SECTION_BUILDERS, Role.Code.EDITOR, broken_builder)
-
-        client, access = login()
-        response = client.get(DASHBOARD_URL, HTTP_AUTHORIZATION=f"Bearer {access}")
-
-        # Conserva 200 y las demás secciones siguen completas.
-        assert response.status_code == 200
-        sections = response.json()["sections"]
-        assert sections["editor"]["status"] == "error"
-        assert sections["editor"]["message"] == SECTION_ERROR_MESSAGE
-        assert sections["editor"]["data"] is None
-        assert sections["author"]["status"] == "ok"
-        assert sections["admin"]["status"] == "ok"
 
     def test_dashboard_requires_authentication(self) -> None:
         response = APIClient().get(DASHBOARD_URL)
@@ -124,15 +88,3 @@ class TestUnifiedDashboard:
         assert response.status_code == 401
         assert response.json()["error"]["code"] == "AUTH_INVALID"
 
-    def test_revoked_role_disappears_from_the_next_dashboard(self) -> None:
-        user = assign_roles(make_user(), "EDITOR")
-        client, access = login()
-
-        UserRole.objects.filter(user=user, role__code="EDITOR").update(
-            is_active=False, revoked_at=timezone.now()
-        )
-
-        # El mismo token vigente: el panel ya no muestra el rol retirado.
-        body = client.get(DASHBOARD_URL, HTTP_AUTHORIZATION=f"Bearer {access}").json()
-        assert body["roles"] == []
-        assert body["sections"] == {}

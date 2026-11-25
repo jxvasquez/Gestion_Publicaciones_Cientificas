@@ -132,7 +132,7 @@ class TestEnvelopeInTheSchema:
             paginated = "PaginatedSuccessEnvelope" in json.dumps(_json_schema(operation, "200"))
             assert ("page" in names) == paginated, (method, path)
             lists += paginated
-        assert lists >= 14
+        assert lists >= 11
 
     def test_file_downloads_are_not_wrapped(self, schema) -> None:
         for path in (

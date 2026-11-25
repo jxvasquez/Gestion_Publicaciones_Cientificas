@@ -43,6 +43,7 @@ logger = logging.getLogger(__name__)
 #: Statuses in which the reason is mandatory (CA-HU-08-02).
 REASON_REQUIRED_STATUSES = (
     Manuscript.Status.UNDER_REVIEW,
+    Manuscript.Status.TIE_BREAKER,
     Manuscript.Status.ACCEPTED,
 )
 

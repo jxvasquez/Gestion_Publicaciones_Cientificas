@@ -149,7 +149,6 @@ class TestIndexes:
         for name in (
             "idx_manuscript_status_active",
             "idx_manuscript_owner_active",
-            "idx_manuscript_area",
         ):
             assert "USING btree" in indexes[name]
         assert "USING gin (search_vector)" in indexes["idx_manuscript_search"]

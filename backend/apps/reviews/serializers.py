@@ -1,9 +1,9 @@
-"""Serializers of the editor and reviewer modules (plan sections 2.4 and 2.9).
+"""Serializers of the reviewer and administrator modules (plan sections 2.5 and 2.9).
 
-The editor is the only role that sees the reviewer's identity, so the
-editor allowlists are never shared with the author or reviewer modules.
-The reviewer ones are separate, explicit allowlists: the double-blind
-rule never depends on an ``exclude`` or on a conditional field.
+The administrator is the only role that sees a reviewer's identity, so its
+allowlists are never shared with the author or reviewer modules. The
+reviewer ones are separate, explicit allowlists: the double-blind rule
+never depends on an ``exclude`` or on a conditional field.
 """
 
 from __future__ import annotations
@@ -11,24 +11,22 @@ from __future__ import annotations
 from django.urls import reverse
 from rest_framework import serializers
 
-from apps.publications.models import Manuscript, ManuscriptVersion, Verdict
-from apps.publications.serializers import (
-    EditorManuscriptSerializer,
-    HistoryEntrySerializer,
-    ManuscriptVersionSummarySerializer,
-)
-from apps.publications.services.history import build_history
+from apps.publications.models import Manuscript, ManuscriptVersion
 from apps.reviews.models import (
+    LEGACY_SCORE_FIELDS,
     MAX_SCORE,
     MIN_SCORE,
-    SCORE_FIELDS,
+    RUBRIC_FIELDS,
+    RUBRIC_RECOMMENDATION_CHOICES,
     Assignment,
     Evaluation,
     IncidentReport,
+    RankingAdjustment,
 )
-from apps.reviews.services.assignments import RevocationCause
+from apps.reviews.policy import MAX_ACTIVE_ASSIGNMENTS
 from apps.reviews.services.inbox import inbox_state
-from apps.users.models import User
+from apps.users.models import ReviewerProfile, User
+from apps.users.serializers import AcademicAreaSerializer
 
 
 class PersonSerializer(serializers.ModelSerializer):
@@ -42,261 +40,6 @@ class PersonSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
 
-class SubmissionListSerializer(serializers.ModelSerializer):
-    """Row of the editor's inbox; ``submitted_at`` is annotated by the view.
-
-    ``corresponding_author`` is only a name: the full roster, contacts and
-    affiliations are in the detail. The view prefetches ``authors``.
-    """
-
-    submitted_at = serializers.DateTimeField(read_only=True)
-    corresponding_author = serializers.SerializerMethodField()
-
-    class Meta:
-        model = Manuscript
-        fields = (
-            "id",
-            "code",
-            "title",
-            "area",
-            "language",
-            "status",
-            "current_round",
-            "current_version",
-            "corresponding_author",
-            "submitted_at",
-            "created_at",
-        )
-        read_only_fields = fields
-
-    def get_corresponding_author(self, obj: Manuscript) -> str | None:
-        """The corresponding author's name, or the first author's if none is marked."""
-        authors = list(obj.authors.all())
-        chosen = next((a for a in authors if a.is_corresponding), authors[0] if authors else None)
-        return chosen.full_name if chosen else None
-
-
-class EditorVersionSerializer(ManuscriptVersionSummarySerializer):
-    """Version with the API path of its PDF, never the volume path."""
-
-    file_url = serializers.SerializerMethodField()
-
-    class Meta(ManuscriptVersionSummarySerializer.Meta):
-        fields = (*ManuscriptVersionSummarySerializer.Meta.fields, "file_url")
-        read_only_fields = fields
-
-    def get_file_url(self, obj) -> str:
-        return reverse(
-            "manuscript-version-file",
-            kwargs={"pk": obj.manuscript_id, "version_id": obj.pk},
-        )
-
-
-class AssignmentSerializer(serializers.ModelSerializer):
-    """Assignment with the reviewer's identity, for the editor only."""
-
-    reviewer = PersonSerializer(read_only=True)
-    assigned_by = PersonSerializer(read_only=True)
-    revoked_by = PersonSerializer(read_only=True)
-    manuscript_code = serializers.CharField(source="manuscript.code", read_only=True)
-    manuscript_title = serializers.CharField(source="manuscript.title", read_only=True)
-    version_number = serializers.IntegerField(source="version.version_number", read_only=True)
-    # Anotado con `due_at <= now()` de PostgreSQL (`with_overdue`).
-    is_overdue = serializers.BooleanField(read_only=True)
-
-    class Meta:
-        model = Assignment
-        fields = (
-            "id",
-            "manuscript",
-            "manuscript_code",
-            "manuscript_title",
-            "version_number",
-            "reviewer",
-            "assigned_by",
-            "assigned_at",
-            "due_at",
-            "status",
-            "is_overdue",
-            "completed_at",
-            "revoked_at",
-            "revoked_by",
-            "revocation_reason",
-        )
-        read_only_fields = fields
-
-
-class SubmissionDetailSerializer(EditorManuscriptSerializer):
-    """Full submission: metadata, authors, PDFs, history and open assignment."""
-
-    versions = EditorVersionSerializer(many=True, read_only=True)
-    history = serializers.SerializerMethodField()
-    open_assignment = serializers.SerializerMethodField()
-    correction_authorization = serializers.SerializerMethodField()
-
-    class Meta(EditorManuscriptSerializer.Meta):
-        fields = (
-            *EditorManuscriptSerializer.Meta.fields,
-            "history",
-            "open_assignment",
-            "correction_authorization",
-        )
-        read_only_fields = fields
-
-    def get_correction_authorization(self, obj: Manuscript) -> dict | None:
-        """The active administrative authorization to decide again, if any (CA-HU-13-12)."""
-        authorization = obj.verdict_corrections.filter(is_active=True).first()
-        if authorization is None:
-            return None
-        return {
-            "id": str(authorization.pk),
-            "verdict_id": str(authorization.original_verdict_id),
-            "authorized_at": authorization.authorized_at,
-        }
-
-    def get_history(self, obj: Manuscript) -> list[dict]:
-        return HistoryEntrySerializer(build_history(obj), many=True).data
-
-    def get_open_assignment(self, obj: Manuscript) -> dict | None:
-        """The active or expired assignment waiting for the editor, if any."""
-        assignment = (
-            obj.assignments.filter(
-                status__in=(Assignment.Status.ACTIVE, Assignment.Status.EXPIRED)
-            )
-            .select_related("reviewer", "assigned_by", "revoked_by", "manuscript", "version")
-            .with_overdue()
-            .first()
-        )
-        if assignment is None:
-            return None
-        return AssignmentSerializer(assignment, context=self.context).data
-
-
-class EligibleReviewerSerializer(serializers.ModelSerializer):
-    """Candidate reviewer with expertise and current load."""
-
-    full_name = serializers.CharField(source="get_full_name", read_only=True)
-    expertise_areas = serializers.ListField(
-        source="reviewer_profile.expertise_areas", read_only=True
-    )
-    max_active_assignments = serializers.IntegerField(
-        source="reviewer_profile.max_active_assignments", read_only=True
-    )
-    active_assignments = serializers.IntegerField(read_only=True)
-
-    class Meta:
-        model = User
-        fields = (
-            "id",
-            "institutional_id",
-            "full_name",
-            "email",
-            "expertise_areas",
-            "max_active_assignments",
-            "active_assignments",
-        )
-        read_only_fields = fields
-
-
-class ReviewerFilterSerializer(serializers.Serializer):
-    """Query string of ``GET /api/v1/editor/reviewers/``."""
-
-    manuscript_id = serializers.UUIDField(required=False)
-    area = serializers.CharField(max_length=120, required=False)
-
-
-class StartReviewSerializer(serializers.Serializer):
-    """Body of ``start-review``: the reviewer is optional."""
-
-    reviewer_id = serializers.UUIDField(required=False)
-
-
-class AssignReviewerSerializer(serializers.Serializer):
-    """Body of ``POST .../assignments/``."""
-
-    reviewer_id = serializers.UUIDField()
-
-
-class RevokeAssignmentSerializer(serializers.Serializer):
-    """Body of ``POST .../revoke/``: the cause and a written reason."""
-
-    cause = serializers.ChoiceField(choices=RevocationCause.choices)
-    reason = serializers.CharField(max_length=2000, trim_whitespace=True)
-
-
-class EditorEvaluationSerializer(serializers.ModelSerializer):
-    """A final evaluation as the editor reads it: reviewer identity and confidential notes.
-
-    It is an allowlist for the editor module only. The author gets
-    :class:`~apps.publications.serializers.AuthorEvaluationFeedbackSerializer`
-    and the reviewer's identity never reaches any other role.
-    """
-
-    reviewer = PersonSerializer(read_only=True)
-    version_number = serializers.IntegerField(source="version.version_number", read_only=True)
-
-    class Meta:
-        model = Evaluation
-        fields = (
-            "id",
-            "assignment",
-            "version_number",
-            "reviewer",
-            "status",
-            "originality_score",
-            "methodology_score",
-            "clarity_score",
-            "relevance_score",
-            "ethics_score",
-            "recommendation",
-            "comments_for_author",
-            "confidential_comments",
-            "conflict_declared",
-            "submitted_at",
-        )
-        read_only_fields = fields
-
-
-class VerdictSerializer(serializers.ModelSerializer):
-    """A registered verdict; read-only, because verdicts are never edited."""
-
-    editor = PersonSerializer(read_only=True)
-    version_number = serializers.IntegerField(source="version.version_number", read_only=True)
-
-    class Meta:
-        model = Verdict
-        fields = (
-            "id",
-            "decision",
-            "justification",
-            "observations",
-            "version_number",
-            "evaluation",
-            "editor",
-            "previous_verdict",
-            "created_at",
-        )
-        read_only_fields = fields
-
-
-class RegisterVerdictSerializer(serializers.Serializer):
-    """Body of ``POST /api/v1/editor/manuscripts/{id}/verdicts/``.
-
-    Only the decision and its texts: the evaluated version, the evaluation
-    and the editor come from the manuscript and the session. Whether a
-    text is mandatory depends on the decision and the evaluation, which
-    the service checks under the manuscript lock.
-    """
-
-    decision = serializers.ChoiceField(choices=Verdict.Decision.choices)
-    justification = serializers.CharField(
-        required=False, allow_blank=True, allow_null=True, max_length=5000
-    )
-    observations = serializers.CharField(
-        required=False, allow_blank=True, allow_null=True, max_length=5000
-    )
-
-
 class ReviewerManuscriptSerializer(serializers.ModelSerializer):
     """The manuscript as its reviewer sees it: content, never authorship.
 
@@ -304,6 +47,8 @@ class ReviewerManuscriptSerializer(serializers.ModelSerializer):
     no authors, affiliations, contact data, ``created_by`` or status
     history, and no file name of the author.
     """
+
+    areas = AcademicAreaSerializer(many=True, read_only=True)
 
     class Meta:
         model = Manuscript
@@ -313,7 +58,7 @@ class ReviewerManuscriptSerializer(serializers.ModelSerializer):
             "title",
             "abstract",
             "keywords",
-            "area",
+            "areas",
             "language",
             "current_round",
             "current_version",
@@ -339,12 +84,12 @@ class ReviewerAssignmentSerializer(serializers.ModelSerializer):
 
     ``is_overdue`` and ``has_evaluation`` are annotated by the view
     (``with_overdue`` and ``with_evaluation_started``). It carries no
-    authorship and no identity of the editor who assigned it.
+    authorship and no identity of anyone else.
     """
 
     manuscript_code = serializers.CharField(source="manuscript.code", read_only=True)
     manuscript_title = serializers.CharField(source="manuscript.title", read_only=True)
-    area = serializers.CharField(source="manuscript.area", read_only=True)
+    areas = AcademicAreaSerializer(source="manuscript.areas", many=True, read_only=True)
     version_number = serializers.IntegerField(source="version.version_number", read_only=True)
     round_number = serializers.IntegerField(source="version.round_number", read_only=True)
     is_overdue = serializers.BooleanField(read_only=True)
@@ -356,7 +101,7 @@ class ReviewerAssignmentSerializer(serializers.ModelSerializer):
             "id",
             "manuscript_code",
             "manuscript_title",
-            "area",
+            "areas",
             "version_number",
             "round_number",
             "assigned_at",
@@ -396,10 +141,11 @@ class ReviewerAssignmentDetailSerializer(ReviewerAssignmentSerializer):
 
 
 class ReviewerEvaluationSerializer(serializers.ModelSerializer):
-    """The reviewer's own draft or final evaluation, confidential notes included.
+    """The reviewer's own draft or final evaluation (rubric of five criteria).
 
     The optimistic lock travels in the ``ETag`` header, not in the body.
     An evaluation that was not saved yet is shown as an empty draft.
+    ``confidential_comments`` is never exposed: its reader was the Editor.
     """
 
     class Meta:
@@ -407,14 +153,10 @@ class ReviewerEvaluationSerializer(serializers.ModelSerializer):
         fields = (
             "id",
             "status",
-            "originality_score",
-            "methodology_score",
-            "clarity_score",
-            "relevance_score",
-            "ethics_score",
+            "rubric_version",
+            *RUBRIC_FIELDS,
             "recommendation",
             "comments_for_author",
-            "confidential_comments",
             "conflict_declared",
             "submitted_at",
         )
@@ -425,31 +167,31 @@ class EvaluationDraftSerializer(serializers.Serializer):
     """Body of ``PUT .../evaluation/``: every field optional, a gap is a valid draft.
 
     Only the keys sent are changed, and nothing else is accepted: the
-    status, the conflict flag and the lock can never be set from here.
+    status, the conflict flag, the lock and the retired keys (previous
+    criteria, confidential comments) are ignored.
     """
 
-    originality_score = serializers.IntegerField(
+    scientific_contribution = serializers.IntegerField(
         min_value=MIN_SCORE, max_value=MAX_SCORE, required=False, allow_null=True
     )
-    methodology_score = serializers.IntegerField(
+    methodological_rigor = serializers.IntegerField(
         min_value=MIN_SCORE, max_value=MAX_SCORE, required=False, allow_null=True
     )
-    clarity_score = serializers.IntegerField(
+    literature_grounding = serializers.IntegerField(
         min_value=MIN_SCORE, max_value=MAX_SCORE, required=False, allow_null=True
     )
-    relevance_score = serializers.IntegerField(
+    results_conclusions = serializers.IntegerField(
         min_value=MIN_SCORE, max_value=MAX_SCORE, required=False, allow_null=True
     )
-    ethics_score = serializers.IntegerField(
+    academic_writing = serializers.IntegerField(
         min_value=MIN_SCORE, max_value=MAX_SCORE, required=False, allow_null=True
     )
     recommendation = serializers.ChoiceField(
-        choices=Evaluation.Recommendation.choices, required=False, allow_null=True
+        choices=RUBRIC_RECOMMENDATION_CHOICES,
+        required=False,
+        allow_null=True,
     )
     comments_for_author = serializers.CharField(
-        required=False, allow_blank=True, allow_null=True, max_length=10000
-    )
-    confidential_comments = serializers.CharField(
         required=False, allow_blank=True, allow_null=True, max_length=10000
     )
 
@@ -466,15 +208,15 @@ class ReviewerEvaluationHistorySerializer(serializers.ModelSerializer):
     """Row of the reviewer's history: a final evaluation of their own, read-only.
 
     Anonymized by construction: the manuscript is identified by code,
-    title and area, and the editorial result is only the decision and its
-    date — never the justification or the observations the editor wrote
-    for the author. ``editorial_decision`` and ``editorial_decided_at``
-    are annotated by the view from the latest verdict, if any.
+    title and areas, and the result is only the decision and its date —
+    never the justification or the observations the author receives.
+    ``editorial_decision`` and ``editorial_decided_at`` are annotated by
+    the view from the latest verdict, if any.
     """
 
     manuscript_code = serializers.CharField(source="manuscript.code", read_only=True)
     manuscript_title = serializers.CharField(source="manuscript.title", read_only=True)
-    area = serializers.CharField(source="manuscript.area", read_only=True)
+    areas = AcademicAreaSerializer(source="manuscript.areas", many=True, read_only=True)
     version_number = serializers.IntegerField(source="version.version_number", read_only=True)
     round_number = serializers.IntegerField(source="version.round_number", read_only=True)
     editorial_result = serializers.SerializerMethodField()
@@ -486,9 +228,10 @@ class ReviewerEvaluationHistorySerializer(serializers.ModelSerializer):
             "assignment",
             "manuscript_code",
             "manuscript_title",
-            "area",
+            "areas",
             "version_number",
             "round_number",
+            "rubric_version",
             "recommendation",
             "submitted_at",
             "editorial_result",
@@ -504,15 +247,66 @@ class ReviewerEvaluationHistorySerializer(serializers.ModelSerializer):
 class ReviewerEvaluationHistoryDetailSerializer(ReviewerEvaluationHistorySerializer):
     """A final evaluation in full, for reading: scores and the comments for the author.
 
-    The confidential comments are left out on purpose (CA-HU-17): they are
-    for the editor and no history read-back carries them.
+    ``scores`` carries the keys of the evaluation's own rubric version.
+    The confidential comments are left out on purpose.
     """
+
+    scores = serializers.SerializerMethodField()
 
     class Meta(ReviewerEvaluationHistorySerializer.Meta):
         fields = (
             *ReviewerEvaluationHistorySerializer.Meta.fields,
-            *SCORE_FIELDS,
+            "scores",
             "comments_for_author",
+        )
+        read_only_fields = fields
+
+    def get_scores(self, obj: Evaluation) -> dict:
+        names = LEGACY_SCORE_FIELDS if obj.rubric_version == 1 else RUBRIC_FIELDS
+        return {name: getattr(obj, name) for name in names}
+
+
+class ReviewerConflictSerializer(serializers.ModelSerializer):
+    """Answer of the conflict declaration: the released assignment."""
+
+    assignment = serializers.UUIDField(source="pk", read_only=True)
+
+    class Meta:
+        model = Assignment
+        fields = ("assignment", "status", "release_cause")
+        read_only_fields = fields
+
+
+class ReviewerStandingSerializer(serializers.Serializer):
+    """The reviewer's own performance (FR-033)."""
+
+    ranking_score = serializers.IntegerField()
+    active_assignments = serializers.IntegerField()
+    max_active_assignments = serializers.IntegerField()
+    on_time_evaluations = serializers.IntegerField()
+    missed_deadlines = serializers.IntegerField()
+    is_available = serializers.BooleanField()
+    areas = AcademicAreaSerializer(many=True)
+
+
+class RankingAdjustmentSerializer(serializers.ModelSerializer):
+    """One ranking adjustment; it identifies no author and no other reviewer."""
+
+    manuscript_code = serializers.CharField(source="assignment.manuscript.code", read_only=True)
+    version_number = serializers.IntegerField(
+        source="assignment.version.version_number", read_only=True
+    )
+
+    class Meta:
+        model = RankingAdjustment
+        fields = (
+            "id",
+            "created_at",
+            "cause",
+            "delta",
+            "score_after",
+            "manuscript_code",
+            "version_number",
         )
         read_only_fields = fields
 
@@ -533,17 +327,21 @@ class ReviewerIncidentSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
 
-class EditorIncidentSerializer(serializers.ModelSerializer):
-    """A confidential report as the editor reads it, with the reporter's identity.
+class AdminIncidentSerializer(serializers.ModelSerializer):
+    """A confidential report as the administrator reads it, with the reporter's identity.
 
-    The editor module is the only place that exposes the description and
-    the reviewer; the author never reaches either.
+    The administrator module is the only place that exposes the description
+    and the reviewer; the author never reaches either.
     """
 
     reporter = PersonSerializer(read_only=True)
     resolved_by = PersonSerializer(read_only=True)
     manuscript_code = serializers.CharField(source="manuscript.code", read_only=True)
     manuscript_title = serializers.CharField(source="manuscript.title", read_only=True)
+    manuscript_status = serializers.CharField(source="manuscript.status", read_only=True)
+    version_number = serializers.IntegerField(
+        source="assignment.version.version_number", read_only=True
+    )
     correction_round_number = serializers.IntegerField(
         source="correction_round.round_number", read_only=True, default=None
     )
@@ -558,6 +356,8 @@ class EditorIncidentSerializer(serializers.ModelSerializer):
             "manuscript",
             "manuscript_code",
             "manuscript_title",
+            "manuscript_status",
+            "version_number",
             "assignment",
             "reporter",
             "created_at",
@@ -573,3 +373,54 @@ class ResolveIncidentSerializer(serializers.Serializer):
     """Body of ``POST .../resolve/``: the one resolution chosen."""
 
     resolution = serializers.ChoiceField(choices=IncidentReport.Resolution.choices)
+
+
+class AdminReviewerSerializer(serializers.ModelSerializer):
+    """Row of the reviewer roster: identity, careers, availability and performance.
+
+    ``active_assignments``, ``on_time_evaluations`` and ``missed_deadlines``
+    are annotated by ``annotate_standing`` (one query for the whole page).
+    """
+
+    id = serializers.UUIDField(source="user_id", read_only=True)
+    full_name = serializers.CharField(source="user.get_full_name", read_only=True)
+    email = serializers.EmailField(source="user.email", read_only=True)
+    institutional_id = serializers.CharField(source="user.institutional_id", read_only=True)
+    areas = AcademicAreaSerializer(many=True, read_only=True)
+    active_assignments = serializers.IntegerField(read_only=True)
+    on_time_evaluations = serializers.IntegerField(read_only=True)
+    missed_deadlines = serializers.IntegerField(read_only=True)
+    max_active_assignments = serializers.SerializerMethodField()
+
+    class Meta:
+        model = ReviewerProfile
+        fields = (
+            "id",
+            "full_name",
+            "email",
+            "institutional_id",
+            "is_available",
+            "areas",
+            "ranking_score",
+            "active_assignments",
+            "max_active_assignments",
+            "on_time_evaluations",
+            "missed_deadlines",
+        )
+        read_only_fields = fields
+
+    def get_max_active_assignments(self, obj: ReviewerProfile) -> int:
+        return MAX_ACTIVE_ASSIGNMENTS
+
+
+class AdminReviewerUpdateSerializer(serializers.Serializer):
+    """Body of ``PATCH /admin/reviewers/{user_id}/``: both fields optional.
+
+    New careers must be active; one that is inactive but already assigned
+    is kept, so the check is done by the service against the profile.
+    """
+
+    areas = serializers.ListField(
+        child=serializers.SlugField(max_length=80), required=False, allow_empty=True
+    )
+    is_available = serializers.BooleanField(required=False)

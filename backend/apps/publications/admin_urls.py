@@ -2,12 +2,12 @@
 
 from django.urls import path
 
-from apps.publications.admin_views import AuthorizeCorrectionView
+from apps.publications.admin_views import CorrectVerdictView
 
 urlpatterns = [
     path(
-        "<uuid:pk>/authorize-correction/",
-        AuthorizeCorrectionView.as_view(),
-        name="admin-verdict-authorize-correction",
+        "<uuid:pk>/correct/",
+        CorrectVerdictView.as_view(),
+        name="admin-verdict-correct",
     ),
 ]

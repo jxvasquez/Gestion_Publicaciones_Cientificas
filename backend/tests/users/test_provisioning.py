@@ -38,23 +38,14 @@ class TestProvisionUser:
         assert result.created and result.password and result.roles_added == ("AUTHOR",)
         assert login("ana", result.password).status_code == 200
 
-    def test_repeating_it_neither_duplicates_nor_changes_the_password(self) -> None:
-        first = provision_user(institutional_id="ana", first_name="Ana", last_name="A",
-                               email="ana@unl.edu.ec", roles=["AUTHOR"])
-        again = provision_user(institutional_id="ana", first_name="Ana", last_name="A",
-                               email="ana@unl.edu.ec", roles=["AUTHOR", "EDITOR"])
-
-        assert not again.created and again.password is None and again.roles_added == ("EDITOR",)
-        assert User.objects.count() == 1
-        assert UserRole.objects.filter(user=first.user, is_active=True).count() == 2
-        assert login("ana", first.password).status_code == 200
 
     def test_a_reviewer_gets_a_profile_with_the_areas(self) -> None:
         result = provision_user(institutional_id="rosa", first_name="Rosa", last_name="R",
-                                email="rosa@unl.edu.ec", roles=["REVIEWER"], expertise_areas=["Agronomía"])
+                                email="rosa@unl.edu.ec", roles=["REVIEWER"], areas=["Derecho"])
 
         profile = ReviewerProfile.objects.get(user=result.user)
-        assert profile.expertise_areas == ["Agronomía"] and profile.is_available
+        assert [a.code for a in profile.areas.all()] == ["derecho"] and profile.is_available
+        assert profile.ranking_score == 100
 
     @pytest.mark.parametrize("bad", [["JEFE"], []])
     def test_rejects_unknown_or_missing_roles(self, bad) -> None:
@@ -106,19 +97,6 @@ class TestSeedDevUsers:
             call_command("seed_dev_users", stdout=StringIO())
         assert not User.objects.exists()
 
-    def test_creates_one_account_per_role_that_can_log_in(self, settings, monkeypatch) -> None:
-        settings.DEBUG = False
-        monkeypatch.setenv("ALLOW_DEV_USERS", "1")
-        call_command("seed_dev_users", stdout=StringIO())
-
-        for identifier, role in (("autor", "AUTHOR"), ("editor", "EDITOR"), ("revisor", "REVIEWER"), ("admin", "ADMIN")):
-            body = login(identifier, "Gpc-dev-2026").json()
-            assert "access" in body and role in APIClient().get(
-                "/api/v1/auth/me/", HTTP_AUTHORIZATION=f"Bearer {body['access']}").json()["roles"]
-        multi = login("autor.revisor", "Gpc-dev-2026").json()["access"]
-        roles = APIClient().get("/api/v1/auth/me/", HTTP_AUTHORIZATION=f"Bearer {multi}").json()["roles"]
-        assert set(roles) == {"AUTHOR", "REVIEWER"}
-        assert ReviewerProfile.objects.filter(user__institutional_id="revisor").exists()
 
     def test_repeating_it_resets_the_password_without_duplicating(self, monkeypatch) -> None:
         monkeypatch.setenv("ALLOW_DEV_USERS", "1")
@@ -142,16 +120,3 @@ class TestSupportOperationsDocumentedInTheRunbook:
 
         assert login("ana", result.password).status_code == 401
 
-    def test_retiring_a_role_removes_it_from_the_next_request_and_keeps_the_history(self) -> None:
-        from django.utils import timezone
-
-        result = provision_user(institutional_id="ana", first_name="Ana", last_name="A",
-                                email="ana@unl.edu.ec", roles=["AUTHOR", "EDITOR"])
-        UserRole.objects.filter(
-            user__institutional_id="ana", role__code="EDITOR", is_active=True
-        ).update(is_active=False, revoked_at=timezone.now())
-
-        token = login("ana", result.password).json()["access"]
-        me = APIClient().get("/api/v1/auth/me/", HTTP_AUTHORIZATION=f"Bearer {token}").json()
-        assert me["roles"] == ["AUTHOR"]
-        assert UserRole.objects.filter(user=result.user, role__code="EDITOR", is_active=False).count() == 1

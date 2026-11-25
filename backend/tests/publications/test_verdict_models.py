@@ -1,7 +1,7 @@
 """Tests for the verdict and catalog entry models (TSK-50).
 
 Covers the acceptance criteria: ``REJECTED`` requires a justification and
-``REQUIRES_CORRECTIONS`` requires observations; the round keeps the
+``CHANGES_REQUESTED`` requires observations; the round keeps the
 reference to the verdict that opened it; the verdict is append-only (no
 ``UPDATE`` nor ``DELETE``); and a manuscript has at most one active
 catalog entry whose public copy never points to the private original.
@@ -23,7 +23,7 @@ from django.utils import timezone
 
 from apps.publications.models import CatalogEntry, CorrectionRound, Verdict
 from apps.reviews.models import Assignment
-from tests.factories import CorrectionRoundFactory, ManuscriptVersionFactory
+from tests.factories import CorrectionRoundFactory, ManuscriptVersionFactory, UserFactory
 from tests.reviews.test_models import Scenario
 
 pytestmark = pytest.mark.django_db
@@ -39,7 +39,8 @@ def make_verdict(scenario: Scenario, evaluation, **overrides) -> Verdict:
         "manuscript": evaluation.manuscript,
         "version": evaluation.version,
         "evaluation": evaluation,
-        "editor": scenario.editor,
+        "decided_by": UserFactory(),
+        "origin": Verdict.Origin.EDITOR_LEGACY,
         "decision": Verdict.Decision.ACCEPTED,
         **overrides,
     }
@@ -71,10 +72,10 @@ class TestVerdictRequirements:
     def test_a_correction_request_requires_observations(self, scenario, evaluation) -> None:
         with pytest.raises(IntegrityError, match="ck_verdict_corrections_observations"):
             with transaction.atomic():
-                make_verdict(scenario, evaluation, decision="REQUIRES_CORRECTIONS")
+                make_verdict(scenario, evaluation, decision="CHANGES_REQUESTED")
 
         verdict = make_verdict(
-            scenario, evaluation, decision="REQUIRES_CORRECTIONS", observations="Ampliar la sección 3."
+            scenario, evaluation, decision="CHANGES_REQUESTED", observations="Ampliar la sección 3."
         )
         assert verdict.observations == "Ampliar la sección 3."
 
@@ -174,7 +175,7 @@ class TestVerdictIsAppendOnly:
         self, scenario, evaluation
     ) -> None:
         verdict = make_verdict(
-            scenario, evaluation, decision="REQUIRES_CORRECTIONS", observations="Corregir."
+            scenario, evaluation, decision="CHANGES_REQUESTED", observations="Corregir."
         )
         CorrectionRoundFactory(
             manuscript=scenario.manuscript, round_number=1, opened_by_verdict=verdict
@@ -189,7 +190,7 @@ class TestRoundKeepsItsVerdict:
         self, scenario, evaluation
     ) -> None:
         verdict = make_verdict(
-            scenario, evaluation, decision="REQUIRES_CORRECTIONS", observations="Corregir."
+            scenario, evaluation, decision="CHANGES_REQUESTED", observations="Corregir."
         )
         round_one = CorrectionRoundFactory(
             manuscript=scenario.manuscript, round_number=1, opened_by_verdict=verdict

@@ -21,35 +21,39 @@ from django.db.models.functions import Lower
 from apps.audit.models import AuditLog
 from apps.audit.services import AuditService, AuditUnavailable
 from apps.publications.models import Manuscript, ManuscriptAuthor, StatusEvent
-from apps.users.models import Role, User
+from apps.reviews.policy import MAX_AREAS_PER_MANUSCRIPT
+from apps.users.models import AcademicArea, Role, User
 from apps.users.services.auth import AUDIT_UNAVAILABLE_MESSAGE
 from config.exceptions import DomainError, ErrorCode
 
 #: Statuses in which the author may still edit the metadata.
 EDITABLE_STATUSES = (
     Manuscript.Status.DRAFT,
-    Manuscript.Status.REQUIRES_CORRECTIONS,
+    Manuscript.Status.CHANGES_REQUESTED,
 )
 
 #: Metadata the formal submission requires (CA-HU-04-02). A draft may
 #: leave them empty; a manuscript under correction may not blank them.
-REQUIRED_METADATA = ("title", "abstract", "keywords", "area", "language")
+REQUIRED_METADATA = ("title", "abstract", "keywords", "language")
 
-#: Metadata edited with ``PATCH``; the authors are compared separately.
-METADATA_FIELDS = ("title", "abstract", "keywords", "area", "language")
+#: Metadata edited with ``PATCH``; the careers and the authors are compared separately.
+METADATA_FIELDS = ("title", "abstract", "keywords", "language")
 
 #: A draft may be saved partially (CA-HU-04-01): missing metadata is empty.
 DRAFT_DEFAULTS: dict[str, Any] = {
     "title": "",
     "abstract": "",
     "keywords": [],
-    "area": "",
     "language": "",
 }
 
+AREAS_REQUIRED_MESSAGE = "Seleccione al menos una carrera o área."
+AREAS_MAX_MESSAGE = f"Seleccione como máximo {MAX_AREAS_PER_MANUSCRIPT} carreras o áreas."
+AREAS_UNKNOWN_MESSAGE = "Una de las carreras o áreas no existe o está inactiva."
+
 
 def ensure_editable(manuscript: Manuscript) -> None:
-    """Reject the edition outside ``DRAFT``/``REQUIRES_CORRECTIONS`` or after a withdrawal."""
+    """Reject the edition outside ``DRAFT``/``CHANGES_REQUESTED`` or after a withdrawal."""
     if not manuscript.is_active or manuscript.status not in EDITABLE_STATUSES:
         raise DomainError(
             "El manuscrito no admite edición en su estado actual.",
@@ -84,6 +88,35 @@ def validate_author_roster(
 REQUIRED_MESSAGE = "Este campo es obligatorio."
 
 
+def resolve_areas(codes: Iterable[str], *, keep: Iterable[AcademicArea] = ()) -> list[AcademicArea]:
+    """The careers of ``codes``: active ones (or ones the manuscript already had).
+
+    At most :data:`MAX_AREAS_PER_MANUSCRIPT` distinct careers; the error
+    goes to ``details.areas``. An empty list is valid here (a draft may
+    still lack careers); the formal submission requires at least one.
+    """
+    wanted = list(dict.fromkeys(codes))
+    if len(wanted) > MAX_AREAS_PER_MANUSCRIPT:
+        raise DomainError(
+            AREAS_MAX_MESSAGE,
+            code=ErrorCode.VALIDATION_ERROR,
+            details={"areas": [AREAS_MAX_MESSAGE]},
+        )
+    kept = {area.code for area in keep}
+    found = {
+        area.code: area
+        for area in AcademicArea.objects.filter(code__in=wanted)
+        if area.is_active or area.code in kept
+    }
+    if len(found) != len(wanted):
+        raise DomainError(
+            AREAS_UNKNOWN_MESSAGE,
+            code=ErrorCode.VALIDATION_ERROR,
+            details={"areas": [AREAS_UNKNOWN_MESSAGE]},
+        )
+    return [found[code] for code in wanted]
+
+
 def missing_metadata(manuscript: Manuscript) -> dict[str, list[str]]:
     """Every metadata field that blocks a formal submission, keyed by field.
 
@@ -95,6 +128,14 @@ def missing_metadata(manuscript: Manuscript) -> dict[str, list[str]]:
         value = getattr(manuscript, field)
         if not (value.strip() if isinstance(value, str) else value):
             errors[field] = [REQUIRED_MESSAGE]
+
+    areas = list(manuscript.areas.all())
+    if not areas:
+        errors["areas"] = [AREAS_REQUIRED_MESSAGE]
+    elif len(areas) > MAX_AREAS_PER_MANUSCRIPT:
+        errors["areas"] = [AREAS_MAX_MESSAGE]
+    elif not all(area.is_active for area in areas):
+        errors["areas"] = [AREAS_UNKNOWN_MESSAGE]
 
     roster = list(manuscript.authors.values_list("email", "is_corresponding"))
     try:
@@ -163,9 +204,11 @@ def create_manuscript(*, user: User, data: dict[str, Any], context: dict) -> Man
     """Create a ``DRAFT`` with its authors; it creates no version and no round."""
     data = {**DRAFT_DEFAULTS, **data}
     authors = data.pop("authors")
+    areas = resolve_areas(data.pop("areas", []))
     try:
         with transaction.atomic():
             manuscript = Manuscript.objects.create(created_by=user, **data)
+            manuscript.areas.set(areas)
             ManuscriptAuthor.objects.bulk_create(_author_rows(manuscript, authors))
             StatusEvent.objects.create(
                 manuscript=manuscript,
@@ -200,6 +243,7 @@ def update_manuscript(
     """
     data = dict(data)
     authors = data.pop("authors", None)
+    area_codes = data.pop("areas", None)
     try:
         with transaction.atomic():
             manuscript = Manuscript.objects.select_for_update().get(pk=manuscript_id)
@@ -218,6 +262,13 @@ def update_manuscript(
             ]
             for field in changed:
                 setattr(manuscript, field, data[field])
+
+            if area_codes is not None:
+                current_areas = list(manuscript.areas.all())
+                areas = resolve_areas(area_codes, keep=current_areas)
+                if {area.pk for area in areas} != {area.pk for area in current_areas}:
+                    manuscript.areas.set(areas)
+                    changed.append("areas")
 
             if authors is not None:
                 current = _authors_signature(

@@ -2,13 +2,17 @@
 
 They follow the implementation plan (sections 1.13, 1.14, 1.14.1 and 1.20):
 
-* ``Assignment`` links one reviewer to one manuscript version. The
-  database allows a single ``ACTIVE`` assignment per manuscript and fixes
-  the deadline to exactly 20 days after ``assigned_at``.
+* ``Assignment`` links one reviewer to one manuscript version in a slot
+  (1 and 2 initial, 3 tie-break). The database allows one live assignment
+  per slot and per reviewer in a version, caps each reviewer at five
+  ``ACTIVE`` assignments and fixes the deadline to exactly 20 days after
+  ``assigned_at``.
 * ``Evaluation`` is the reviewer's draft and, once ``FINAL``, the
   immutable evaluation. A trigger (migration ``0002``) rejects any
   ``UPDATE`` or ``DELETE`` over a ``FINAL`` row; the submission logic
   that performs the ``DRAFT`` → ``FINAL`` transition arrives in Phase 4.
+* ``RankingAdjustment`` is the append-only log of every bonus or penalty
+  of the reviewer's ranking score.
 * ``IncidentReport`` is the reviewer's confidential report of a possible
   identity leak (CA-HU-16-06). It only stores the report: it never
   touches the PDF, the evaluation or the manuscript status.
@@ -22,25 +26,58 @@ from datetime import timedelta
 from django.conf import settings
 from django.db import models
 from django.db.models import BooleanField, Exists, ExpressionWrapper, F, OuterRef, Q
-from django.db.models.functions import Now
+from django.db.models.functions import Length, Now
+from django.db.models.lookups import GreaterThanOrEqual
 from django.utils import timezone
 
-from apps.publications.models import CorrectionRound, Manuscript, ManuscriptVersion
-
-#: Calendar days a reviewer has to evaluate (RN-05).
-ASSIGNMENT_DAYS = 20
+from apps.publications.models import (
+    AppendOnlyModel,
+    CorrectionRound,
+    Manuscript,
+    ManuscriptVersion,
+)
+from apps.reviews.policy import (
+    ASSIGNMENT_DAYS,
+    JUSTIFICATION_MIN_LENGTH,
+    JUSTIFICATION_SCORE_THRESHOLD,
+    MISSED_DEADLINE_PENALTY,
+    ON_TIME_BONUS,
+)
 
 #: Inclusive bounds of every evaluation score.
 MIN_SCORE = 1
 MAX_SCORE = 5
 
-SCORE_FIELDS = (
+#: Criteria of the professional rubric (``rubric_version=2``), in display order.
+RUBRIC_FIELDS = (
+    "scientific_contribution",
+    "methodological_rigor",
+    "literature_grounding",
+    "results_conclusions",
+    "academic_writing",
+)
+
+#: Criteria of the previous rubric (``rubric_version=1``); only historical rows use them.
+LEGACY_SCORE_FIELDS = (
     "originality_score",
     "methodology_score",
     "clarity_score",
     "relevance_score",
     "ethics_score",
 )
+
+#: Recommendations of each rubric version.
+LEGACY_RECOMMENDATIONS = ("ACCEPT", "REQUIRES_CORRECTIONS", "REJECT")
+RUBRIC_RECOMMENDATIONS = ("ACCEPTED", "MINOR_REVISION", "MAJOR_REVISION", "REJECTED")
+
+
+#: Choices a reviewer may select in the rubric 2 form (the legacy codes are history only).
+RUBRIC_RECOMMENDATION_CHOICES = [
+    ("ACCEPTED", "Aceptar"),
+    ("MINOR_REVISION", "Revisión menor"),
+    ("MAJOR_REVISION", "Revisión mayor"),
+    ("REJECTED", "Rechazar"),
+]
 
 
 class AssignmentQuerySet(models.QuerySet):
@@ -91,7 +128,17 @@ class Assignment(models.Model):
         ACTIVE = "ACTIVE", "Activa"
         COMPLETED = "COMPLETED", "Completada"
         REVOKED = "REVOKED", "Revocada"
+        # Terminal: vencida y revocada por el sistema, con penalización.
         EXPIRED = "EXPIRED", "Vencida"
+
+    class ReleaseCause(models.TextChoices):
+        OVERDUE = "OVERDUE", "Plazo vencido"
+        CONFLICT_OF_INTEREST = "CONFLICT_OF_INTEREST", "Conflicto de interés"
+        INCIDENT_REASSIGN = "INCIDENT_REASSIGN", "Reasignación por incidente"
+        ANONYMIZATION_REQUESTED = "ANONYMIZATION_REQUESTED", "Versión anonimizada solicitada"
+        MANUSCRIPT_WITHDRAWN = "MANUSCRIPT_WITHDRAWN", "Baja lógica del manuscrito"
+        LEGACY_TRANSITION = "LEGACY_TRANSITION", "Cierre en la transición"
+        EDITOR_LEGACY = "EDITOR_LEGACY", "Revocación heredada del Editor"
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4)
     manuscript = models.ForeignKey(
@@ -109,9 +156,14 @@ class Assignment(models.Model):
         on_delete=models.PROTECT,
         related_name="review_assignments",
     )
+    # 1 y 2 son los cupos iniciales; 3 es el desempate.
+    slot = models.PositiveSmallIntegerField(default=1)
+    # `NULL` significa asignación del sistema; las heredadas conservan al Editor.
     assigned_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.PROTECT,
+        null=True,
+        blank=True,
         related_name="created_assignments",
     )
     assigned_at = models.DateTimeField(default=timezone.now)
@@ -133,6 +185,12 @@ class Assignment(models.Model):
         related_name="revoked_assignments",
     )
     revocation_reason = models.TextField(null=True, blank=True)
+    release_cause = models.CharField(
+        max_length=32,
+        choices=ReleaseCause.choices,
+        null=True,
+        blank=True,
+    )
     # Bloqueo optimista para `If-Match`/`ETag`.
     lock_version = models.IntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -169,11 +227,20 @@ class Assignment(models.Model):
                 ),
                 name="ck_assignment_due_at",
             ),
-            # Como máximo un Revisor activo por manuscrito.
+            models.CheckConstraint(
+                condition=Q(slot__in=(1, 2, 3)),
+                name="ck_assignment_slot",
+            ),
+            # Un cupo vivo por versión y un revisor vivo por versión.
             models.UniqueConstraint(
-                fields=("manuscript",),
-                condition=Q(status="ACTIVE"),
-                name="uq_assignment_active",
+                fields=("version", "slot"),
+                condition=Q(status__in=("ACTIVE", "COMPLETED")),
+                name="uq_assignment_live_slot",
+            ),
+            models.UniqueConstraint(
+                fields=("version", "reviewer"),
+                condition=Q(status__in=("ACTIVE", "COMPLETED")),
+                name="uq_assignment_live_reviewer",
             ),
         ]
 
@@ -182,16 +249,26 @@ class Assignment(models.Model):
 
 
 class Evaluation(models.Model):
-    """Reviewer's private draft that becomes the immutable final evaluation."""
+    """Reviewer's private draft that becomes the immutable final evaluation.
+
+    ``rubric_version=2`` rows use the five professional criteria and the
+    four recommendations; ``rubric_version=1`` rows are the historical
+    evaluations, kept with their original criteria.
+    """
 
     class Status(models.TextChoices):
         DRAFT = "DRAFT", "Borrador"
         FINAL = "FINAL", "Final"
 
     class Recommendation(models.TextChoices):
-        ACCEPT = "ACCEPT", "Aceptar"
-        REQUIRES_CORRECTIONS = "REQUIRES_CORRECTIONS", "Requiere correcciones"
-        REJECT = "REJECT", "Rechazar"
+        ACCEPTED = "ACCEPTED", "Aceptar"
+        MINOR_REVISION = "MINOR_REVISION", "Revisión menor"
+        MAJOR_REVISION = "MAJOR_REVISION", "Revisión mayor"
+        REJECTED = "REJECTED", "Rechazar"
+        # Solo la rúbrica 1 (evaluaciones heredadas).
+        ACCEPT = "ACCEPT", "Aceptar (heredado)"
+        REQUIRES_CORRECTIONS = "REQUIRES_CORRECTIONS", "Requiere correcciones (heredado)"
+        REJECT = "REJECT", "Rechazar (heredado)"
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4)
     assignment = models.OneToOneField(
@@ -219,6 +296,14 @@ class Evaluation(models.Model):
         choices=Status.choices,
         default=Status.DRAFT,
     )
+    rubric_version = models.PositiveSmallIntegerField(default=2)
+    # Rúbrica 2.
+    scientific_contribution = models.SmallIntegerField(null=True, blank=True)
+    methodological_rigor = models.SmallIntegerField(null=True, blank=True)
+    literature_grounding = models.SmallIntegerField(null=True, blank=True)
+    results_conclusions = models.SmallIntegerField(null=True, blank=True)
+    academic_writing = models.SmallIntegerField(null=True, blank=True)
+    # Rúbrica 1: solo las filas históricas los usan.
     originality_score = models.SmallIntegerField(null=True, blank=True)
     methodology_score = models.SmallIntegerField(null=True, blank=True)
     clarity_score = models.SmallIntegerField(null=True, blank=True)
@@ -232,7 +317,7 @@ class Evaluation(models.Model):
     )
     # Visibles para el Autor; obligatorios al enviar.
     comments_for_author = models.TextField(null=True, blank=True)
-    # Solo para el Editor, nunca para el Autor.
+    # Columna conservada por las evaluaciones históricas: la API nunca la expone.
     confidential_comments = models.TextField(null=True, blank=True)
     conflict_declared = models.BooleanField(default=False)
     submitted_at = models.DateTimeField(null=True, blank=True)
@@ -254,8 +339,14 @@ class Evaluation(models.Model):
                 name="ck_evaluation_status",
             ),
             models.CheckConstraint(
+                condition=Q(rubric_version__in=(1, 2)),
+                name="ck_evaluation_rubric_version",
+            ),
+            # El dictamen es nulo o pertenece al conjunto de su versión.
+            models.CheckConstraint(
                 condition=Q(recommendation__isnull=True)
-                | Q(recommendation__in=("ACCEPT", "REQUIRES_CORRECTIONS", "REJECT")),
+                | Q(rubric_version=1, recommendation__in=LEGACY_RECOMMENDATIONS)
+                | Q(rubric_version=2, recommendation__in=RUBRIC_RECOMMENDATIONS),
                 name="ck_evaluation_recommendation",
             ),
             *(
@@ -264,7 +355,7 @@ class Evaluation(models.Model):
                     | Q(**{f"{field}__gte": MIN_SCORE, f"{field}__lte": MAX_SCORE}),
                     name=f"ck_evaluation_{field}",
                 )
-                for field in SCORE_FIELDS
+                for field in (*LEGACY_SCORE_FIELDS, *RUBRIC_FIELDS)
             ),
             # Una evaluación final está completa; el borrador admite huecos.
             models.CheckConstraint(
@@ -273,9 +364,29 @@ class Evaluation(models.Model):
                     recommendation__isnull=False,
                     comments_for_author__isnull=False,
                     submitted_at__isnull=False,
-                    **{f"{field}__isnull": False for field in SCORE_FIELDS},
+                )
+                & (
+                    Q(
+                        rubric_version=1,
+                        **{f"{field}__isnull": False for field in LEGACY_SCORE_FIELDS},
+                    )
+                    | Q(
+                        rubric_version=2,
+                        **{f"{field}__isnull": False for field in RUBRIC_FIELDS},
+                    )
                 ),
                 name="ck_evaluation_final_complete",
+            ),
+            # FR-019: criterio bajo, revisión mayor o rechazo exigen 100 caracteres.
+            models.CheckConstraint(
+                condition=Q(status="DRAFT")
+                | Q(rubric_version=1)
+                | (
+                    Q(**{f"{field}__gt": JUSTIFICATION_SCORE_THRESHOLD for field in RUBRIC_FIELDS})
+                    & ~Q(recommendation__in=("MAJOR_REVISION", "REJECTED"))
+                )
+                | Q(GreaterThanOrEqual(Length("comments_for_author"), JUSTIFICATION_MIN_LENGTH)),
+                name="ck_evaluation_rubric_justification",
             ),
         ]
 
@@ -283,27 +394,90 @@ class Evaluation(models.Model):
         return f"{self.assignment_id} · {self.status}"
 
 
+class RankingAdjustment(AppendOnlyModel):
+    """Append-only log of one bonus or penalty of the ranking score (FR-032).
+
+    ``delta`` is the nominal change of the cause; ``score_after`` is already
+    clamped at 0. ``UNIQUE (assignment, cause)`` makes each adjustment
+    idempotent.
+    """
+
+    class Cause(models.TextChoices):
+        ON_TIME_EVALUATION = "ON_TIME_EVALUATION", "Evaluación a tiempo"
+        DEADLINE_MISSED = "DEADLINE_MISSED", "Plazo vencido"
+
+    id = models.BigAutoField(primary_key=True)
+    reviewer = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="ranking_adjustments",
+    )
+    assignment = models.ForeignKey(
+        Assignment,
+        on_delete=models.PROTECT,
+        related_name="ranking_adjustments",
+    )
+    cause = models.CharField(max_length=24, choices=Cause.choices)
+    delta = models.SmallIntegerField()
+    score_before = models.IntegerField()
+    score_after = models.IntegerField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "reviews_ranking_adjustment"
+        ordering = ("-created_at", "-id")
+        indexes = [
+            models.Index(
+                fields=("reviewer", "-created_at"),
+                name="idx_ranking_reviewer_date",
+            ),
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=("assignment", "cause"),
+                name="uq_ranking_assignment_cause",
+            ),
+            models.CheckConstraint(
+                condition=(
+                    Q(cause="ON_TIME_EVALUATION", delta=ON_TIME_BONUS)
+                    | Q(cause="DEADLINE_MISSED", delta=MISSED_DEADLINE_PENALTY)
+                ),
+                name="ck_ranking_delta_cause",
+            ),
+            models.CheckConstraint(
+                condition=Q(score_after__gte=0),
+                name="ck_ranking_score_after",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.reviewer_id} · {self.cause} · {self.delta:+d}"
+
+
 class IncidentReportQuerySet(models.QuerySet):
     """Scopes over incident reports."""
 
-    def for_editor(self, user) -> "IncidentReportQuerySet":
-        """Reports over manuscripts in the editor's scope.
+    def for_admin(self, user) -> "IncidentReportQuerySet":
+        """Reports over manuscripts in which the administrator has no authorship.
 
-        The same conflict-of-interest rule as the editor's inbox: an editor
-        who registered or co-authored the manuscript never reaches its
-        reports, which answer ``404``.
+        An administrator who registered or co-authored the manuscript, by
+        account or by e-mail, never reaches its reports, which answer ``404``.
         """
-        return self.filter(manuscript__in=Manuscript.objects.for_editor(user).values("pk"))
+        return (
+            self.exclude(manuscript__created_by=user)
+            .exclude(manuscript__authors__user=user)
+            .exclude(manuscript__authors__email__iexact=user.email)
+        )
 
 
 class IncidentReport(models.Model):
     """Reviewer's confidential report about an assignment (CA-HU-16-06).
 
-    The report is private to the reviewer and the editor; the author never
-    sees it. The database allows one ``OPEN`` report per assignment and
+    The report is private to the reviewer and the administrator; the author
+    never sees it. The database allows one ``OPEN`` report per assignment and
     requires ``resolution`` and ``resolved_at`` once it is ``RESOLVED``.
-    The effects of each resolution belong to the editor's service, not to
-    this model.
+    The effects of each resolution belong to the administrator's service, not
+    to this model.
     """
 
     class ReportType(models.TextChoices):

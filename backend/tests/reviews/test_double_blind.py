@@ -52,12 +52,12 @@ from tests.publications.test_submission import (  # noqa: F401
     seeded_roles,
     submit,
 )
-from tests.reviews.test_editor_api import make_reviewer
+from tests.reviews.support import make_reviewer
 
 pytestmark = pytest.mark.django_db
 
 REVIEWER_BASE = "/api/v1/reviewer/"
-EDITOR_BASE = "/api/v1/editor/"
+ADMIN_BASE = "/api/v1/admin/"
 
 OWNER_NAME = ("Beatriz", "Autorreservada")
 COAUTHOR_NAME = "Carlos Coautor Reservado"
@@ -67,7 +67,7 @@ ORIGINAL_FILENAME = "beatriz-autorreservada-articulo-final.pdf"
 REVIEWER_NAME = ("Rafael", "Revisor Reservado")
 CONFIDENTIAL = "nota-confidencial-solo-para-el-editor"
 LEAK_TEXT = "El PDF menciona al grupo de investigación de los autores."
-OBSERVATIONS = "Corrija la sección de métodos."
+from apps.publications.services.verdicts import CONSENSUS_OBSERVATIONS  # noqa: E402
 
 #: Strings that the identity-laden fixture PDF carries in the original.
 PDF_IDENTITY_MARKERS = (b"Ana L", b"Word de Ana", b"Comentario de Ana")
@@ -132,7 +132,9 @@ SIGNALS = {
     "assignment_revoked": reviews_signals.assignment_revoked,
     "assignment_expired": reviews_signals.assignment_expired,
     "evaluation_submitted": reviews_signals.evaluation_submitted,
-    "reviewer_conflict_declared": reviews_signals.reviewer_conflict_declared,
+    "review_started": reviews_signals.review_started,
+    "slot_unfilled": reviews_signals.slot_unfilled,
+    "tie_break_started": reviews_signals.tie_break_started,
     "incident_reported": reviews_signals.incident_reported,
     "incident_resolved": reviews_signals.incident_resolved,
     "manuscript_submitted": publications_signals.manuscript_submitted,
@@ -148,7 +150,7 @@ class Cycle:
 
     owner: object
     reviewer: object
-    editor: object
+    admin: object
     manuscript: object
     assignment: object
     incident: object
@@ -162,7 +164,9 @@ class Cycle:
 def cycle(media_root, submit, django_capture_on_commit_callbacks) -> Cycle:
     owner = actor("AUTHOR", first_name=OWNER_NAME[0], last_name=OWNER_NAME[1])
     reviewer = make_reviewer(first_name=REVIEWER_NAME[0], last_name=REVIEWER_NAME[1])
-    editor = actor("EDITOR", first_name="Elena", last_name="Editora")
+    admin = actor("ADMIN", first_name="Adriana", last_name="Administradora")
+    # Segundo revisor de la misma carrera: el motor lo asigna al cupo 2.
+    second_reviewer = make_reviewer(first_name="Sergio", last_name="Segundo Revisor", ranking_score=90)
     events: list[tuple[str, dict]] = []
 
     def listen(name):
@@ -204,16 +208,9 @@ def cycle(media_root, submit, django_capture_on_commit_callbacks) -> Cycle:
             ),
         )
         assert submit(owner, manuscript).status_code == 201
-        started = step(
-            lambda: client_for(editor).post(
-                f"{EDITOR_BASE}submissions/{manuscript.pk}/start-review/",
-                {"reviewer_id": str(reviewer.pk)},
-                format="json",
-            )
-        )
-        assert started.status_code == 200, started.content
         manuscript.refresh_from_db()
-        assignment = manuscript.assignments.get()
+        assert manuscript.assignments.count() == 2  # la asignación es automática
+        assignment = manuscript.assignments.get(reviewer=reviewer)
         client = client_for(reviewer)
         base = f"{REVIEWER_BASE}assignments/{assignment.pk}/"
 
@@ -235,12 +232,12 @@ def cycle(media_root, submit, django_capture_on_commit_callbacks) -> Cycle:
             client.put(
                 f"{base}evaluation/",
                 {
-                    "originality_score": 4,
-                    "methodology_score": 3,
-                    "clarity_score": 5,
-                    "relevance_score": 4,
-                    "ethics_score": 5,
-                    "recommendation": "REQUIRES_CORRECTIONS",
+                    "scientific_contribution": 4,
+                    "methodological_rigor": 4,
+                    "literature_grounding": 5,
+                    "results_conclusions": 4,
+                    "academic_writing": 5,
+                    "recommendation": "MINOR_REVISION",
                     "comments_for_author": "Aclare la metodología.",
                     "confidential_comments": CONFIDENTIAL,
                 },
@@ -264,26 +261,33 @@ def cycle(media_root, submit, django_capture_on_commit_callbacks) -> Cycle:
         history = reviewer_gets(client.get(f"{REVIEWER_BASE}evaluations/"), 200)
         reviewer_gets(client.get(f"{REVIEWER_BASE}evaluations/{final['id']}/"), 200)
 
-        manuscript.refresh_from_db()
-        verdict = step(
-            lambda: client_for(editor).post(
-                f"{EDITOR_BASE}manuscripts/{manuscript.pk}/verdicts/",
-                {"decision": "REQUIRES_CORRECTIONS", "observations": OBSERVATIONS},
-                format="json",
-                HTTP_IDEMPOTENCY_KEY="clave-ciego",
-                HTTP_IF_MATCH=f'"{manuscript.lock_version}"',
-            )
-        )
-        assert verdict.status_code == 201, verdict.content
         incident = IncidentReport.objects.get(pk=leak.json()["id"])
+        # El segundo revisor evalúa; el reporte abierto retiene el veredicto hasta que el Administrador lo resuelva.
+        second_client = client_for(second_reviewer)
+        second_base = f"{REVIEWER_BASE}assignments/{manuscript.assignments.get(reviewer=second_reviewer).pk}/"
+        second_saved = second_client.put(
+            f"{second_base}evaluation/",
+            {
+                "scientific_contribution": 4, "methodological_rigor": 4, "literature_grounding": 4,
+                "results_conclusions": 4, "academic_writing": 4, "recommendation": "MINOR_REVISION",
+                "comments_for_author": "Ajuste menor.",
+            },
+            format="json", HTTP_IF_MATCH='"0"',
+        )
+        assert second_saved.status_code == 200, second_saved.content
+        step(lambda: second_client.post(f"{second_base}evaluation/submit/", HTTP_IF_MATCH=second_saved["ETag"]))
+        manuscript.refresh_from_db()
+        assert manuscript.status == "UNDER_REVIEW" and not manuscript.verdicts.exists()
         resolved = step(
-            lambda: client_for(editor).post(
-                f"{EDITOR_BASE}incidents/{incident.pk}/resolve/",
+            lambda: client_for(admin).post(
+                f"{ADMIN_BASE}incidents/{incident.pk}/resolve/",
                 {"resolution": "DISMISS"},
                 format="json",
             )
         )
         assert resolved.status_code == 200, resolved.content
+        manuscript.refresh_from_db()
+        assert manuscript.status == "CHANGES_REQUESTED", manuscript.status
         reviewer_gets(client.get(f"{REVIEWER_BASE}evaluations/"), 200)
         assert history.status_code == 200
 
@@ -301,7 +305,7 @@ def cycle(media_root, submit, django_capture_on_commit_callbacks) -> Cycle:
     return Cycle(
         owner=owner,
         reviewer=reviewer,
-        editor=editor,
+        admin=admin,
         manuscript=manuscript,
         assignment=assignment,
         incident=incident,
@@ -359,7 +363,9 @@ class TestReviewerNeverSeesAuthorship:
 
         assert cycle.manuscript.code in text
         assert "Efecto del clima en cultivos andinos" in text
-        assert CONFIDENTIAL in text
+        assert "Aclare la metodología." in text
+        # El comentario confidencial dejó de existir: nadie lo recibe ni lo guarda.
+        assert CONFIDENTIAL not in text
 
 
 class TestSanitizedPdf:
@@ -446,7 +452,7 @@ class TestEventsCarryIdentifiersOnly:
             COAUTHOR_EMAIL,
             LEAK_TEXT,
             CONFIDENTIAL,
-            OBSERVATIONS,
+            CONSENSUS_OBSERVATIONS,
             cycle.owner.email,
             cycle.reviewer.email,
         ):
@@ -469,8 +475,8 @@ class TestAuthorNeverSeesTheReviewer:
             LEAK_TEXT,
             "confidential_comments",
             "reviewer",
-            "originality_score",
-            "ethics_score",
+            "scientific_contribution",
+            "academic_writing",
             "IDENTITY_LEAK",
         ]
         text = "\n".join(cycle.author_texts).lower()
@@ -483,8 +489,9 @@ class TestAuthorNeverSeesTheReviewer:
         text = "\n".join(cycle.author_texts)
 
         assert "Aclare la metodología." in text
-        assert OBSERVATIONS in text
-        assert "REQUIRES_CORRECTIONS" in text
+        assert CONSENSUS_OBSERVATIONS in text
+        assert "Revisor 1" in text and "Revisor 2" in text
+        assert "CHANGES_REQUESTED" in text
 
 
 class TestForeignAssignmentsAnswer404:
@@ -548,3 +555,53 @@ class TestForeignAssignmentsAnswer404:
         response = APIClient().get(f"{REVIEWER_BASE}assignments/{assignment.pk}/")
 
         assert response.status_code == 401
+
+
+class TestThreeReviewers:
+    """T066: nadie ve a los otros revisores ni sus evaluaciones; el desempate parte a ciegas."""
+
+    @pytest.fixture
+    def tie(self, django_capture_on_commit_callbacks, submit, media_root):  # noqa: F811
+        from tests.phase5 import REJECTION, Lifecycle
+
+        flow = Lifecycle.create(django_capture_on_commit_callbacks, submit)
+        flow.submit_manuscript()
+        flow.evaluate(flow.reviewers[0], comments_for_author="Comentario ACEPTAR del primero.")
+        flow.evaluate(flow.reviewers[1], **REJECTION)
+        flow.refresh_assignments()
+        return flow
+
+    def test_the_manuscript_is_in_tie_break_with_a_third_reviewer(self, tie) -> None:
+        assert tie.manuscript.status == "TIE_BREAKER"
+        assert [a.slot for a in tie.assignments if a.status == "ACTIVE"] == [3]
+        assert tie.assignments[-1].reviewer_id == tie.reviewers[2].pk
+
+    def test_no_reviewer_endpoint_exposes_the_others_or_their_evaluations(self, tie) -> None:
+        third = tie.reviewers[2]
+        client = client_for(third)
+        mine = tie.assignment_of(third)
+
+        texts = [
+            client.get(f"{REVIEWER_BASE}assignments/").content.decode(),
+            client.get(f"{REVIEWER_BASE}assignments/{mine.pk}/").content.decode(),
+            client.get(f"{REVIEWER_BASE}assignments/{mine.pk}/evaluation/").content.decode(),
+            client.get(f"{REVIEWER_BASE}evaluations/").content.decode(),
+        ]
+        blob = "\n".join(texts)
+
+        assert "ACEPTAR del primero" not in blob and "no alcanza el nivel esperado" not in blob
+        for other in tie.reviewers[:2]:
+            assert other.email not in blob and str(other.pk) not in blob
+        for first_assignment in (a for a in tie.assignments if a.slot in (1, 2)):
+            assert client.get(f"{REVIEWER_BASE}assignments/{first_assignment.pk}/").status_code == 404
+            assert client.get(f"{REVIEWER_BASE}assignments/{first_assignment.pk}/evaluation/").status_code == 404
+
+    def test_the_tie_break_notice_to_the_author_carries_no_opinions(self, tie) -> None:
+        from apps.notifications.models import Notification
+
+        notices = Notification.objects.filter(recipient=tie.author, event_type="TIE_BREAK_STARTED")
+
+        assert notices.count() == 2  # panel y correo
+        for notice in notices:
+            text = str(notice.payload)
+            assert "ACEPTAR" not in text and "REJECTED" not in text and "recommendation" not in text

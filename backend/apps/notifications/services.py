@@ -11,8 +11,8 @@ notices (CA-HU-24-06).
 
 The recipients are resolved here from the manuscript, never from the
 event arguments: an author is the registrant or a linked co-author, an
-editor holds the active ``EDITOR`` role and has no conflict with the
-manuscript, and a reviewer is the one of the assignment. An inactive account
+administrator holds the active ``ADMIN`` role and has no authorship
+relation with the manuscript, and a reviewer is the one of the assignment. An inactive account
 gets nothing (CA-HU-24-07).
 """
 
@@ -23,6 +23,7 @@ from collections.abc import Iterable
 
 from django.db import IntegrityError, transaction
 from django.db.models import Q
+from django.db.models.functions import Lower
 from django.utils import timezone
 
 from apps.notifications.models import Notification
@@ -47,25 +48,27 @@ def authors_of(manuscript: Manuscript, *, exclude_ids: Iterable = ()) -> list[Us
     return list(users.exclude(pk__in=list(exclude_ids)).distinct())
 
 
-def editors_for(manuscript: Manuscript) -> list[User]:
-    """Active editors without a conflict of interest with the manuscript."""
+def admins_for(manuscript: Manuscript) -> list[User]:
+    """Active administrators without an authorship relation with the manuscript.
+
+    The relation is by account (registrant or linked author) or by e-mail.
+    """
+    author_emails = [
+        email.lower() for email in manuscript.authors.values_list("email", flat=True)
+    ]
     return list(
-        User.objects.filter(
+        User.objects.annotate(email_lower=Lower("email"))
+        .filter(
             is_active=True,
             role_assignments__is_active=True,
-            role_assignments__role__code=Role.Code.EDITOR,
+            role_assignments__role__code=Role.Code.ADMIN,
+            role_assignments__role__is_active=True,
         )
         .exclude(pk=manuscript.created_by_id)
         .exclude(authorships__manuscript=manuscript)
+        .exclude(email_lower__in=author_emails)
         .distinct()
     )
-
-
-def assigning_editor(assignment) -> list[User]:
-    """The editor who made the assignment; every eligible editor if they cannot act."""
-    eligible = editors_for(assignment.manuscript)
-    chosen = [user for user in eligible if user.pk == assignment.assigned_by_id]
-    return chosen or eligible
 
 
 def reviewer_of(assignment) -> list[User]:

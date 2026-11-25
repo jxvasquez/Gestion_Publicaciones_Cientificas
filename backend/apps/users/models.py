@@ -5,14 +5,16 @@ The account registry follows the implementation plan (sections 1.3-1.7):
 * ``User`` is the institutional account (UUID PK, institutional id, unique
   case-insensitive email). Accounts are never physically deleted: they are
   disabled through ``is_active`` to preserve evaluation and audit history.
-* ``Role`` is the fixed catalog: ``AUTHOR``, ``REVIEWER``, ``EDITOR`` and
-  ``ADMIN``.
+* ``Role`` is the fixed catalog: ``AUTHOR``, ``REVIEWER`` and ``ADMIN``.
+  The legacy ``EDITOR`` row stays inactive for the history that points to it.
+* ``AcademicArea`` is the validated catalog of careers or areas shared by
+  manuscripts and reviewer profiles.
 * ``UserRole`` keeps the historical role assignments. A user may hold
   several simultaneous active roles and keeps the history of revoked ones;
   the partial unique index allows at most one ACTIVE row per
   (user, role).
-* ``ReviewerProfile`` declares expertise areas (GIN indexed) and the
-  assignment capacity of a reviewer.
+* ``ReviewerProfile`` declares the careers of a reviewer, their availability
+  and their ranking score.
 * ``LoginAttempt`` records failed/successful login attempts without ever
   storing passwords (consumed by the rate limit of TSK-20).
 * ``RefreshToken`` is the server-side registry of refresh tokens (plan
@@ -26,12 +28,12 @@ from __future__ import annotations
 import uuid
 
 from django.contrib.auth.models import AbstractUser
-from django.contrib.postgres.fields import ArrayField
-from django.contrib.postgres.indexes import GinIndex
 from django.db import models
 from django.db.models import Q
 from django.db.models.functions import Lower
 from django.utils import timezone
+
+from apps.reviews.policy import RANKING_BASE_SCORE
 
 
 class User(AbstractUser):
@@ -56,17 +58,48 @@ class User(AbstractUser):
         return f"{self.get_full_name()} <{self.email}>".strip()
 
 
+class AcademicArea(models.Model):
+    """Career or academic area of the institutional catalog (FR-007).
+
+    ``code`` is stable and is what the API and the filters use; ``name`` is
+    unique ignoring case. An inactive area is no longer offered, but it keeps
+    its associations with manuscripts and reviewer profiles.
+    """
+
+    id = models.SmallAutoField(primary_key=True)
+    code = models.SlugField(max_length=80, unique=True)
+    name = models.CharField(max_length=120)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "users_academic_area"
+        ordering = ("name",)
+        constraints = [
+            models.UniqueConstraint(Lower("name"), name="uq_academic_area_name_lower"),
+        ]
+
+    def __str__(self) -> str:
+        return self.name
+
+
 class Role(models.Model):
-    """Fixed role catalog."""
+    """Fixed role catalog.
+
+    The legacy ``EDITOR`` row is not a valid code any more: it stays in the
+    table with ``is_active=False`` because ``UserRole`` and the audit trail
+    still reference it. Nobody can receive it and ``active_role_codes()``
+    ignores inactive rows.
+    """
 
     class Code(models.TextChoices):
         AUTHOR = "AUTHOR", "Autor"
         REVIEWER = "REVIEWER", "Revisor"
-        EDITOR = "EDITOR", "Editor"
         ADMIN = "ADMIN", "Administrador"
 
     id = models.SmallAutoField(primary_key=True)
-    code = models.CharField(max_length=20, unique=True, choices=Code.choices)
+    code = models.CharField(max_length=20, unique=True)
     name = models.CharField(max_length=50)
     description = models.TextField(blank=True, null=True)
     is_active = models.BooleanField(default=True)
@@ -137,7 +170,11 @@ class UserRole(models.Model):
 
 
 class ReviewerProfile(models.Model):
-    """Expertise areas and availability of a reviewer."""
+    """Careers, availability and ranking score of a reviewer.
+
+    A reviewer without careers is not eligible. ``ranking_score`` is only
+    modified by ``apps.reviews.services.ranking.adjust``.
+    """
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4)
     user = models.OneToOneField(
@@ -145,22 +182,22 @@ class ReviewerProfile(models.Model):
         on_delete=models.PROTECT,
         related_name="reviewer_profile",
     )
-    expertise_areas = ArrayField(
-        models.CharField(max_length=120),
-        default=list,
+    areas = models.ManyToManyField(
+        AcademicArea,
         blank=True,
+        related_name="reviewer_profiles",
     )
     is_available = models.BooleanField(default=True)
-    max_active_assignments = models.PositiveSmallIntegerField(default=3)
+    ranking_score = models.IntegerField(default=RANKING_BASE_SCORE)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         db_table = "users_reviewer_profile"
-        indexes = [
-            GinIndex(
-                fields=("expertise_areas",),
-                name="idx_reviewer_expertise_areas",
+        constraints = [
+            models.CheckConstraint(
+                condition=Q(ranking_score__gte=0),
+                name="ck_reviewer_ranking_score",
             ),
         ]
 

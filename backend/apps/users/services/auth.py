@@ -94,7 +94,7 @@ class _RefreshRejected(Exception):
 def active_role_codes(user: User) -> list[str]:
     """Active role codes, always read from PostgreSQL (never from the JWT)."""
     return list(
-        UserRole.objects.filter(user=user, is_active=True)
+        UserRole.objects.filter(user=user, is_active=True, role__is_active=True)
         .order_by("role_id")
         .values_list("role__code", flat=True)
     )

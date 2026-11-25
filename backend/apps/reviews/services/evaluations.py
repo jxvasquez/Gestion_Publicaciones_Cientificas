@@ -9,18 +9,22 @@ submission see each other's result instead of racing. The rules:
   answers ``410``; the draft is kept and never becomes final.
 * ``lock_version`` is the optimistic lock (``If-Match``/``ETag``): a stale
   value answers ``409`` and keeps the winning edit.
-* A draft admits gaps. The final submission needs the five scores, the
-  recommendation and the comments for the author; it completes the
-  assignment in the same transaction, audits it, and announces it after
-  the commit. A ``FINAL`` evaluation is immutable (trigger of migration
+* A draft admits gaps (``rubric_version=2``). The final submission needs
+  the five criteria of the rubric, the recommendation and the comments for
+  the author, which must have at least 100 characters (after trimming)
+  when any criterion is 3 or less or the recommendation is
+  ``MAJOR_REVISION`` or ``REJECTED``. It completes the assignment, adds the
+  on-time bonus to the ranking in the same transaction, audits it, and
+  announces it after the commit; the automatic verdict is scheduled with
+  ``on_commit``. A ``FINAL`` evaluation is immutable (trigger of migration
   ``0002``); the service also refuses to touch it.
-* Declaring a conflict of interest (TSK-63) flags the evaluation, which
-  blocks every later save and submission. The assignment stays ``ACTIVE``
-  and nothing is revoked: the editor is told and decides.
+* Declaring a conflict of interest flags the evaluation and releases the
+  assignment without penalty: the slot is covered by another reviewer.
 """
 
 from __future__ import annotations
 
+import logging
 from typing import Any
 from uuid import UUID
 
@@ -29,17 +33,27 @@ from django.db.models.functions import Now
 
 from apps.audit.models import AuditLog
 from apps.audit.services import AuditService
-from apps.reviews.models import SCORE_FIELDS, Assignment, Evaluation
-from apps.reviews.services.assignments import run_audited
-from apps.reviews.signals import announce, evaluation_submitted, reviewer_conflict_declared
+from apps.reviews.models import RUBRIC_FIELDS, Assignment, Evaluation, RankingAdjustment
+from apps.reviews.policy import JUSTIFICATION_MIN_LENGTH, JUSTIFICATION_SCORE_THRESHOLD
+from apps.reviews.services import ranking
+from apps.reviews.services.assignments import release_assignment, run_audited
+from apps.reviews.signals import announce, evaluation_submitted
 from apps.users.models import Role, User
 from config.exceptions import DomainError, ErrorCode
 
 #: What the reviewer writes in a draft; nothing else is ever taken from the client.
-DRAFT_FIELDS = (*SCORE_FIELDS, "recommendation", "comments_for_author", "confidential_comments")
+DRAFT_FIELDS = (*RUBRIC_FIELDS, "recommendation", "comments_for_author")
 
-#: What the final submission requires (``confidential_comments`` stays optional).
-REQUIRED_FIELDS = (*SCORE_FIELDS, "recommendation", "comments_for_author")
+#: What the final submission requires.
+REQUIRED_FIELDS = (*RUBRIC_FIELDS, "recommendation", "comments_for_author")
+
+#: Recommendations that always need a justification.
+JUSTIFIED_RECOMMENDATIONS = (
+    Evaluation.Recommendation.MAJOR_REVISION,
+    Evaluation.Recommendation.REJECTED,
+)
+
+logger = logging.getLogger(__name__)
 
 NOT_FOUND_MESSAGE = "No encontrado."
 SUBMITTED_MESSAGE = "La evaluación ya fue enviada y no admite cambios."
@@ -48,6 +62,10 @@ OVERDUE_MESSAGE = "El plazo de evaluación venció. El borrador se conserva sin 
 CONFLICT_DECLARED_MESSAGE = "Se declaró un conflicto de interés: la evaluación está bloqueada."
 STALE_MESSAGE = "El borrador cambió desde que lo leyó. Recárguelo antes de continuar."
 MISSING_MESSAGE = "Este campo es obligatorio para enviar la evaluación."
+JUSTIFICATION_MESSAGE = (
+    "Escriba al menos {minimum} caracteres: algún criterio es {threshold} o menos, "
+    "o el dictamen es Revisión mayor o Rechazar (lleva {current})."
+)
 NOT_ACTIVE_MESSAGE = "Solo una asignación activa permite declarar un conflicto de interés."
 ALREADY_DECLARED_MESSAGE = "El conflicto de interés ya fue declarado."
 
@@ -148,6 +166,34 @@ def _missing_fields(evaluation: Evaluation | None) -> list[str]:
     return [field for field in REQUIRED_FIELDS if getattr(evaluation, field) in (None, "")]
 
 
+def justification_required(evaluation: Evaluation) -> bool:
+    """FR-019: a low criterion, a major revision or a rejection need a justification."""
+    low = any(
+        getattr(evaluation, field) is not None
+        and getattr(evaluation, field) <= JUSTIFICATION_SCORE_THRESHOLD
+        for field in RUBRIC_FIELDS
+    )
+    return low or evaluation.recommendation in JUSTIFIED_RECOMMENDATIONS
+
+
+def _check_justification(evaluation: Evaluation) -> None:
+    """The comments for the author reach the minimum once trimmed (code points)."""
+    if not justification_required(evaluation):
+        return
+    current = len((evaluation.comments_for_author or "").strip())
+    if current < JUSTIFICATION_MIN_LENGTH:
+        message = JUSTIFICATION_MESSAGE.format(
+            minimum=JUSTIFICATION_MIN_LENGTH,
+            threshold=JUSTIFICATION_SCORE_THRESHOLD,
+            current=current,
+        )
+        raise DomainError(
+            message,
+            code=ErrorCode.VALIDATION_ERROR,
+            details={"comments_for_author": [message]},
+        )
+
+
 def submit_evaluation(
     *, assignment_id: UUID, reviewer: User, expected_lock_version: int, context: dict
 ) -> Evaluation:
@@ -168,6 +214,7 @@ def submit_evaluation(
                 code=ErrorCode.VALIDATION_ERROR,
                 details={field: [MISSING_MESSAGE] for field in missing},
             )
+        _check_justification(evaluation)
 
         evaluation.status = Evaluation.Status.FINAL
         evaluation.submitted_at = Now()
@@ -178,6 +225,13 @@ def submit_evaluation(
         assignment.completed_at = Now()
         assignment.lock_version += 1
         assignment.save(update_fields=("status", "completed_at", "lock_version", "updated_at"))
+        # Antes del vencimiento (el corte lo validó `_ensure_open`): bonificación en la misma transacción.
+        ranking.adjust(
+            reviewer_id=reviewer.pk,
+            assignment=assignment,
+            cause=RankingAdjustment.Cause.ON_TIME_EVALUATION,
+            context=context,
+        )
 
         AuditService.record(
             action="EVALUATION_SUBMITTED",
@@ -202,25 +256,41 @@ def submit_evaluation(
                 reviewer_id=reviewer.pk,
             )
         )
+        transaction.on_commit(lambda: _decide_after_commit(assignment.manuscript_id))
         evaluation.refresh_from_db()
         return evaluation
 
     return run_audited(work)
 
 
+def _decide_after_commit(manuscript_id: UUID) -> None:
+    """Issue the automatic verdict once the evaluation is committed (R-11).
+
+    A failure here (storage, audit) never undoes the evaluation: the
+    scheduled cycle reconciles the pending verdicts later.
+    """
+    from apps.reviews.services.consensus import decide_version
+
+    try:
+        decide_version(manuscript_id)
+    except Exception:  # noqa: BLE001
+        logger.exception("No se pudo decidir el manuscrito %s tras la evaluación", manuscript_id)
+
+
 def declare_conflict(
     *, assignment_id: UUID, reviewer: User, reason: str | None, context: dict
-) -> Evaluation:
-    """Flag the evaluation as blocked by a conflict of interest and tell the editor.
+) -> Assignment:
+    """Release the assignment without penalty and keep the draft marked.
 
     Only an ``ACTIVE`` assignment can declare it, once. The flag lives on
     the evaluation, so a reviewer who never saved a draft gets an empty
     one that carries it; an existing draft keeps its content. The free
     text goes to the audit trail only. Nothing about the manuscript's
-    authors is read or written.
+    authors is read or written. The released slot is covered again by the
+    automatic engine, and the ranking does not change (FR-031).
     """
 
-    def work() -> Evaluation:
+    def work() -> Assignment:
         assignment = locked_assignment(assignment_id, reviewer)
         if assignment.status != Assignment.Status.ACTIVE:
             raise DomainError(
@@ -231,7 +301,7 @@ def declare_conflict(
         evaluation = Evaluation.objects.select_for_update().filter(assignment=assignment).first()
         if evaluation is None:
             # Nace en 1, como todo borrador guardado (ver `save_draft`).
-            evaluation = Evaluation.objects.create(
+            Evaluation.objects.create(
                 assignment=assignment,
                 manuscript=assignment.manuscript,
                 version=assignment.version,
@@ -257,14 +327,12 @@ def declare_conflict(
             details={"manuscript_id": str(assignment.manuscript_id)},
             **context,
         )
-        transaction.on_commit(
-            lambda: announce(
-                reviewer_conflict_declared,
-                assignment_id=assignment.pk,
-                manuscript_id=assignment.manuscript_id,
-                reviewer_id=reviewer.pk,
-            )
+        return release_assignment(
+            assignment,
+            cause=Assignment.ReleaseCause.CONFLICT_OF_INTEREST,
+            actor=reviewer,
+            actor_role=Role.Code.REVIEWER,
+            context=context,
         )
-        return evaluation
 
     return run_audited(work)

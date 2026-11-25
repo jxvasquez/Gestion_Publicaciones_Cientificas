@@ -151,7 +151,7 @@ def public_entries() -> QuerySet[CatalogEntry]:
             manuscript__is_active=True,
         )
         .select_related("manuscript", "version")
-        .prefetch_related("manuscript__authors")
+        .prefetch_related("manuscript__authors", "manuscript__areas")
     )
 
 
@@ -166,6 +166,9 @@ def search_entries(queryset: QuerySet[CatalogEntry], params: dict) -> QuerySet[C
     """Apply the validated public filters and the ordering."""
     term = params.get("search")
     if term:
+        by_area_name = Manuscript.areas.through.objects.filter(
+            manuscript_id=OuterRef("manuscript_id"), academicarea__name__icontains=term
+        )
         by_author = ManuscriptAuthor.objects.filter(manuscript=OuterRef("manuscript_id")).filter(
             Q(full_name__icontains=term) | Q(affiliation__icontains=term)
         )
@@ -173,11 +176,18 @@ def search_entries(queryset: QuerySet[CatalogEntry], params: dict) -> QuerySet[C
             Q(manuscript__search_vector=SearchQuery(term, config="spanish", search_type="websearch"))
             | Q(manuscript__title__icontains=term)
             | Q(manuscript__code__icontains=term)
-            | Q(manuscript__area__icontains=term)
+            | Exists(by_area_name)
             | Exists(by_author)
         )
     if "area" in params:
-        queryset = queryset.filter(manuscript__area__iexact=params["area"])
+        queryset = queryset.filter(
+            Exists(
+                Manuscript.areas.through.objects.filter(
+                    manuscript_id=OuterRef("manuscript_id"),
+                    academicarea__code__iexact=params["area"],
+                )
+            )
+        )
     if "language" in params:
         queryset = queryset.filter(manuscript__language=params["language"])
     if "keyword" in params:

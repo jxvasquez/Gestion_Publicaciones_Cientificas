@@ -7,7 +7,7 @@
 # basta (no hace falta `copytruncate`).
 
 # Corren cada minuto y solo escriben si hubo trabajo o un error: rotación semanal.
-/var/log/gpc-expire.log /var/log/gpc-notify.log /var/log/gpc-cleanup.log {
+/var/log/gpc-review.log /var/log/gpc-notify.log /var/log/gpc-cleanup.log {
     weekly
     rotate 8
     compress

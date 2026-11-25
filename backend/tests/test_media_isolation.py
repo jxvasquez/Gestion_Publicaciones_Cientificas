@@ -23,7 +23,7 @@ BACKEND = Path(__file__).resolve().parents[1]
 REPOSITORY = BACKEND.parent
 NGINX_CONF = REPOSITORY / "nginx" / "conf.d" / "default.conf"
 
-#: Nombres que solo el Autor y el Editor pueden tocar: apuntan al PDF original.
+#: Nombres que solo el Autor puede tocar: apuntan al PDF original.
 ORIGINAL_MARKERS = ("original_file_path", "original_filename", "original.pdf", "original_sha256")
 
 

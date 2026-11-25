@@ -80,7 +80,7 @@ class TestVisibility:
 
     def test_only_accepted_active_and_published_articles_are_listed(self, anonymous) -> None:
         visible = published()
-        for status in ("DRAFT", "SUBMITTED", "UNDER_REVIEW", "REQUIRES_CORRECTIONS", "REJECTED"):
+        for status in ("DRAFT", "SUBMITTED", "UNDER_REVIEW", "CHANGES_REQUESTED", "REJECTED"):
             manuscript = ManuscriptFactory(status=status)
             version = ManuscriptVersionFactory(manuscript=manuscript, submitted_by=manuscript.created_by)
             CatalogEntry.objects.create(
@@ -119,7 +119,7 @@ class TestMinimization:
         body = response.json()
 
         assert set(body) == {
-            "code", "title", "authors", "abstract", "keywords", "area",
+            "code", "title", "authors", "abstract", "keywords", "areas",
             "language", "published_at", "version_number", "document_url",
         }
         assert body["authors"] == [
@@ -183,7 +183,7 @@ class TestSearchAndFilters:
         by_title = published(title="Glaciares tropicales")
         by_abstract = published(abstract="Estudio sobre la quinua orgánica en suelos áridos.")
         by_keyword = published(keywords=["hidroponía", "lechuga"])
-        by_area = published(area="Oceanografía")
+        by_area = published(areas=["oceanografia"])
         by_author = published()
         ManuscriptAuthorFactory(
             manuscript=by_author.manuscript, full_name="Yolanda Zambrano", affiliation="ESPOL", author_order=2
@@ -195,7 +195,7 @@ class TestSearchAndFilters:
         assert found("glaciares") == [by_title.manuscript.code]
         assert found("quinua") == [by_abstract.manuscript.code]
         assert found("hidroponía") == [by_keyword.manuscript.code]
-        assert found("oceanografía") == [by_area.manuscript.code]
+        assert found("oceanografia") == [by_area.manuscript.code]
         assert found("Zambrano") == [by_author.manuscript.code]
         assert found("ESPOL") == [by_author.manuscript.code]
         assert found("inexistente") == []
@@ -214,10 +214,10 @@ class TestSearchAndFilters:
         assert codes(anonymous.get(LIST_URL, {"search": "ana"})) == [entry.manuscript.code]
 
     def test_area_language_keyword_filters(self, anonymous) -> None:
-        agro = published(area="Agronomía", language="es", keywords=["suelo"])
-        published(area="Física", language="en", keywords=["energía"])
+        agro = published(areas=["agronomia"], language="es", keywords=["suelo"])
+        published(areas=["fisica"], language="en", keywords=["energía"])
 
-        assert codes(anonymous.get(LIST_URL, {"area": "agronomía"})) == [agro.manuscript.code]
+        assert codes(anonymous.get(LIST_URL, {"area": "agronomia"})) == [agro.manuscript.code]
         assert codes(anonymous.get(LIST_URL, {"language": "es"})) == [agro.manuscript.code]
         assert codes(anonymous.get(LIST_URL, {"keyword": "suelo"})) == [agro.manuscript.code]
 

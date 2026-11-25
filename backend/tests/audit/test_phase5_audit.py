@@ -101,7 +101,7 @@ class TestAdministratorView:
 
         assert {
             "MANUSCRIPT_SUBMITTED",
-            "ASSIGNMENT_CREATED",
+            "AUTO_ASSIGNMENT_CREATED",
             "EVALUATION_SUBMITTED",
             "VERDICT_REGISTERED",
             "CATALOG_DOCUMENT_DOWNLOADED",
@@ -125,7 +125,7 @@ class TestAdministratorView:
         for forbidden in (
             *AUTHOR_TOKENS, *REVIEWER_TOKENS,
             "203.0.113.77", "NavegadorDePrueba", "Retiro por decisión",
-            EVALUATION["confidential_comments"], EVALUATION["comments_for_author"],
+            EVALUATION["comments_for_author"],
             manuscript.title, manuscript.abstract,
         ):
             assert forbidden not in blob
@@ -146,31 +146,26 @@ class TestCorrectionInTheAudit:
     def test_the_correction_cycle_leaves_three_linked_events(self, flow) -> None:
         manuscript = flow.accepted()
         original = manuscript.verdicts.get()
-        assert flow.authorize_correction(original.pk).status_code == 201
-        manuscript.refresh_from_db()
-        # Aceptado -> rechazado por corrección.
-        corrected = flow.judge({"decision": "REJECTED", "justification": "Se detectó un error grave."}, "corrige-1")
+        # Aceptado -> rechazado por corrección del Administrador.
+        corrected = flow.correct(original.pk, decision="REJECTED", key="corrige-1")
         assert corrected.status_code == 201, corrected.content
 
         events = list(
-            AuditLog.objects.filter(
-                action__in=("VERDICT_REGISTERED", "VERDICT_CORRECTION_AUTHORIZED", "VERDICT_CORRECTED")
-            ).order_by("id")
+            AuditLog.objects.filter(action__in=("VERDICT_REGISTERED", "VERDICT_CORRECTED")).order_by("id")
         )
-        assert [e.action for e in events] == [
-            "VERDICT_REGISTERED", "VERDICT_CORRECTION_AUTHORIZED", "VERDICT_CORRECTED",
-        ]
+        assert [e.action for e in events] == ["VERDICT_REGISTERED", "VERDICT_CORRECTED"]
+        # El sistema decide sin actor; la corrección lleva al Administrador.
+        assert events[0].actor_id is None and events[1].actor_id == flow.admin.pk
         newest = manuscript.verdicts.order_by("created_at", "id").last()
-        assert events[2].details["verdict_id"] == str(newest.pk)
-        assert events[2].details["previous_verdict_id"] == str(original.pk)
-        assert events[2].details["correction_id"] == events[1].entity_id.__str__()
+        assert events[1].details["verdict_id"] == str(newest.pk)
+        assert events[1].details["previous_verdict_id"] == str(original.pk)
+        assert events[1].details["origin"] == "ADMIN_CORRECTION"
         assert_audit_chain_intact()
 
     def test_the_flag_moves_to_the_newest_verdict(self, flow) -> None:
         manuscript = flow.accepted()
         original = manuscript.verdicts.get()
-        flow.authorize_correction(original.pk)
-        flow.judge({"decision": "REJECTED", "justification": "Se detectó un error grave."}, "corrige-1")
+        flow.correct(original.pk, decision="REJECTED", key="corrige-1")
         client = client_for(flow.admin)
 
         def flag(action):

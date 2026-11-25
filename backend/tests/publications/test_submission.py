@@ -243,7 +243,8 @@ class TestMetadataSeal:
         submit(owner, manuscript)
 
         expected = (
-            '{"abstract":"Resumen del estudio de campo.","area":"Agronomía",'
+            '{"abstract":"Resumen del estudio de campo.",'
+            '"areas":[{"code":"agronomia","name":"Agronomia"}],'
             '"authors":[{"affiliation":"Universidad Nacional de Loja",'
             f'"email":"{owner.email}","full_name":"{owner.get_full_name()}",'
             '"is_corresponding":true,"order":1}],'
@@ -501,7 +502,7 @@ class TestValidation:
 
         assert response.status_code == 400 and error_code(response) == "VALIDATION_ERROR"
         assert set(response.json()["error"]["details"]) == {
-            "title", "abstract", "keywords", "area", "language", "draft_file",
+            "title", "abstract", "keywords", "areas", "language", "draft_file",
         }
         manuscript.refresh_from_db()
         assert manuscript.status == "DRAFT" and not ManuscriptVersion.objects.exists()
@@ -509,7 +510,7 @@ class TestValidation:
     def test_the_entered_data_is_kept_as_a_draft(self, owner, submit) -> None:
         client = client_for(owner)
         created = client.post(
-            URL, create_payload(owner, abstract="", area=""), format="json"
+            URL, create_payload(owner, abstract="", areas=[]), format="json"
         ).json()
         manuscript = Manuscript.objects.get(pk=created["id"])
 
@@ -588,7 +589,7 @@ class TestState:
         assert AuditLog.objects.filter(action="MANUSCRIPT_SUBMITTED").count() == 1
 
     @pytest.mark.parametrize(
-        "status", ["SUBMITTED", "UNDER_REVIEW", "REQUIRES_CORRECTIONS", "ACCEPTED", "REJECTED"]
+        "status", ["SUBMITTED", "UNDER_REVIEW", "CHANGES_REQUESTED", "ACCEPTED", "REJECTED"]
     )
     def test_any_state_but_draft_answers_409(self, owner, submit, status) -> None:
         manuscript = owned_manuscript(owner, status=status)
@@ -624,12 +625,6 @@ class TestAccess:
 
         assert APIClient().post(submit_url(manuscript)).status_code == 401
 
-    @pytest.mark.parametrize("roles", [("EDITOR",), ("REVIEWER",), ("ADMIN",), ()])
-    def test_roles_without_the_author_module_answer_403(self, owner, submit, roles) -> None:
-        manuscript = ready_draft(owner)
-
-        assert submit(actor(*roles), manuscript).status_code == 403
-        assert not ManuscriptVersion.objects.exists()
 
     def test_someone_elses_manuscript_answers_404(self, owner, submit) -> None:
         manuscript = ready_draft(owner)
@@ -639,11 +634,6 @@ class TestAccess:
         assert response.status_code == 404
         assert not ManuscriptVersion.objects.exists()
 
-    def test_multirole_user_cannot_submit_a_manuscript_seen_as_editor(self, submit) -> None:
-        person = actor("AUTHOR", "EDITOR")
-        foreign = owned_manuscript(actor("AUTHOR"), status="SUBMITTED")
-
-        assert submit(person, foreign).status_code == 404
 
     def test_get_is_not_allowed(self, owner) -> None:
         manuscript = ready_draft(owner)
@@ -651,17 +641,3 @@ class TestAccess:
         assert client_for(owner).get(submit_url(manuscript)).status_code == 405
 
 
-class TestEditorSeesTheSubmission:
-    def test_the_editor_gets_the_manuscript_with_v1_and_its_seal(self, owner, submit) -> None:
-        data = factory.clean_pdf()
-        manuscript = ready_draft(owner, pdf=data, name="envio.pdf")
-        submit(owner, manuscript)
-
-        item = client_for(actor("EDITOR")).get(detail_url(manuscript)).json()
-
-        assert item["status"] == "SUBMITTED" and item["current_version"] == 1
-        [version] = item["versions"]
-        assert version["version_number"] == 1 and version["round_number"] == 0
-        assert version["original_filename"] == "envio.pdf"
-        assert version["original_sha256"] == hashlib.sha256(data).hexdigest()
-        assert "path" not in json.dumps(version)

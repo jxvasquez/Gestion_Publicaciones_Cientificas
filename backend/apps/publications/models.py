@@ -10,9 +10,11 @@ They follow the implementation plan (sections 1.8-1.11 and 1.16):
   submission: exact PDF hashes plus a canonical snapshot of the metadata.
 * ``CorrectionRound`` tracks rounds 0, 1, 2, ...
 * ``StatusEvent`` is the append-only history of status transitions.
-* ``Verdict`` is the append-only editorial decision over an evaluated
-  version; a correction never edits it, it adds a row that points back to
-  the one it replaces (``previous_verdict``).
+* ``Verdict`` is the append-only decision over an evaluated version,
+  issued by the system (consensus or tie-break) or by an administrative
+  correction; a correction never edits it, it adds a row that points back
+  to the one it replaces (``previous_verdict``). ``VerdictEvaluation``
+  records the evaluations a new verdict considered.
 * ``CatalogEntry`` is the public copy of an accepted version, active at
   most once per manuscript.
 
@@ -104,33 +106,11 @@ class ManuscriptQuerySet(models.QuerySet):
         """Manuscripts the user registered."""
         return self.filter(created_by=user)
 
-    def for_editor(self, user) -> "ManuscriptQuerySet":
-        """Editor scope: formally submitted manuscripts without conflict.
-
-        Drafts belong to their author until the formal submission. An
-        editor who registered the manuscript or figures as author or
-        coauthor has a conflict of interest and never reaches it through
-        the editor role.
-        """
-        return (
-            self.exclude(status=Manuscript.Status.DRAFT)
-            .exclude(created_by=user)
-            .exclude(authors__user=user)
-        )
-
-    def visible_to(self, user, *, as_author: bool, as_editor: bool) -> "ManuscriptQuerySet":
-        """Union of the scopes of the roles the actor holds."""
-        scopes = []
-        if as_author:
-            scopes.append(self.owned_by(user))
-        if as_editor:
-            scopes.append(self.for_editor(user))
-        if not scopes:
+    def visible_to(self, user, *, as_author: bool) -> "ManuscriptQuerySet":
+        """Scope of the roles the actor holds: only the author's own manuscripts."""
+        if not as_author:
             return self.none()
-        result = scopes[0]
-        for scope in scopes[1:]:
-            result = result | scope
-        return result
+        return self.owned_by(user)
 
 
 class Manuscript(models.Model):
@@ -140,7 +120,8 @@ class Manuscript(models.Model):
         DRAFT = "DRAFT", "Borrador"
         SUBMITTED = "SUBMITTED", "Enviado"
         UNDER_REVIEW = "UNDER_REVIEW", "En revisión"
-        REQUIRES_CORRECTIONS = "REQUIRES_CORRECTIONS", "Requiere correcciones"
+        TIE_BREAKER = "TIE_BREAKER", "En desempate"
+        CHANGES_REQUESTED = "CHANGES_REQUESTED", "Cambios solicitados"
         ACCEPTED = "ACCEPTED", "Aceptado"
         REJECTED = "REJECTED", "Rechazado"
 
@@ -150,7 +131,12 @@ class Manuscript(models.Model):
     title = models.CharField(max_length=300)
     abstract = models.TextField()
     keywords = ArrayField(models.TextField())
-    area = models.CharField(max_length=120)
+    # Entre 1 y 3 carreras activas del catálogo para poder enviar (FR-008).
+    areas = models.ManyToManyField(
+        "users.AcademicArea",
+        blank=True,
+        related_name="manuscripts",
+    )
     language = models.CharField(max_length=10)
     status = models.CharField(
         max_length=24,
@@ -208,7 +194,6 @@ class Manuscript(models.Model):
                 fields=("created_by", "is_active"),
                 name="idx_manuscript_owner_active",
             ),
-            models.Index(fields=("area",), name="idx_manuscript_area"),
             GinIndex(fields=("search_vector",), name="idx_manuscript_search"),
         ]
         constraints = [
@@ -218,7 +203,8 @@ class Manuscript(models.Model):
                         "DRAFT",
                         "SUBMITTED",
                         "UNDER_REVIEW",
-                        "REQUIRES_CORRECTIONS",
+                        "TIE_BREAKER",
+                        "CHANGES_REQUESTED",
                         "ACCEPTED",
                         "REJECTED",
                     )
@@ -394,7 +380,7 @@ class CorrectionRound(models.Model):
     """Review round 0, 1, 2, ... of a manuscript.
 
     Round 0 opens with the first submission and closes with v1; each
-    ``REQUIRES_CORRECTIONS`` verdict opens the next one and keeps its
+    ``CHANGES_REQUESTED`` verdict opens the next one and keeps its
     reference in ``opened_by_verdict``. PostgreSQL creates the foreign
     key ``DEFERRABLE INITIALLY DEFERRED``, so the round and the verdict
     that opens it can be written in the same transaction in any order.
@@ -478,20 +464,29 @@ class StatusEvent(AppendOnlyModel):
 
 
 class Verdict(AppendOnlyModel):
-    """Immutable editorial decision over an evaluated version (plan section 1.15).
+    """Immutable decision over an evaluated version (plan section 1.15).
 
-    ``REJECTED`` requires a justification and ``REQUIRES_CORRECTIONS``
-    requires observations. In the normal flow a version has a single
-    verdict; the only exception is an administrative correction, which
-    adds a new row whose ``previous_verdict`` is the one it replaces and
-    never updates it. The database trigger rejects ``UPDATE`` and
-    ``DELETE``.
+    ``REJECTED`` requires a justification and ``CHANGES_REQUESTED`` requires
+    observations. The system issues the ordinary verdict by consensus or
+    tie-break (``decided_by`` is empty); the only other source is an
+    administrative correction, which adds a new row whose
+    ``previous_verdict`` is the one it replaces and never updates it.
+    ``EDITOR_LEGACY`` marks the verdicts written by the retired Editor role.
+    The database trigger rejects ``UPDATE`` and ``DELETE``.
     """
 
     class Decision(models.TextChoices):
         ACCEPTED = "ACCEPTED", "Aceptado"
         REJECTED = "REJECTED", "Rechazado"
+        CHANGES_REQUESTED = "CHANGES_REQUESTED", "Cambios solicitados"
+        # Solo los veredictos heredados del Editor (`origin='EDITOR_LEGACY'`).
         REQUIRES_CORRECTIONS = "REQUIRES_CORRECTIONS", "Requiere correcciones"
+
+    class Origin(models.TextChoices):
+        CONSENSUS = "CONSENSUS", "Consenso de dos revisores"
+        TIE_BREAK = "TIE_BREAK", "Desempate de un tercer revisor"
+        ADMIN_CORRECTION = "ADMIN_CORRECTION", "Corrección del Administrador"
+        EDITOR_LEGACY = "EDITOR_LEGACY", "Veredicto heredado del Editor"
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4)
     manuscript = models.ForeignKey(
@@ -505,16 +500,23 @@ class Verdict(AppendOnlyModel):
         related_name="verdicts",
     )
     # Referencia diferida por texto: `reviews` ya depende de `publications`.
+    # Solo la usan los veredictos heredados; los nuevos usan `VerdictEvaluation`.
     evaluation = models.ForeignKey(
         "reviews.Evaluation",
         on_delete=models.PROTECT,
+        null=True,
+        blank=True,
         related_name="verdicts",
     )
-    editor = models.ForeignKey(
+    # `NULL` significa decisión del sistema.
+    decided_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.PROTECT,
+        null=True,
+        blank=True,
         related_name="issued_verdicts",
     )
+    origin = models.CharField(max_length=20, choices=Origin.choices)
     decision = models.CharField(max_length=24, choices=Decision.choices)
     justification = models.TextField(null=True, blank=True)
     observations = models.TextField(null=True, blank=True)
@@ -540,7 +542,13 @@ class Verdict(AppendOnlyModel):
         ]
         constraints = [
             models.CheckConstraint(
-                condition=Q(decision__in=("ACCEPTED", "REJECTED", "REQUIRES_CORRECTIONS")),
+                condition=Q(origin__in=("CONSENSUS", "TIE_BREAK", "ADMIN_CORRECTION", "EDITOR_LEGACY")),
+                name="ck_verdict_origin",
+            ),
+            # `REQUIRES_CORRECTIONS` solo existe en los veredictos heredados.
+            models.CheckConstraint(
+                condition=Q(decision__in=("ACCEPTED", "REJECTED", "CHANGES_REQUESTED"))
+                | Q(decision="REQUIRES_CORRECTIONS", origin="EDITOR_LEGACY"),
                 name="ck_verdict_decision",
             ),
             models.CheckConstraint(
@@ -548,8 +556,17 @@ class Verdict(AppendOnlyModel):
                 name="ck_verdict_rejected_justification",
             ),
             models.CheckConstraint(
-                condition=~Q(decision="REQUIRES_CORRECTIONS") | Q(observations__isnull=False),
+                condition=~Q(decision__in=("CHANGES_REQUESTED", "REQUIRES_CORRECTIONS"))
+                | Q(observations__isnull=False),
                 name="ck_verdict_corrections_observations",
+            ),
+            # El sistema decide por consenso o desempate; una persona, lo demás.
+            models.CheckConstraint(
+                condition=(
+                    Q(origin__in=("CONSENSUS", "TIE_BREAK"), decided_by__isnull=True)
+                    | Q(origin__in=("ADMIN_CORRECTION", "EDITOR_LEGACY"), decided_by__isnull=False)
+                ),
+                name="ck_verdict_decider",
             ),
             # Un solo veredicto normal por versión; la corrección lo enlaza.
             models.UniqueConstraint(
@@ -563,16 +580,51 @@ class Verdict(AppendOnlyModel):
         return f"{self.manuscript_id} · {self.decision}"
 
 
-class VerdictCorrection(models.Model):
-    """Administrative authorization to decide again over a verdict (plan section 1.15.1).
+class VerdictEvaluation(AppendOnlyModel):
+    """Final evaluation a verdict considered, with the slot of its assignment.
 
-    It exists for CA-HU-13-12 only: an administrator enables ONE new
-    decision over the latest verdict when it contains an error. It never
-    edits the verdict (which is append-only) and never gives the
-    administrator access to the manuscript. The editor consumes it by
-    registering the new decision (TSK-78): ``is_active`` turns false and
-    ``consumed_at``/``consumed_by_verdict`` are filled together. At most
-    one authorization is active per original verdict.
+    ``slot`` defines the «Revisor N» label the author sees. A correction
+    copies the basis of the verdict it replaces.
+    """
+
+    id = models.BigAutoField(primary_key=True)
+    verdict = models.ForeignKey(
+        Verdict,
+        on_delete=models.PROTECT,
+        related_name="evaluations",
+    )
+    evaluation = models.ForeignKey(
+        "reviews.Evaluation",
+        on_delete=models.PROTECT,
+        related_name="verdict_links",
+    )
+    slot = models.PositiveSmallIntegerField()
+
+    class Meta:
+        db_table = "publications_verdict_evaluation"
+        ordering = ("slot",)
+        constraints = [
+            models.UniqueConstraint(
+                fields=("verdict", "evaluation"),
+                name="uq_verdict_evaluation_pair",
+            ),
+            models.UniqueConstraint(
+                fields=("verdict", "slot"),
+                name="uq_verdict_evaluation_slot",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.verdict_id} · cupo {self.slot}"
+
+
+class VerdictCorrection(models.Model):
+    """Administrative correction of a verdict (plan section 1.15.1).
+
+    ``authorized_by`` is the administrator who corrects. The record is
+    created and consumed in the same transaction by ``correct_verdict()``:
+    ``is_active`` turns false and ``consumed_at``/``consumed_by_verdict`` are
+    filled together. It never edits the verdict (which is append-only).
     """
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4)

@@ -4,9 +4,8 @@ They are sent AFTER the transaction commits, never inside it: a
 receiver can fail or be slow without undoing the assignment it reacts
 to. The notifications app subscribes to them (TSK-75); reviews knows
 nothing about who listens. Receivers get identifiers only and build
-their own sanitized payloads: the free-text reason of a revocation is
-left out on purpose, because it is written by the editor and must not
-travel to the reviewer.
+their own sanitized payloads: the free text of a report or a reason is
+left out on purpose.
 """
 
 from __future__ import annotations
@@ -17,44 +16,49 @@ from django.dispatch import Signal
 
 logger = logging.getLogger(__name__)
 
-#: A reviewer was assigned to a manuscript. Args: ``assignment_id``,
-#: ``manuscript_id``, ``reviewer_id``, ``assigned_by_id``.
+#: The system assigned a reviewer to a version slot. Args: ``assignment_id``,
+#: ``manuscript_id``, ``reviewer_id``.
 assignment_created = Signal()
 
-#: An assignment was revoked, by an editor or by the withdrawal of the
-#: manuscript. Args: ``assignment_id``, ``manuscript_id``, ``reviewer_id``,
-#: ``cause``.
+#: The first assignment of a version moved the manuscript to ``UNDER_REVIEW``.
+#: Args: ``manuscript_id``, ``version_id``.
+review_started = Signal()
+
+#: A required slot of a version has no eligible reviewer yet (once per slot).
+#: Args: ``manuscript_id``, ``version_id``, ``slot``.
+slot_unfilled = Signal()
+
+#: An assignment was released without penalty (conflict of interest, incident
+#: resolution, anonymized version or withdrawal of the manuscript). Args:
+#: ``assignment_id``, ``manuscript_id``, ``reviewer_id``, ``cause`` (a
+#: ``Assignment.ReleaseCause`` value).
 assignment_revoked = Signal()
 
-
-#: The deadline of an assignment passed and the scheduled task marked it
-#: ``EXPIRED``. It is sent once per assignment, because only an ``ACTIVE``
-#: one can expire. The editor decides what follows; nothing is revoked or
-#: reassigned automatically. Args: ``assignment_id``, ``manuscript_id``,
-#: ``reviewer_id``, ``assigned_by_id``.
+#: The deadline passed without a final evaluation: the system expired the
+#: assignment and subtracted points. Sent once per assignment. Args:
+#: ``assignment_id``, ``manuscript_id``, ``reviewer_id``.
 assignment_expired = Signal()
 
 #: A reviewer submitted the final evaluation and the assignment became
-#: ``COMPLETED``. The editor is told; the payload they build must carry
-#: no author data. Args: ``evaluation_id``, ``assignment_id``,
+#: ``COMPLETED``. Args: ``evaluation_id``, ``assignment_id``,
 #: ``manuscript_id``, ``reviewer_id``.
 evaluation_submitted = Signal()
 
-#: A reviewer declared a conflict of interest on an ``ACTIVE`` assignment
-#: and the evaluation was blocked. The assignment stays ``ACTIVE``: the
-#: editor decides whether to revoke it. The payload they build must carry
-#: no author data. Args: ``assignment_id``, ``manuscript_id``, ``reviewer_id``.
-reviewer_conflict_declared = Signal()
+#: Two final evaluations disagreed (one rejects, the other does not) and the
+#: manuscript moved to ``TIE_BREAKER``. The notice carries no opinions.
+#: Args: ``manuscript_id``, ``version_id``.
+tie_break_started = Signal()
 
-#: A reviewer filed a confidential incident report. The editor is told; the
-#: payload they build must carry no author data and not the free text.
-#: Args: ``incident_id``, ``assignment_id``, ``manuscript_id``, ``report_type``.
+#: A reviewer filed a confidential incident report. The administrator is
+#: told; the payload carries no author data and not the free text. Args:
+#: ``incident_id``, ``assignment_id``, ``manuscript_id``, ``report_type``.
 incident_reported = Signal()
 
-#: The editor resolved an incident. For ``REQUEST_ANONYMIZED_VERSION`` the
-#: author is asked for an anonymized version: that notice must never mention
-#: the report nor the reviewer. Args: ``incident_id``, ``assignment_id``,
-#: ``manuscript_id``, ``resolution``, ``correction_round_id`` (or ``None``).
+#: The administrator resolved an incident. For ``REQUEST_ANONYMIZED_VERSION``
+#: the author is asked for an anonymized version: that notice must never
+#: mention the report nor the reviewer. Args: ``incident_id``,
+#: ``assignment_id``, ``manuscript_id``, ``resolution``,
+#: ``correction_round_id`` (or ``None``).
 incident_resolved = Signal()
 
 

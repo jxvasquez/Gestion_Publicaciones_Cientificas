@@ -57,9 +57,9 @@ from tests.publications.test_submission import (  # noqa: F401
 
 pytestmark = pytest.mark.django_db
 
-ALL_STATES = ["DRAFT", "SUBMITTED", "UNDER_REVIEW", "REQUIRES_CORRECTIONS", "ACCEPTED", "REJECTED"]
+ALL_STATES = ["DRAFT", "SUBMITTED", "UNDER_REVIEW", "CHANGES_REQUESTED", "ACCEPTED", "REJECTED"]
 REASON_REQUIRED = ["UNDER_REVIEW", "ACCEPTED"]
-REASON_OPTIONAL = ["DRAFT", "SUBMITTED", "REQUIRES_CORRECTIONS", "REJECTED"]
+REASON_OPTIONAL = ["DRAFT", "SUBMITTED", "CHANGES_REQUESTED", "REJECTED"]
 
 
 def withdraw_url(manuscript) -> str:
@@ -256,16 +256,6 @@ class TestVisibility:
         assert response.json()["withdrawal_reason"] == "Retiro."
         assert response.json()["status"] == "ACCEPTED"
 
-    def test_the_editor_loses_it_from_the_active_inbox_but_keeps_the_archive(self, owner, withdraw) -> None:
-        manuscript = owned_manuscript(owner, status="SUBMITTED")
-        editor = client_for(actor("EDITOR"))
-        assert [i["id"] for i in editor.get(URL).json()["results"]] == [str(manuscript.pk)]
-
-        withdraw(owner, manuscript)
-
-        assert editor.get(URL).json()["results"] == []
-        archived = editor.get(URL, {"archived": "true"}).json()["results"]
-        assert [i["id"] for i in archived] == [str(manuscript.pk)]
 
 
 class TestRepeatedWithdrawal:
@@ -347,13 +337,6 @@ class TestAccess:
 
         assert APIClient().post(withdraw_url(manuscript), {}, format="json").status_code == 401
 
-    @pytest.mark.parametrize("roles", [("EDITOR",), ("REVIEWER",), ("ADMIN",), ()])
-    def test_roles_without_the_author_module_answer_403(self, owner, withdraw, roles) -> None:
-        manuscript = owned_manuscript(owner)
-
-        assert withdraw(actor(*roles), manuscript).status_code == 403
-        manuscript.refresh_from_db()
-        assert manuscript.is_active is True
 
     def test_someone_elses_manuscript_answers_404_without_revealing_it(self, owner, withdraw) -> None:
         manuscript = owned_manuscript(owner)
@@ -364,12 +347,6 @@ class TestAccess:
         manuscript.refresh_from_db()
         assert manuscript.is_active is True and manuscript.withdrawn_at is None
 
-    def test_multirole_user_cannot_withdraw_a_manuscript_seen_as_editor(self, owner, withdraw) -> None:
-        manuscript = owned_manuscript(owner, status="SUBMITTED")
-
-        assert withdraw(actor("AUTHOR", "EDITOR"), manuscript).status_code == 404
-        manuscript.refresh_from_db()
-        assert manuscript.is_active is True
 
     def test_unknown_manuscript_answers_404(self, owner) -> None:
         response = client_for(owner).post(

@@ -20,27 +20,26 @@ from django.db.models import ProtectedError
 from django.db.utils import DatabaseError
 from django.utils import timezone
 
-from apps.reviews.models import ASSIGNMENT_DAYS, SCORE_FIELDS, Assignment, Evaluation
+from apps.reviews.models import ASSIGNMENT_DAYS, RUBRIC_FIELDS, Assignment, Evaluation
 from tests.factories import ManuscriptFactory, ManuscriptVersionFactory, UserFactory
 
 COMPLETE_FINAL = {
     "status": Evaluation.Status.FINAL,
-    "recommendation": Evaluation.Recommendation.ACCEPT,
+    "recommendation": Evaluation.Recommendation.ACCEPTED,
     "comments_for_author": "Observaciones para el autor.",
-    "originality_score": 4,
-    "methodology_score": 4,
-    "clarity_score": 3,
-    "relevance_score": 5,
-    "ethics_score": 5,
+    "scientific_contribution": 4,
+    "methodological_rigor": 4,
+    "literature_grounding": 4,
+    "results_conclusions": 5,
+    "academic_writing": 5,
 }
 
 
 class Scenario:
-    """A manuscript with one version, an editor and a reviewer."""
+    """A manuscript with one version and a reviewer."""
 
     def __init__(self) -> None:
         self.author = UserFactory()
-        self.editor = UserFactory()
         self.reviewer = UserFactory()
         self.manuscript = ManuscriptFactory(created_by=self.author)
         self.version = ManuscriptVersionFactory(
@@ -53,7 +52,7 @@ class Scenario:
             "manuscript": self.manuscript,
             "version": self.version,
             "reviewer": self.reviewer,
-            "assigned_by": self.editor,
+            "assigned_by": None,
             "assigned_at": timezone.now(),
         }
         values.update(overrides)
@@ -125,19 +124,25 @@ class TestAssignmentStatus:
             with transaction.atomic():
                 scenario.assignment(status="PENDING")
 
-    def test_a_second_active_assignment_for_a_manuscript_is_rejected(self, scenario) -> None:
+    def test_a_second_assignment_in_the_same_slot_of_a_version_is_rejected(self, scenario) -> None:
         scenario.assignment()
 
-        with pytest.raises(IntegrityError, match="uq_assignment_active"):
+        with pytest.raises(IntegrityError, match="uq_assignment_live_slot"):
             with transaction.atomic():
                 scenario.assignment(reviewer=UserFactory())
+
+    def test_a_second_slot_of_the_same_version_is_allowed_for_another_reviewer(self, scenario) -> None:
+        scenario.assignment()
+
+        second = scenario.assignment(reviewer=UserFactory(), slot=2)
+
+        assert second.slot == 2 and second.status == Assignment.Status.ACTIVE
 
     @pytest.mark.parametrize(
         "closed",
         [
             Assignment.Status.EXPIRED,
             Assignment.Status.REVOKED,
-            Assignment.Status.COMPLETED,
         ],
     )
     def test_a_new_active_assignment_is_allowed_after_a_closed_one(self, scenario, closed) -> None:
@@ -176,7 +181,7 @@ class TestEvaluationScores:
         evaluation = scenario.evaluation(scenario.assignment())
 
         assert evaluation.status == Evaluation.Status.DRAFT
-        assert evaluation.originality_score is None
+        assert evaluation.scientific_contribution is None
         assert evaluation.submitted_at is None
         assert evaluation.conflict_declared is False
         assert evaluation.lock_version == 0
@@ -184,12 +189,12 @@ class TestEvaluationScores:
     @pytest.mark.parametrize("score", [1, 5])
     def test_scores_at_the_bounds_are_accepted(self, scenario, score) -> None:
         evaluation = scenario.evaluation(
-            scenario.assignment(), **{field: score for field in SCORE_FIELDS}
+            scenario.assignment(), **{field: score for field in RUBRIC_FIELDS}
         )
 
-        assert evaluation.clarity_score == score
+        assert evaluation.literature_grounding == score
 
-    @pytest.mark.parametrize("field", SCORE_FIELDS)
+    @pytest.mark.parametrize("field", RUBRIC_FIELDS)
     @pytest.mark.parametrize("score", [0, 6, -1])
     def test_scores_outside_one_to_five_are_rejected(self, scenario, field, score) -> None:
         assignment = scenario.assignment()
@@ -220,7 +225,7 @@ class TestFinalEvaluationRequirements:
 
     @pytest.mark.parametrize(
         "missing",
-        [*SCORE_FIELDS, "recommendation", "comments_for_author", "submitted_at"],
+        [*RUBRIC_FIELDS, "recommendation", "comments_for_author", "submitted_at"],
     )
     def test_a_final_evaluation_without_a_required_field_is_rejected(
         self, scenario, missing
@@ -239,7 +244,7 @@ class TestFinalEvaluationRequirements:
         assert evaluation.confidential_comments is None
 
     def test_a_draft_cannot_become_final_while_incomplete(self, scenario) -> None:
-        evaluation = scenario.evaluation(scenario.assignment(), clarity_score=3)
+        evaluation = scenario.evaluation(scenario.assignment(), literature_grounding=3)
 
         with pytest.raises(IntegrityError, match="ck_evaluation_final_complete"):
             with transaction.atomic():
@@ -286,10 +291,10 @@ class TestFinalEvaluationImmutability:
 
         with pytest.raises(DatabaseError, match="evaluación final es inmutable"):
             with transaction.atomic():
-                Evaluation.objects.filter(pk=evaluation.pk).update(clarity_score=1)
+                Evaluation.objects.filter(pk=evaluation.pk).update(literature_grounding=1)
 
         evaluation.refresh_from_db()
-        assert evaluation.clarity_score == 3
+        assert evaluation.literature_grounding == 4
 
     def test_raw_update_over_a_final_evaluation_also_fails(self, scenario) -> None:
         evaluation = scenario.final_evaluation(scenario.assignment())
@@ -320,14 +325,14 @@ class TestFinalEvaluationImmutability:
     def test_a_draft_can_be_edited_and_become_final(self, scenario) -> None:
         evaluation = scenario.evaluation(scenario.assignment())
 
-        Evaluation.objects.filter(pk=evaluation.pk).update(clarity_score=2)
+        Evaluation.objects.filter(pk=evaluation.pk).update(literature_grounding=2)
         Evaluation.objects.filter(pk=evaluation.pk).update(
             **{**COMPLETE_FINAL, "submitted_at": timezone.now()}
         )
 
         evaluation.refresh_from_db()
         assert evaluation.status == Evaluation.Status.FINAL
-        assert evaluation.clarity_score == 3
+        assert evaluation.literature_grounding == 4
 
     def test_a_draft_can_be_deleted_and_the_row_really_disappears(self, scenario) -> None:
         evaluation = scenario.evaluation(scenario.assignment())

@@ -16,6 +16,7 @@ TEMPLATE = Path(__file__).resolve().parents[2] / "scripts" / "cron" / "gpc.cron"
 
 #: command -> (schedule fields, lock file)
 JOBS = {
+    "run_review_automation": ("* * * * *", "gpc-review.lock"),
     "send_pending_notifications": ("* * * * *", "gpc-notify.lock"),
     "cleanup_idempotency_keys": ("0 3 * * *", "gpc-cleanup.lock"),
     "verify_integrity": ("30 3 1 * *", "gpc-integrity.lock"),
@@ -48,3 +49,7 @@ def test_jobs_do_not_share_a_lock() -> None:
     locks = [lock for _, lock in JOBS.values()]
     assert len(set(locks)) == len(locks)
     assert "gpc-backup.lock" not in locks
+
+
+def test_the_retired_expiration_command_is_not_scheduled() -> None:
+    assert not [line for line in active_lines() if "mark_expired_assignments" in line]

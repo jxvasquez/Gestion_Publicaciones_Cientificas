@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from rest_framework import serializers
 
-from apps.users.models import Role, User
+from apps.users.models import AcademicArea, Role, User
 
 
 class LoginSerializer(serializers.Serializer):
@@ -109,16 +109,11 @@ NAVIGATION_BY_ROLE: dict[str, tuple[dict[str, str], ...]] = {
         {"label": "Mis asignaciones", "route": "/app/reviewer/assignments"},
         {"label": "Historial de evaluaciones", "route": "/app/reviewer/history"},
     ),
-    Role.Code.EDITOR: (
-        {"label": "Bandeja de envíos", "route": "/app/editor/submissions"},
-        {
-            "label": "Plazos vencidos",
-            "route": "/app/editor/assignments/expired",
-        },
-        {"label": "Incidentes confidenciales", "route": "/app/editor/incidents"},
-    ),
     Role.Code.ADMIN: (
         {"label": "Auditoría", "route": "/app/admin/audit"},
+        {"label": "Incidentes confidenciales", "route": "/app/admin/incidents"},
+        {"label": "Revisores", "route": "/app/admin/reviewers"},
+        {"label": "Carreras", "route": "/app/admin/areas"},
     ),
 }
 
@@ -130,3 +125,34 @@ def navigation_permissions(role_codes: list[str]) -> list[dict[str, str]]:
         for entry in NAVIGATION_BY_ROLE.get(code, ()):
             entries.append({"role": code, **entry})
     return entries
+
+
+class AcademicAreaSerializer(serializers.ModelSerializer):
+    """Career of the catalog as the public API shows it: ``{code, name}``."""
+
+    class Meta:
+        model = AcademicArea
+        fields = ("code", "name")
+        read_only_fields = fields
+
+
+class AdminAcademicAreaSerializer(serializers.ModelSerializer):
+    """Career with its state and usage counters, for the administrator.
+
+    ``manuscript_count`` and ``reviewer_count`` are annotated by the view.
+    """
+
+    manuscripts = serializers.IntegerField(source="manuscript_count", read_only=True)
+    reviewers = serializers.IntegerField(source="reviewer_count", read_only=True)
+
+    class Meta:
+        model = AcademicArea
+        fields = ("code", "name", "is_active", "manuscripts", "reviewers")
+        read_only_fields = fields
+
+
+class AdminAcademicAreaWriteSerializer(serializers.Serializer):
+    """Body of ``POST``/``PATCH /admin/areas/``: the code never changes."""
+
+    name = serializers.CharField(max_length=120, trim_whitespace=True, required=False)
+    is_active = serializers.BooleanField(required=False)
