@@ -149,17 +149,17 @@ textarea {
   align-items: flex-start;
   gap: var(--gpc-space-2, 0.5rem);
   padding: var(--gpc-space-2, 0.5rem) var(--gpc-space-3, 0.75rem);
-  border: 1px solid var(--gpc-border, #c9ced6);
+  border: 1px solid var(--gpc-border);
   border-radius: var(--gpc-radius, 0.5rem);
   cursor: pointer;
 
   &:has(input:checked) {
-    border-color: var(--gpc-info-border, #1d4f91);
-    background: var(--gpc-info-bg, #eaf1fb);
+    border-color: var(--gpc-primary-700);
+    background: var(--gpc-primary-50);
   }
 
   &:has(input:focus-visible) {
-    outline: 3px solid var(--gpc-focus, #1d4f91);
+    outline: var(--gpc-focus-ring);
     outline-offset: 2px;
   }
 
@@ -175,5 +175,5 @@ textarea {
 .counter {
   margin: var(--gpc-space-1, 0.25rem) 0 0;
   font-variant-numeric: tabular-nums;
-  color: var(--gpc-text-muted, #4a5260);
+  color: var(--gpc-text-muted);
 }

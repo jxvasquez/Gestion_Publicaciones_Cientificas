@@ -1,4 +1,15 @@
+/*
+ * Tokens de diseño con dos temas: claro (por defecto) y oscuro (`[data-theme='dark']`).
+ *
+ * Las escalas de color conservan su rol en ambos temas: `-900`, `-800` y `-700` son tintas
+ * de primer plano (texto, bordes y rellenos de acción) y `-100` y `-50` son fondos. En
+ * oscuro se invierte su luminosidad. El contenido sobre un relleno de acción usa
+ * `--gpc-on-accent`, nunca un color de superficie. El oscuro redefine solo colores y
+ * sombras. `scripts/check_theme_contrast.py` comprueba el contraste WCAG 2.1 AA.
+ */
 :root {
+  color-scheme: light;
+
   /* Colores institucionales e informativos */
   --gpc-primary-900: #172a4a;
   --gpc-primary-700: #1d4e89;
@@ -24,18 +35,23 @@
   --gpc-danger-100: #fce8e6;
   --gpc-danger-50: #fef2f2;
 
-  /* Texto, superficies y límites */
-  --gpc-text: #1f2937;
-  --gpc-text-muted: #4b5563;
-  --gpc-neutral-700: #374151;
-  --gpc-neutral-100: #e5e7eb;
-  --gpc-surface: #f7f8fa;
+  /* Texto, superficies y límites: base suave y tarjetas blancas */
+  --gpc-text: #1e293b;
+  --gpc-text-muted: #475569;
+  --gpc-neutral-700: #334155;
+  --gpc-neutral-100: #e2e8f0;
+  --gpc-surface: #f8fafc;
   --gpc-surface-alt: #ffffff;
-  --gpc-workspace: #f1f5f9;
-  --gpc-sidebar-bg: #f8fafc;
-  --gpc-border: #d1d5db;
+  --gpc-workspace: #f8fafc;
+  --gpc-sidebar-bg: #ffffff;
+  --gpc-border: #e2e8f0;
   --gpc-sidebar-divider: #e2e8f0;
   --gpc-control-border: #64748b;
+
+  /* Contenido sobre rellenos de acción, pista de las barras y telón de los diálogos */
+  --gpc-on-accent: #ffffff;
+  --gpc-track: var(--gpc-neutral-100);
+  --gpc-backdrop: rgb(23 42 74 / 45%);
 
   /* Tipografía de interfaz y títulos editoriales */
   --gpc-font-sans: system-ui, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
@@ -67,9 +83,53 @@
   --gpc-header-height: 64px;
 
   /* Elevación e interacción */
-  --gpc-shadow: 0 1px 3px rgba(23, 42, 74, 0.18);
-  --gpc-shadow-dialog: 0 8px 24px rgba(23, 42, 74, 0.16);
+  --gpc-shadow: 0 1px 2px rgb(15 23 42 / 6%), 0 1px 3px rgb(15 23 42 / 10%);
+  --gpc-shadow-dialog: 0 8px 24px rgb(15 23 42 / 16%);
   --gpc-focus-color: var(--gpc-primary-700);
   --gpc-focus-ring: 3px solid var(--gpc-focus-color);
   --gpc-transition-duration: 150ms;
+}
+
+/* Tema oscuro: tonos pizarra descansados. */
+:root[data-theme='dark'] {
+  color-scheme: dark;
+
+  --gpc-primary-900: #cfe1fb;
+  --gpc-primary-700: #7cb4f5;
+  --gpc-primary-100: #203a5c;
+  --gpc-primary-50: #1a2c47;
+
+  --gpc-success-900: #bbf0cf;
+  --gpc-success-700: #5fd08c;
+  --gpc-success-100: #173b2c;
+
+  --gpc-warning-900: #fde7a6;
+  --gpc-warning-800: #f8cf6a;
+  --gpc-warning-700: #e0a93a;
+  --gpc-warning-100: #3d2f14;
+  --gpc-warning-50: #2c2312;
+
+  --gpc-danger-900: #fed0d0;
+  --gpc-danger-800: #fcaaaa;
+  --gpc-danger-700: #f58b8b;
+  --gpc-danger-100: #47212a;
+  --gpc-danger-50: #33181f;
+
+  --gpc-text: #f1f5f9;
+  --gpc-text-muted: #b4c0cf;
+  --gpc-neutral-700: #e2e8f0;
+  --gpc-neutral-100: #334155;
+  --gpc-surface: #0f172a;
+  --gpc-surface-alt: #1e293b;
+  --gpc-workspace: #0f172a;
+  --gpc-sidebar-bg: #1e293b;
+  --gpc-border: #334155;
+  --gpc-sidebar-divider: #334155;
+  --gpc-control-border: #7b8aa0;
+
+  --gpc-on-accent: #0f172a;
+  --gpc-backdrop: rgb(2 6 23 / 70%);
+
+  --gpc-shadow: 0 1px 2px rgb(0 0 0 / 35%), 0 1px 3px rgb(0 0 0 / 45%);
+  --gpc-shadow-dialog: 0 8px 24px rgb(0 0 0 / 55%);
 }

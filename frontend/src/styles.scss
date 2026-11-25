@@ -63,7 +63,7 @@ a {
   z-index: 100;
   padding: var(--gpc-space-3) var(--gpc-space-4);
   background: var(--gpc-primary-900);
-  color: var(--gpc-surface-alt);
+  color: var(--gpc-on-accent);
   border-radius: 0 0 var(--gpc-radius) 0;
 }
 
@@ -114,7 +114,7 @@ a {
 }
 
 :where(dialog)::backdrop {
-  background: rgb(23 42 74 / 45%);
+  background: var(--gpc-backdrop);
 }
 
 /* Cabeceras y estados de fila de tablas */
@@ -152,7 +152,7 @@ a {
 
 .btn--primary {
   background: var(--gpc-primary-700);
-  color: var(--gpc-surface-alt);
+  color: var(--gpc-on-accent);
 }
 
 .btn--primary:hover {
@@ -161,7 +161,7 @@ a {
 
 .btn--success {
   background: var(--gpc-success-700);
-  color: var(--gpc-surface-alt);
+  color: var(--gpc-on-accent);
 }
 
 .btn--success:hover {
@@ -170,7 +170,7 @@ a {
 
 .btn--danger {
   background: var(--gpc-danger-700);
-  color: var(--gpc-surface-alt);
+  color: var(--gpc-on-accent);
 }
 
 .btn--danger:hover {
@@ -190,6 +190,38 @@ a {
 .btn:disabled {
   opacity: 0.55;
   cursor: not-allowed;
+}
+
+/* Acción compacta: pesa menos que un botón con borde y conserva el área táctil. */
+.btn--subtle {
+  background: transparent;
+  color: var(--gpc-primary-700);
+  padding-inline: var(--gpc-space-2);
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+.btn--subtle:hover {
+  background: var(--gpc-primary-50);
+}
+
+/* Destructiva sin relleno: acompaña a `.btn--ghost` o `.btn--subtle`. */
+.btn--danger-text {
+  color: var(--gpc-danger-700);
+}
+
+/* Botón cuadrado solo con icono; su nombre accesible va en `aria-label`. */
+.btn--icon {
+  justify-content: center;
+  min-inline-size: 2.5rem;
+  min-block-size: 2.5rem;
+  padding: var(--gpc-space-2);
+}
+
+.btn__icon {
+  flex: none;
+  inline-size: 1.125rem;
+  block-size: 1.125rem;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -232,4 +264,110 @@ a {
 .badge--danger {
   background: var(--gpc-danger-100);
   color: var(--gpc-danger-800);
+}
+
+/*
+ * Sección plegable (filtros extensos y acciones poco frecuentes): un `<details>` nativo,
+ * operable por teclado sin JavaScript. El resumen se dibuja como un botón con borde.
+ */
+.disclosure > summary {
+  display: inline-flex;
+  max-inline-size: 100%;
+  align-items: center;
+  gap: var(--gpc-space-2);
+  padding: var(--gpc-space-2) var(--gpc-space-4);
+  border: 1px solid var(--gpc-control-border);
+  border-radius: var(--gpc-radius);
+  background: var(--gpc-surface-alt);
+  color: var(--gpc-primary-700);
+  font-weight: var(--gpc-weight-semibold);
+  list-style: none;
+  cursor: pointer;
+}
+
+.disclosure > summary:hover {
+  background: var(--gpc-primary-50);
+}
+
+.disclosure > summary::-webkit-details-marker {
+  display: none;
+}
+
+.disclosure > summary::after {
+  content: '';
+  flex: none;
+  inline-size: 0.45rem;
+  block-size: 0.45rem;
+  border-inline-end: 2px solid currentColor;
+  border-block-end: 2px solid currentColor;
+  transform: translateY(-0.1rem) rotate(45deg);
+}
+
+.disclosure[open] > summary::after {
+  transform: translateY(0.1rem) rotate(225deg);
+}
+
+/* Conteo junto al rótulo: «Filtros · 2». */
+.disclosure__count::before {
+  content: '· ';
+}
+
+.disclosure__panel {
+  margin-block-start: var(--gpc-space-3);
+}
+
+/*
+ * Barra de avance (plazo restante y cupo). El valor se dice también con texto, nunca solo
+ * con color o longitud.
+ */
+.meter-bar {
+  display: block;
+  inline-size: 100%;
+  block-size: 0.5rem;
+  overflow: hidden;
+  border-radius: var(--gpc-radius-pill);
+  background: var(--gpc-track);
+}
+
+.meter-bar__fill {
+  display: block;
+  block-size: 100%;
+  max-inline-size: 100%;
+  border-radius: inherit;
+  background: var(--gpc-primary-700);
+  transition: inline-size var(--gpc-transition-duration);
+}
+
+.meter-bar__fill--success {
+  background: var(--gpc-success-700);
+}
+
+.meter-bar__fill--warning {
+  background: var(--gpc-warning-700);
+}
+
+.meter-bar__fill--danger {
+  background: var(--gpc-danger-700);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .meter-bar__fill {
+    transition: none;
+  }
+}
+
+/* Avatar con las iniciales de la persona autenticada (decorativo). */
+.avatar {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  inline-size: 1.75rem;
+  block-size: 1.75rem;
+  border-radius: 50%;
+  background: var(--gpc-primary-100);
+  color: var(--gpc-primary-900);
+  font-size: var(--gpc-text-xs);
+  font-weight: var(--gpc-weight-bold);
+  line-height: 1;
 }

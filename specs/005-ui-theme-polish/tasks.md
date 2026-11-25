@@ -46,16 +46,16 @@ description: "Tareas de implementación del tema claro y oscuro descansado y del
 
 ### Pruebas de fundamentos
 
-- [ ] T005 Crear `scripts/check_theme_contrast.py`, con el estilo de `scripts/check_frontend_build.py` (una función `check()` y código de salida 1 si algo falla). Lee `frontend/src/styles/_tokens.scss`, extrae los bloques `:root` y `:root[data-theme='dark']`, hereda en el oscuro los tokens no redefinidos y resuelve las referencias `var(--gpc-…)`. Calcula el contraste con la luminancia relativa de WCAG 2.1 para el inventario de pares de la tabla «Ratios validados» de [plan.md](plan.md#tokens-de-color), más el avatar (`--gpc-primary-900` sobre `--gpc-primary-100`). Exige 4.5:1 en texto y 3:1 en no textuales e imprime una tabla por tema. Falla si falta el bloque oscuro o un token del inventario. Debe fallar antes de T006.
+- [x] T005 Crear `scripts/check_theme_contrast.py`, con el estilo de `scripts/check_frontend_build.py` (una función `check()` y código de salida 1 si algo falla). Lee `frontend/src/styles/_tokens.scss`, extrae los bloques `:root` y `:root[data-theme='dark']`, hereda en el oscuro los tokens no redefinidos y resuelve las referencias `var(--gpc-…)`. Calcula el contraste con la luminancia relativa de WCAG 2.1 para el inventario de pares de la tabla «Ratios validados» de [plan.md](plan.md#tokens-de-color), más el avatar (`--gpc-primary-900` sobre `--gpc-primary-100`). Exige 4.5:1 en texto y 3:1 en no textuales e imprime una tabla por tema. Falla si falta el bloque oscuro o un token del inventario. Debe fallar antes de T006.
 
 ### Implementación de fundamentos
 
-- [ ] T006 Modificar `frontend/src/styles/_tokens.scss` con los valores de la tabla «Tokens de color» de [plan.md](plan.md#tokens-de-color). En `:root`: `color-scheme: light`, superficies `#f8fafc` y `#ffffff`, bordes `#e2e8f0`, neutros pizarra, `--gpc-on-accent`, `--gpc-track`, `--gpc-backdrop` y sombras suaves. Agregar `:root[data-theme='dark']` con `color-scheme: dark` y solo los colores. Un comentario de cabecera explica que `-900`, `-800` y `-700` son tintas de primer plano, `-100` y `-50` son fondos y el contenido sobre rellenos usa `--gpc-on-accent`.
-- [ ] T007 Modificar `frontend/src/styles.scss`. Usar `--gpc-on-accent` en `.btn--primary`, `.btn--success`, `.btn--danger` y `.skip-link`, y `--gpc-backdrop` en `:where(dialog)::backdrop`. Agregar las utilidades del mapa de cambios: `.btn--subtle`, `.btn--danger-text`, `.btn--icon`, `.btn__icon`, `.disclosure` (resumen como botón, flecha, `.disclosure__count` y `.disclosure__panel`), `.meter-bar` y `.meter-bar__fill` con los tonos `--success`, `--warning` y `--danger`, y `.avatar`. Desactivar transiciones de las barras con `prefers-reduced-motion: reduce`.
-- [ ] T008 [P] Reemplazar `color: var(--gpc-surface-alt)` por `var(--gpc-on-accent)` en `frontend/src/app/core/layout/notification-bell.component.scss` y `frontend/src/app/features/notifications/notification-list/notification-list.component.scss`.
-- [ ] T009 [P] Reemplazar en `frontend/src/app/features/reviewer/evaluation-form/evaluation-form.component.scss` `--gpc-info-border`, `--gpc-info-bg` y `--gpc-focus` por `--gpc-primary-700`, `--gpc-primary-50` y `--gpc-focus-ring`, y retirar los respaldos literales de ese archivo y de `frontend/src/app/features/reviewer/reviewer-standing/reviewer-standing.component.scss`.
-- [ ] T010 [P] Agregar a `frontend/public/icons/ui.svg` los símbolos `sun`, `moon`, `user`, `hourglass` y `check`, con `viewBox="0 0 24 24"`, `stroke="currentColor"` y `stroke-width="1.75"`, como los vigentes.
-- [ ] T011 Ejecutar `python3 scripts/check_theme_contrast.py`, que ahora debe pasar, y `TZ=UTC npx ng test --watch=false` y `npx ng build --configuration production` desde `frontend/`. Registrar la tabla de ratios por tema en «Resultados de verificación».
+- [x] T006 Modificar `frontend/src/styles/_tokens.scss` con los valores de la tabla «Tokens de color» de [plan.md](plan.md#tokens-de-color). En `:root`: `color-scheme: light`, superficies `#f8fafc` y `#ffffff`, bordes `#e2e8f0`, neutros pizarra, `--gpc-on-accent`, `--gpc-track`, `--gpc-backdrop` y sombras suaves. Agregar `:root[data-theme='dark']` con `color-scheme: dark` y solo los colores. Un comentario de cabecera explica que `-900`, `-800` y `-700` son tintas de primer plano, `-100` y `-50` son fondos y el contenido sobre rellenos usa `--gpc-on-accent`.
+- [x] T007 Modificar `frontend/src/styles.scss`. Usar `--gpc-on-accent` en `.btn--primary`, `.btn--success`, `.btn--danger` y `.skip-link`, y `--gpc-backdrop` en `:where(dialog)::backdrop`. Agregar las utilidades del mapa de cambios: `.btn--subtle`, `.btn--danger-text`, `.btn--icon`, `.btn__icon`, `.disclosure` (resumen como botón, flecha, `.disclosure__count` y `.disclosure__panel`), `.meter-bar` y `.meter-bar__fill` con los tonos `--success`, `--warning` y `--danger`, y `.avatar`. Desactivar transiciones de las barras con `prefers-reduced-motion: reduce`.
+- [x] T008 [P] Reemplazar `color: var(--gpc-surface-alt)` por `var(--gpc-on-accent)` en `frontend/src/app/core/layout/notification-bell.component.scss` y `frontend/src/app/features/notifications/notification-list/notification-list.component.scss`.
+- [x] T009 [P] Reemplazar en `frontend/src/app/features/reviewer/evaluation-form/evaluation-form.component.scss` `--gpc-info-border`, `--gpc-info-bg` y `--gpc-focus` por `--gpc-primary-700`, `--gpc-primary-50` y `--gpc-focus-ring`, y retirar los respaldos literales de ese archivo y de `frontend/src/app/features/reviewer/reviewer-standing/reviewer-standing.component.scss`.
+- [x] T010 [P] Agregar a `frontend/public/icons/ui.svg` los símbolos `sun`, `moon`, `user`, `hourglass` y `check`, con `viewBox="0 0 24 24"`, `stroke="currentColor"` y `stroke-width="1.75"`, como los vigentes.
+- [x] T011 Ejecutar `python3 scripts/check_theme_contrast.py`, que ahora debe pasar, y `TZ=UTC npx ng test --watch=false` y `npx ng build --configuration production` desde `frontend/`. Registrar la tabla de ratios por tema en «Resultados de verificación».
 
 **Checkpoint**: ambos temas existen, cumplen el contraste en el validador y el tema claro no pierde pruebas.
 
@@ -90,7 +90,7 @@ description: "Tareas de implementación del tema claro y oscuro descansado y del
 ### Implementation for User Story 1
 
 - [ ] T017 [US1] Crear `frontend/public/theme-init.js` según el paso 1 del «Flujo del tema» de [plan.md](plan.md#flujo-del-tema): función autoejecutable, accesos protegidos con `try`, valores `light` y `dark` y un comentario que remite a `THEME_STORAGE_KEY` de `theme.service.ts`. Agregar `<script src="theme-init.js"></script>` a `<head>` de `frontend/src/index.html`, sin `defer` ni `async`.
-- [ ] T018 [US1] Crear `frontend/src/app/core/theme/theme.service.ts` (`providedIn: 'root'`). Exporta `Theme`, `THEME_STORAGE_KEY = 'gpc-theme'` y la función pura `resolveTheme(stored, prefersDark)`. Expone `theme` y `isDark` como señales, `toggle()` y `set()`. Usa `DOCUMENT` y registra los escuchas de `matchMedia` y `storage` solo si existen.
+- [ ] T018 [US1] Crear `frontend/src/app/core/theme/theme.service.ts` (`providedIn: 'root'`). Exporta `Theme`, `THEME_STORAGE_KEY = 'gpc-theme'` y la función pura `resolveTheme(stored, prefersDark)`. Expone `theme` y `isDark` como señales, `toggle()` y `set()`. Usa `DOCUMENT` y registra los escuchas de `matchMedia` y `storage` solo si existen. Al cambiar el tema, suspende las transiciones de color vigentes (`.btn` y la navegación lateral) para que el cambio no se anime (caso límite «Movimiento reducido» de [spec.md](spec.md#edge-cases)).
 - [ ] T019 [US1] Inyectar `ThemeService` en `frontend/src/app/app.component.ts` para que funcione también en las rutas públicas, y comprobar en `frontend/src/app/app.component.spec.ts` que al crear la raíz el atributo `data-theme` existe.
 - [ ] T020 [US1] Crear `frontend/src/app/core/layout/theme-toggle.component.ts`, `.html` y `.scss` según FR-007. Incorporarlo en `frontend/src/app/core/layout/header.component.html` y `.ts`, entre `app-notification-bell` y «Mi cuenta», y ajustar `header.component.scss` para que la sesión se reparta en varias líneas a 320 px.
 
@@ -349,7 +349,61 @@ Medidas el 2026-11-25 sobre `45ffaeb`, cuyo árbol de `frontend/` y `scripts/` e
 
 ### Contraste de la paleta (T011 y T025)
 
-Pendiente: salida de `python3 scripts/check_theme_contrast.py` por tema.
+**T011 (2026-11-25).** Antes de T006, `python3 scripts/check_theme_contrast.py` falló con 11 comprobaciones (sin tema oscuro, sin `--gpc-on-accent` y sin `--gpc-track`). Con los tokens nuevos pasa: 51 pares por tema, cero fallos. Mínimos observados: claro 5,93:1 en texto y 3,99:1 en no textuales; oscuro 5,98:1 y 4,17:1. `TZ=UTC npx ng test --watch=false` con 76 archivos y 1198 pruebas en verde, `tsc` de la app limpio, build de producción sin avisos (paquete inicial de 309,67 kB, 3,22 kB más que la línea base, por `styles` 8,49 kB) y `scripts/check_frontend_build.py` correcto.
+
+| Par (sin el prefijo `--gpc-`) | Uso | Mínimo | Claro | Oscuro |
+| --- | --- | --- | --- | --- |
+| `text` / `surface` | texto sobre el fondo base | 4.5:1 | 13.98 | 16.30 |
+| `text` / `surface-alt` | texto en tarjeta | 4.5:1 | 14.63 | 13.35 |
+| `text` / `primary-50` | texto en fila resaltada | 4.5:1 | 13.48 | 12.82 |
+| `text` / `primary-100` | texto en navegación activa | 4.5:1 | 12.37 | 10.53 |
+| `text` / `neutral-100` | texto sobre superficie neutra | 4.5:1 | 11.87 | 9.45 |
+| `text-muted` / `surface-alt` | secundario en tarjeta | 4.5:1 | 7.58 | 7.93 |
+| `text-muted` / `workspace` | secundario sobre el fondo base | 4.5:1 | 7.24 | 9.68 |
+| `text-muted` / `primary-50` | secundario en aviso sin leer | 4.5:1 | 6.98 | 7.61 |
+| `text-muted` / `primary-100` | secundario sobre acento suave | 4.5:1 | 6.41 | 6.25 |
+| `text-muted` / `warning-100` | secundario en plazo urgente | 4.5:1 | 6.62 | 7.05 |
+| `text-muted` / `danger-100` | secundario en plazo vencido | 4.5:1 | 6.43 | 7.49 |
+| `text-muted` / `success-100` | secundario en aviso de éxito | 4.5:1 | 6.61 | 6.70 |
+| `primary-900` / `surface-alt` | títulos en tarjeta | 4.5:1 | 14.32 | 11.02 |
+| `primary-900` / `workspace` | títulos sobre el fondo base | 4.5:1 | 13.69 | 13.45 |
+| `primary-900` / `primary-50` | cabecera de tabla | 4.5:1 | 13.20 | 10.58 |
+| `primary-900` / `primary-100` | insignia TIE_BREAKER e informativa; avatar | 4.5:1 | 12.11 | 8.68 |
+| `primary-900` / `success-100` | título en aviso de éxito | 4.5:1 | 12.50 | 9.31 |
+| `primary-700` / `surface-alt` | enlace en tarjeta | 4.5:1 | 8.39 | 6.76 |
+| `primary-700` / `workspace` | enlace sobre el fondo base | 4.5:1 | 8.02 | 8.25 |
+| `primary-700` / `primary-50` | enlace al pasar el puntero | 4.5:1 | 7.73 | 6.49 |
+| `primary-700` / `sidebar-bg` | navegación lateral | 4.5:1 | 8.39 | 6.76 |
+| `on-accent` / `primary-700` | botón primario | 4.5:1 | 8.39 | 8.25 |
+| `on-accent` / `primary-900` | botón primario al pasar el puntero y salto | 4.5:1 | 14.32 | 13.45 |
+| `on-accent` / `success-700` | botón de éxito | 4.5:1 | 6.52 | 9.26 |
+| `on-accent` / `success-900` | botón de éxito al pasar el puntero | 4.5:1 | 9.36 | 14.01 |
+| `on-accent` / `danger-700` | botón destructivo y contador de avisos | 4.5:1 | 6.54 | 7.61 |
+| `on-accent` / `danger-800` | botón destructivo al pasar el puntero | 4.5:1 | 8.15 | 9.75 |
+| `neutral-700` / `neutral-100` | insignia neutra | 4.5:1 | 8.40 | 8.40 |
+| `success-900` / `success-100` | insignia ACCEPTED y ajuste «+10» | 4.5:1 | 8.17 | 9.70 |
+| `warning-800` / `warning-100` | insignia CHANGES_REQUESTED | 4.5:1 | 5.93 | 8.75 |
+| `danger-800` / `danger-100` | insignia REJECTED y ajuste «−20» | 4.5:1 | 6.92 | 7.55 |
+| `danger-800` / `danger-50` | error del inicio de sesión | 4.5:1 | 7.45 | 8.88 |
+| `danger-800` / `surface-alt` | peligro en tarjeta | 4.5:1 | 8.15 | 7.99 |
+| `danger-900` / `danger-50` | aviso de error de la API | 4.5:1 | 9.16 | 11.73 |
+| `warning-900` / `warning-50` | aviso de advertencia de la API | 4.5:1 | 8.38 | 12.65 |
+| `warning-900` / `warning-100` | aviso de advertencia | 4.5:1 | 7.58 | 10.62 |
+| `warning-800` / `surface-alt` | texto de advertencia en tarjeta | 4.5:1 | 6.79 | 9.84 |
+| `warning-800` / `workspace` | texto de advertencia sobre el fondo base | 4.5:1 | 6.49 | 12.01 |
+| `success-900` / `surface-alt` | texto de éxito | 4.5:1 | 9.36 | 11.48 |
+| `success-700` / `surface-alt` | texto de éxito medio | 4.5:1 | 6.52 | 7.58 |
+| `danger-700` / `surface-alt` | texto de peligro en tarjeta | 4.5:1 | 6.54 | 6.23 |
+| `danger-700` / `workspace` | texto de peligro sobre el fondo base | 4.5:1 | 6.25 | 7.61 |
+| `danger-700` / `primary-50` | texto de peligro al pasar el puntero | 4.5:1 | 6.02 | 5.98 |
+| `control-border` / `surface-alt` | borde de control en tarjeta | 3.0:1 | 4.76 | 4.17 |
+| `control-border` / `surface` | borde de control sobre el fondo base | 3.0:1 | 4.55 | 5.09 |
+| `focus-color` / `surface` | anillo de foco sobre el fondo base | 3.0:1 | 8.02 | 8.25 |
+| `focus-color` / `surface-alt` | anillo de foco en tarjeta | 3.0:1 | 8.39 | 6.76 |
+| `primary-700` / `track` | relleno de barra neutro | 3.0:1 | 6.81 | 4.78 |
+| `success-700` / `track` | relleno de barra de éxito | 3.0:1 | 5.29 | 5.37 |
+| `warning-700` / `track` | relleno de barra de advertencia | 3.0:1 | 3.99 | 4.88 |
+| `danger-700` / `track` | relleno de barra de peligro | 3.0:1 | 5.30 | 4.41 |
 
 ### Accesibilidad y estados (T024 y T023)
 
