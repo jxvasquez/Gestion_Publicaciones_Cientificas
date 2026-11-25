@@ -4,10 +4,9 @@ import { provideRouter } from '@angular/router';
 
 import { AdminSummaryComponent } from './admin-summary/admin-summary.component';
 import { AuthorSummaryComponent } from './author-summary/author-summary.component';
-import { EditorSummaryComponent } from './editor-summary/editor-summary.component';
 import { ReviewerSummaryComponent } from './reviewer-summary/reviewer-summary.component';
 
-/** Suite directa de los cuatro resúmenes del panel (TSK-28). */
+/** Suite directa de los tres resúmenes del panel (TSK-28, spec 004). */
 
 const renderSummary = async (
   component: Type<unknown>,
@@ -30,27 +29,21 @@ const cases = [
   {
     component: ReviewerSummaryComponent,
     heading: 'Revisor',
-    metric: 'pending',
-    label: 'Asignaciones pendientes',
+    metric: 'ranking_score',
+    label: 'Puntaje de ranking',
     paths: ['/app/reviewer/assignments', '/app/reviewer/history'],
-  },
-  {
-    component: EditorSummaryComponent,
-    heading: 'Editor',
-    metric: 'new_submissions',
-    label: 'Nuevos envíos',
-    paths: [
-      '/app/editor/submissions',
-      '/app/editor/assignments/expired',
-      '/app/editor/incidents',
-    ],
   },
   {
     component: AdminSummaryComponent,
     heading: 'Administrador',
-    metric: 'audit_events',
-    label: 'Eventos de auditoría',
-    paths: ['/app/admin/audit'],
+    metric: 'open_incidents',
+    label: 'Reportes abiertos',
+    paths: [
+      '/app/admin/incidents',
+      '/app/admin/reviewers',
+      '/app/admin/areas',
+      '/app/admin/audit',
+    ],
   },
 ] as const;
 
@@ -96,7 +89,7 @@ describe('Resúmenes del panel unificado (TSK-28)', () => {
 
   it('omite conteos no válidos y campos ajenos a la tarjeta en la vista del Revisor', async () => {
     const fixture = await renderSummary(ReviewerSummaryComponent, {
-      pending: '3',
+      ranking_score: '3',
       unexpected_count: 42,
       author: { name: 'Autor reservado', email: 'reservado@example.invalid' },
     });
@@ -105,5 +98,23 @@ describe('Resúmenes del panel unificado (TSK-28)', () => {
     expect(element.querySelector('dd')).toBeNull();
     expect(element.querySelector('app-empty-state')).not.toBeNull();
     expect(element.textContent).not.toMatch(/42|unexpected_count|Autor reservado|example\.invalid/);
+  });
+
+  it('muestra el cupo del Revisor como «3/5», con el nombre accesible «3 de 5»', async () => {
+    const fixture = await renderSummary(ReviewerSummaryComponent, {
+      ranking_score: 110,
+      active_assignments: 3,
+      max_active_assignments: 5,
+      pending_evaluations: 2,
+      on_time_evaluations: 2,
+      missed_deadlines: 1,
+    });
+    const element = fixture.nativeElement as HTMLElement;
+
+    const metrics = Array.from(element.querySelectorAll('.kpi-card__metric'));
+    const slot = metrics.find((metric) => metric.querySelector('dt')?.textContent?.includes('activas'));
+    expect(slot?.querySelector('[aria-hidden="true"]')?.textContent?.trim()).toBe('3/5');
+    expect(slot?.querySelector('.visually-hidden')?.textContent?.trim()).toBe('3 de 5');
+    expect(metrics).toHaveLength(5);
   });
 });

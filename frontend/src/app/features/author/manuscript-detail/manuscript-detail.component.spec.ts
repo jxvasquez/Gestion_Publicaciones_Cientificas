@@ -159,7 +159,7 @@ describe('ManuscriptDetailComponent', () => {
         const { element } = await open({ status });
 
         const uploader = element.querySelector('app-pdf-uploader');
-        if (status === 'REQUIRES_CORRECTIONS') {
+        if (status === 'CHANGES_REQUESTED') {
           // En correcciones el mismo cargador envía la nueva versión, no el borrador.
           expect(text(uploader as HTMLElement)).toContain('Enviar nueva versión');
           expect(text(uploader as HTMLElement)).not.toContain('Adjuntar el PDF');
@@ -231,7 +231,7 @@ describe('ManuscriptDetailComponent', () => {
       async (status) => {
         const { element } = await open({ status });
 
-        expect(hasEdit(element)).toBe(status === 'DRAFT' || status === 'REQUIRES_CORRECTIONS');
+        expect(hasEdit(element)).toBe(status === 'DRAFT' || status === 'CHANGES_REQUESTED');
       },
     );
 
@@ -249,7 +249,7 @@ describe('ManuscriptDetailComponent', () => {
     );
 
     it('el enlace de edición apunta al formulario del manuscrito', async () => {
-      const { element } = await open({ id: 'm-1', status: 'REQUIRES_CORRECTIONS' });
+      const { element } = await open({ id: 'm-1', status: 'CHANGES_REQUESTED' });
 
       expect(links(element)).toContainEqual([
         'Editar manuscrito',
@@ -259,6 +259,23 @@ describe('ManuscriptDetailComponent', () => {
   });
 
   describe('siguiente acción', () => {
+    it('SUBMITTED explica la asignación automática y muestra las carreras como badges', async () => {
+      const { element } = await open({
+        status: 'SUBMITTED',
+        areas: [
+          { code: 'agronomia', name: 'Agronomía' },
+          { code: 'derecho', name: 'Derecho' },
+        ],
+      });
+
+      const callout = text(
+        element.querySelector('[aria-labelledby="next-action-title"]') as HTMLElement,
+      );
+      expect(callout).toContain('asigna dos revisores de su carrera');
+      expect(text(element)).toContain('Agronomía');
+      expect(text(element)).toContain('Derecho');
+    });
+
     it.each(MANUSCRIPT_STATUSES)('explica qué hacer en %s', async (status) => {
       const { element } = await open({ status });
 
@@ -295,18 +312,26 @@ describe('ManuscriptDetailComponent', () => {
   describe('observaciones y veredicto', () => {
     it('muestra el veredicto, las observaciones y los comentarios para el autor', async () => {
       const { element } = await open({
-        status: 'REQUIRES_CORRECTIONS',
+        status: 'CHANGES_REQUESTED',
         feedback: {
-          decision: 'REQUIRES_CORRECTIONS',
+          decision: 'CHANGES_REQUESTED',
+          decided_at: '2026-10-22T15:00:00Z',
+          origin: 'CONSENSUS',
           observations: 'Ampliar la muestra y revisar la metodología.',
-          comments_for_author: 'El análisis estadístico es claro, pero faltan controles.',
+          reviews: [
+            { label: 'Revisor 1', comments_for_author: 'El análisis estadístico es claro.' },
+            { label: 'Revisor 2', comments_for_author: 'Faltan controles en el diseño.' },
+          ],
         },
       });
 
       const section = element.querySelector('[aria-labelledby="feedback-title"]') as HTMLElement;
-      expect(text(section)).toContain('Veredicto: Requiere correcciones');
+      expect(text(section)).toContain('Decisión: Cambios solicitados');
       expect(text(section)).toContain('Ampliar la muestra y revisar la metodología.');
-      expect(text(section)).toContain('El análisis estadístico es claro, pero faltan controles.');
+      expect(text(section)).toContain('Revisor 1');
+      expect(text(section)).toContain('El análisis estadístico es claro.');
+      expect(text(section)).toContain('Revisor 2');
+      expect(text(section)).toContain('Faltan controles en el diseño.');
     });
 
     it('un rechazo sin observaciones muestra solo el veredicto y los comentarios', async () => {
@@ -314,14 +339,16 @@ describe('ManuscriptDetailComponent', () => {
         status: 'REJECTED',
         feedback: {
           decision: 'REJECTED',
+          decided_at: '2026-10-22T15:00:00Z',
+          origin: 'CONSENSUS',
           observations: null,
-          comments_for_author: 'No cumple el alcance.',
+          reviews: [{ label: 'Revisor 1', comments_for_author: 'No cumple el alcance.' }],
         },
       });
 
       const section = element.querySelector('[aria-labelledby="feedback-title"]') as HTMLElement;
-      expect(text(section)).toContain('Veredicto: Rechazado');
-      expect(text(section)).not.toContain('Observaciones del Editor');
+      expect(text(section)).toContain('Decisión: Rechazado');
+      expect(text(section)).not.toContain('Observaciones');
       expect(text(section)).toContain('No cumple el alcance.');
     });
 
@@ -338,9 +365,11 @@ describe('ManuscriptDetailComponent', () => {
       // Aunque la respuesta los trajera por error, la vista solo lee los tres campos permitidos.
       const { element } = await open({
         feedback: {
-          decision: 'REQUIRES_CORRECTIONS',
+          decision: 'CHANGES_REQUESTED',
+          decided_at: '2026-10-22T15:00:00Z',
+          origin: 'CONSENSUS',
           observations: 'Ampliar la muestra.',
-          comments_for_author: 'Buen trabajo.',
+          reviews: [{ label: 'Revisor 1', comments_for_author: 'Buen trabajo.' }],
           reviewer: { full_name: 'Revisor Secreto', email: 'revisor.secreto@unl.edu.ec' },
           confidential_comments: 'Solo para el Editor: sospecho plagio.',
           originality_score: 2,
@@ -412,7 +441,7 @@ describe('ManuscriptDetailComponent', () => {
   });
 
   describe('baja lógica', () => {
-    const REASON_REQUIRED = ['UNDER_REVIEW', 'ACCEPTED'] as const;
+    const REASON_REQUIRED = ['UNDER_REVIEW', 'TIE_BREAKER', 'ACCEPTED'] as const;
     const REASON_OPTIONAL = MANUSCRIPT_STATUSES.filter(
       (status) => !(REASON_REQUIRED as readonly string[]).includes(status),
     );
@@ -528,7 +557,7 @@ describe('ManuscriptDetailComponent', () => {
     });
 
     it('tras la baja el detalle pasa a archivado, de solo lectura, y lo explica', async () => {
-      const { element, settle } = await open({ status: 'REQUIRES_CORRECTIONS' });
+      const { element, settle } = await open({ status: 'CHANGES_REQUESTED' });
       expect(hasEditLink(element)).toBe(true);
       withdrawButton(element)?.click();
       await settle();
@@ -538,7 +567,7 @@ describe('ManuscriptDetailComponent', () => {
 
       http.expectOne(WITHDRAW_URL).flush(
         buildManuscript({
-          status: 'REQUIRES_CORRECTIONS',
+          status: 'CHANGES_REQUESTED',
           is_active: false,
           withdrawn_at: '2026-10-22T17:00:00Z',
           withdrawal_reason: 'Cierro el proceso.',
@@ -705,7 +734,7 @@ describe('ManuscriptDetailComponent', () => {
       ['el título en blanco', { title: '   ' }, 'Título'],
       ['el resumen', { abstract: '' }, 'Resumen'],
       ['las palabras clave', { keywords: [] }, 'Palabras clave'],
-      ['el área', { area: '' }, 'Área de conocimiento'],
+      ['las carreras', { areas: [] }, 'Carreras o áreas'],
       ['el idioma', { language: '' }, 'Idioma'],
       ['el PDF', { draft_file: null }, 'PDF del manuscrito'],
     ])('si falta %s, lo indica y no permite enviar', async (_name, change, label) => {
@@ -721,10 +750,10 @@ describe('ManuscriptDetailComponent', () => {
     });
 
     it('varios faltantes se listan juntos', async () => {
-      const { element } = await open({ status: 'DRAFT', title: '', area: '', draft_file: null });
+      const { element } = await open({ status: 'DRAFT', title: '', areas: [], draft_file: null });
 
       expect(text(element.querySelector('#submit-missing') as HTMLElement).trim()).toBe(
-        'Para enviarlo aún falta: Título, Área de conocimiento, PDF del manuscrito.',
+        'Para enviarlo aún falta: Título, Carreras o áreas, PDF del manuscrito.',
       );
     });
 
@@ -757,7 +786,7 @@ describe('ManuscriptDetailComponent', () => {
       const dialogText = text(confirmDialog(element));
       expect(dialogText).toContain('Se creará la versión v1');
       expect(dialogText).toContain('«articulo.pdf»');
-      expect(dialogText).toContain('no podrá editarlos hasta que el Editor solicite correcciones');
+      expect(dialogText).toContain('no podrá editarlos hasta que se soliciten cambios');
       http.expectNone(SUBMIT_URL);
     });
 
@@ -930,7 +959,7 @@ describe('ManuscriptDetailComponent', () => {
       integrity_seal: `sha256:${'c'.repeat(64)}`,
     };
     const CORRECTIONS = {
-      status: 'REQUIRES_CORRECTIONS',
+      status: 'CHANGES_REQUESTED',
       current_version: 1,
       current_round: 1,
     } as const;

@@ -9,15 +9,18 @@ import { toApiError } from '../models/api-error.model';
 import { Paginated } from '../models/paginated.model';
 import {
   AssignmentSnapshot,
+  ConflictResult,
   EvaluationDraft,
   EvaluationSnapshot,
   IncidentReceipt,
   IncidentReportType,
+  RankingAdjustment,
   ReviewerAssignmentDetail,
   ReviewerAssignmentRow,
   ReviewerEvaluation,
   ReviewerHistoryDetail,
   ReviewerHistoryRow,
+  ReviewerStanding,
   genericDocumentName,
 } from '../models/reviewer.model';
 
@@ -138,25 +141,37 @@ export class ReviewerService {
   }
 
   /**
-   * Declara un conflicto de interés (`POST .../conflict/`). Bloquea la
-   * evaluación y avisa al Editor; la asignación no se revoca sola. El
-   * motivo es opcional y solo queda en la auditoría.
+   * Declara un conflicto de interés (`POST .../conflict/`). Libera la
+   * asignación sin penalización y el sistema cubre el cupo con otro revisor;
+   * el borrador queda marcado. El motivo es opcional y solo queda en la auditoría.
    */
-  declareConflict(assignmentId: string, reason: string | null): Observable<EvaluationSnapshot> {
+  declareConflict(assignmentId: string, reason: string | null): Observable<ConflictResult> {
     return this.http
-      .post<ReviewerEvaluation>(
+      .post<ConflictResult>(
         `${this.url}assignments/${assignmentId}/conflict/`,
         reason ? { reason } : {},
-        { observe: 'response' },
       )
-      .pipe(
-        map(toEvaluationSnapshot),
-        catchError((error) => throwError(() => toApiError(error))),
-      );
+      .pipe(catchError((error) => throwError(() => toApiError(error))));
+  }
+
+  /** Desempeño propio: puntaje, cupo y contadores (`GET .../standing/`). */
+  standing(): Observable<ReviewerStanding> {
+    return this.http
+      .get<ReviewerStanding>(`${this.url}standing/`)
+      .pipe(catchError((error) => throwError(() => toApiError(error))));
+  }
+
+  /** Historial de ajustes del ranking, el más reciente primero. */
+  adjustments(page = 1, pageSize = 10): Observable<Paginated<RankingAdjustment>> {
+    return this.http
+      .get<Paginated<RankingAdjustment>>(`${this.url}standing/adjustments/`, {
+        params: toHttpParams({ page: page > 1 ? page : undefined, page_size: pageSize }),
+      })
+      .pipe(catchError((error) => throwError(() => toApiError(error))));
   }
 
   /**
-   * Reporte confidencial al Editor (`POST .../identity-leak/`). No cambia
+   * Reporte confidencial al Administrador (`POST .../identity-leak/`). No cambia
    * la evaluación, el PDF ni el manuscrito, y el Autor nunca se entera.
    */
   reportIdentityLeak(

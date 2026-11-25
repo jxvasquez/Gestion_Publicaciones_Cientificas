@@ -48,14 +48,14 @@
     @if (m.feedback; as feedback) {
       <section class="card" aria-labelledby="feedback-title">
         <h2 id="feedback-title">Resultado de la evaluación</h2>
-        <p>Veredicto: <app-status-badge [status]="feedback.decision" /></p>
+        <p>Decisión: <app-status-badge [status]="feedback.decision" /></p>
         @if (feedback.observations) {
-          <h3>Observaciones del Editor</h3>
+          <h3>Observaciones</h3>
           <p class="prose">{{ feedback.observations }}</p>
         }
-        @if (feedback.comments_for_author) {
-          <h3>Comentarios para el autor</h3>
-          <p class="prose">{{ feedback.comments_for_author }}</p>
+        @for (review of feedback.reviews; track review.label) {
+          <h3>{{ review.label }}</h3>
+          <p class="prose">{{ review.comments_for_author }}</p>
         }
       </section>
     }
@@ -118,7 +118,7 @@
         } @else {
           <p>
             Todo está listo. Al enviarlo se crea la versión v1 con el PDF y los metadatos actuales,
-            y el Editor recibe el manuscrito.
+            y el sistema asigna dos revisores de sus carreras.
           </p>
         }
         @if (submitError()) {
@@ -148,8 +148,14 @@
     <section class="card" aria-labelledby="metadata-title">
       <h2 id="metadata-title">Datos generales</h2>
       <dl class="data">
-        <dt>Área de conocimiento</dt>
-        <dd>{{ m.area || '—' }}</dd>
+        <dt>Carreras o áreas</dt>
+        <dd>
+          @for (area of m.areas; track area.code) {
+            <span class="badge badge--info">{{ area.name }}</span>
+          } @empty {
+            —
+          }
+        </dd>
         <dt>Idioma</dt>
         <dd>{{ m.language || '—' }}</dd>
         <dt>Palabras clave</dt>

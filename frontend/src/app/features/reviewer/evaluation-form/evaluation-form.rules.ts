@@ -1,53 +1,51 @@
-import { Recommendation } from '../../../core/models/editor.model';
 import {
   COMMENT_MAX_LENGTH,
   EvaluationDraft,
   MAX_SCORE,
   MIN_SCORE,
   ReviewerEvaluation,
-  SCORE_CRITERIA,
-  ScoreField,
 } from '../../../core/models/reviewer.model';
+import {
+  JUSTIFICATION_MIN_LENGTH,
+  JUSTIFICATION_SCORE_THRESHOLD,
+  RUBRIC_KEYS,
+  Recommendation,
+  RubricKey,
+  characterCount,
+  requiresJustification,
+} from '../../../core/models/rubric.model';
 
 /** Lo que el Revisor escribe; los comentarios son siempre texto (vacío si no hay). */
-export interface EvaluationValues {
-  originality_score: number | null;
-  methodology_score: number | null;
-  clarity_score: number | null;
-  relevance_score: number | null;
-  ethics_score: number | null;
+export interface EvaluationValues extends Record<RubricKey, number | null> {
   recommendation: Recommendation | null;
   comments_for_author: string;
-  confidential_comments: string;
 }
 
 /** Campos que pueden fallar al enviar (los mismos que el servidor exige). */
-export type EvaluationField = ScoreField | 'recommendation' | 'comments_for_author';
+export type EvaluationField = RubricKey | 'recommendation' | 'comments_for_author';
 
 export type EvaluationErrors = Partial<Record<EvaluationField | 'declaration', string>>;
 
 export const EMPTY_VALUES: EvaluationValues = {
-  originality_score: null,
-  methodology_score: null,
-  clarity_score: null,
-  relevance_score: null,
-  ethics_score: null,
+  scientific_contribution: null,
+  methodological_rigor: null,
+  literature_grounding: null,
+  results_conclusions: null,
+  academic_writing: null,
   recommendation: null,
   comments_for_author: '',
-  confidential_comments: '',
 };
 
 /** Valores del formulario a partir de la evaluación del servidor. */
 export function toValues(evaluation: ReviewerEvaluation): EvaluationValues {
   return {
-    originality_score: evaluation.originality_score,
-    methodology_score: evaluation.methodology_score,
-    clarity_score: evaluation.clarity_score,
-    relevance_score: evaluation.relevance_score,
-    ethics_score: evaluation.ethics_score,
+    scientific_contribution: evaluation.scientific_contribution,
+    methodological_rigor: evaluation.methodological_rigor,
+    literature_grounding: evaluation.literature_grounding,
+    results_conclusions: evaluation.results_conclusions,
+    academic_writing: evaluation.academic_writing,
     recommendation: evaluation.recommendation,
     comments_for_author: evaluation.comments_for_author ?? '',
-    confidential_comments: evaluation.confidential_comments ?? '',
   };
 }
 
@@ -56,7 +54,6 @@ export function toDraft(values: EvaluationValues): EvaluationDraft {
   return {
     ...values,
     comments_for_author: values.comments_for_author.trim() || null,
-    confidential_comments: values.confidential_comments.trim() || null,
   };
 }
 
@@ -68,37 +65,52 @@ export function isDirty(current: EvaluationValues, saved: EvaluationValues): boo
 }
 
 export const SCORE_REQUIRED = `Seleccione una puntuación del ${MIN_SCORE} al ${MAX_SCORE}.`;
-export const RECOMMENDATION_REQUIRED = 'Seleccione una recomendación.';
+export const RECOMMENDATION_REQUIRED = 'Seleccione un dictamen.';
 export const COMMENTS_REQUIRED = 'Escriba los comentarios para el Autor.';
 export const COMMENTS_TOO_LONG = `Los comentarios admiten hasta ${COMMENT_MAX_LENGTH} caracteres.`;
 export const DECLARATION_REQUIRED =
   'Debe declarar que no tiene conflicto de interés para enviar la evaluación.';
 
+/** FR-019 aplica: algún criterio en 3 o menos, Revisión mayor o Rechazar. */
+export function justificationRequired(values: EvaluationValues): boolean {
+  return requiresJustification({ scores: values, recommendation: values.recommendation });
+}
+
+/** Mensaje de la justificación, con los caracteres que lleva y los que exige (FR-019). */
+export function justificationMessage(current: number): string {
+  return (
+    `Escriba al menos ${JUSTIFICATION_MIN_LENGTH} caracteres: algún criterio es ` +
+    `${JUSTIFICATION_SCORE_THRESHOLD} o menos, o el dictamen es Revisión mayor o Rechazar ` +
+    `(lleva ${current}).`
+  );
+}
+
 /**
- * Lo que impide el envío final: los cinco puntajes, la recomendación, los
- * comentarios para el Autor y la declaración de no tener conflicto de
- * interés. Los comentarios confidenciales son opcionales. El borrador no
- * pasa por aquí: se guarda con huecos.
+ * Lo que impide el envío final: los cinco criterios, el dictamen, los comentarios
+ * para el Autor (con 100 caracteres cuando FR-019 lo exige) y la declaración de no
+ * tener conflicto de interés. El borrador no pasa por aquí: se guarda con huecos.
  */
 export function submitErrors(values: EvaluationValues, declared: boolean): EvaluationErrors {
   const errors: EvaluationErrors = {};
-  for (const { field } of SCORE_CRITERIA) {
-    const score = values[field];
+  for (const key of RUBRIC_KEYS) {
+    const score = values[key];
     if (score === null || score < MIN_SCORE || score > MAX_SCORE) {
-      errors[field] = SCORE_REQUIRED;
+      errors[key] = SCORE_REQUIRED;
     }
   }
   if (values.recommendation === null) {
-    errors.recommendation = RECOMMENDATION_REQUIRED;
+    errors['recommendation'] = RECOMMENDATION_REQUIRED;
   }
-  if (values.comments_for_author.trim() === '') {
-    errors.comments_for_author = COMMENTS_REQUIRED;
-  }
-  if (values.comments_for_author.length > COMMENT_MAX_LENGTH) {
-    errors.comments_for_author = COMMENTS_TOO_LONG;
+  const length = characterCount(values.comments_for_author);
+  if (length === 0) {
+    errors['comments_for_author'] = COMMENTS_REQUIRED;
+  } else if (values.comments_for_author.length > COMMENT_MAX_LENGTH) {
+    errors['comments_for_author'] = COMMENTS_TOO_LONG;
+  } else if (justificationRequired(values) && length < JUSTIFICATION_MIN_LENGTH) {
+    errors['comments_for_author'] = justificationMessage(length);
   }
   if (!declared) {
-    errors.declaration = DECLARATION_REQUIRED;
+    errors['declaration'] = DECLARATION_REQUIRED;
   }
   return errors;
 }
@@ -109,11 +121,7 @@ export function serverFieldErrors(details: unknown): EvaluationErrors {
   if (typeof details !== 'object' || details === null) {
     return errors;
   }
-  const known = new Set<string>([
-    ...SCORE_CRITERIA.map((c) => c.field),
-    'recommendation',
-    'comments_for_author',
-  ]);
+  const known = new Set<string>([...RUBRIC_KEYS, 'recommendation', 'comments_for_author']);
   for (const [field, messages] of Object.entries(details)) {
     const first = Array.isArray(messages) ? messages[0] : messages;
     if (known.has(field) && typeof first === 'string') {

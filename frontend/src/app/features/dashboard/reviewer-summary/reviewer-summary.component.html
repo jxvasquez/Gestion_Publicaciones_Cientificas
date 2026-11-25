@@ -1,7 +1,17 @@
 <app-kpi-card
   title="Revisor"
   icon="reviewer"
-  [metrics]="[{ label: 'Asignaciones pendientes', value: data()?.['pending'] }]"
+  [metrics]="[
+    { label: 'Puntaje de ranking', value: data()?.['ranking_score'] },
+    {
+      label: 'Asignaciones activas',
+      value: data()?.['active_assignments'],
+      max: data()?.['max_active_assignments'],
+    },
+    { label: 'Evaluaciones pendientes', value: data()?.['pending_evaluations'] },
+    { label: 'Evaluadas a tiempo', value: data()?.['on_time_evaluations'] },
+    { label: 'Plazos vencidos', value: data()?.['missed_deadlines'] },
+  ]"
 >
   <a class="btn btn--ghost" routerLink="/app/reviewer/assignments">Mis asignaciones</a>
   <a class="btn btn--ghost" routerLink="/app/reviewer/history">Historial de evaluaciones</a>

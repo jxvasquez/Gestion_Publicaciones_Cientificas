@@ -3,6 +3,7 @@ import { TestBed } from '@angular/core/testing';
 
 import { AuditVerdict } from '../../../core/models/audit.model';
 import {
+  CorrectionChoice,
   VerdictCorrectionDialogComponent,
   correctionReasonError,
 } from './verdict-correction-dialog.component';
@@ -30,7 +31,7 @@ class HostComponent {
   readonly verdict = signal<AuditVerdict | null>(VERDICT);
   readonly busy = signal(false);
   readonly error = signal('');
-  readonly confirmed: string[] = [];
+  readonly confirmed: CorrectionChoice[] = [];
   cancelled = 0;
 }
 
@@ -66,7 +67,13 @@ describe('VerdictCorrectionDialogComponent', () => {
       area.dispatchEvent(new Event('input'));
       fixture.detectChanges();
     };
-    return { fixture, host: fixture.componentInstance, dialog, button, write };
+    const choose = (decision: string) => {
+      const radio = dialog().querySelector<HTMLInputElement>(`input[type="radio"][value="${decision}"]`)!;
+      radio.click();
+      radio.dispatchEvent(new Event('change'));
+      fixture.detectChanges();
+    };
+    return { fixture, host: fixture.componentInstance, dialog, button, write, choose };
   };
 
   it('muestra el veredicto y aclara que la decisión anterior se conserva', () => {
@@ -87,37 +94,93 @@ describe('VerdictCorrectionDialogComponent', () => {
     expect(text(dialog())).not.toMatch(/@|autor(es)?:|evaluaci|pdf/i);
   });
 
-  it('el motivo es obligatorio: vacío no emite y lo explica', () => {
-    const { host, fixture, dialog, button } = setup();
+  it('la nueva decisión es obligatoria: sin elegirla no emite y lo explica', () => {
+    const { host, fixture, dialog, button, write } = setup();
+    write('Un motivo suficientemente largo.');
 
-    button('Habilitar corrección').click();
+    button('Corregir veredicto').click();
+    fixture.detectChanges();
+
+    expect(host.confirmed).toEqual([]);
+    expect(text(dialog().querySelector('[role="alert"]'))).toBe('Seleccione la nueva decisión.');
+  });
+
+  it('ofrece las tres decisiones y las observaciones solo con «Cambios solicitados»', () => {
+    const { dialog, choose } = setup();
+
+    expect(
+      Array.from(dialog().querySelectorAll('input[type="radio"]'), (r) => (r as HTMLInputElement).value),
+    ).toEqual(['ACCEPTED', 'REJECTED', 'CHANGES_REQUESTED']);
+    expect(dialog().querySelectorAll('textarea')).toHaveLength(1);
+
+    choose('CHANGES_REQUESTED');
+
+    expect(dialog().querySelectorAll('textarea')).toHaveLength(2);
+  });
+
+  it('con «Cambios solicitados» las observaciones son obligatorias y viajan recortadas', () => {
+    const { host, fixture, dialog, button, choose } = setup();
+    choose('CHANGES_REQUESTED');
+    const [observations, reason] = Array.from(dialog().querySelectorAll('textarea'));
+    reason.value = 'Un motivo suficientemente largo.';
+    reason.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+
+    button('Corregir veredicto').click();
+    fixture.detectChanges();
+    expect(host.confirmed).toEqual([]);
+    expect(text(dialog())).toContain('Indique las observaciones para el Autor.');
+
+    observations.value = '  Ampliar la metodología.  ';
+    observations.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+    button('Corregir veredicto').click();
+
+    expect(host.confirmed).toEqual([
+      {
+        decision: 'CHANGES_REQUESTED',
+        reason: 'Un motivo suficientemente largo.',
+        observations: 'Ampliar la metodología.',
+      },
+    ]);
+  });
+
+  it('el motivo es obligatorio: vacío no emite y lo explica', () => {
+    const { host, fixture, dialog, button, choose } = setup();
+    choose('ACCEPTED');
+
+    button('Corregir veredicto').click();
     fixture.detectChanges();
 
     expect(host.confirmed).toEqual([]);
     expect(text(dialog().querySelector('[role="alert"]'))).toBe(
-      'Indique el motivo de la habilitación.',
+      'Indique el motivo de la corrección.',
     );
     expect(dialog().querySelector('textarea')!.getAttribute('aria-invalid')).toBe('true');
   });
 
   it('un motivo de menos de 10 caracteres (sin contar espacios) no se emite', () => {
-    const { host, fixture, dialog, button, write } = setup();
+    const { host, fixture, dialog, button, write, choose } = setup();
+    choose('REJECTED');
 
     write('  corto   ');
-    button('Habilitar corrección').click();
+    button('Corregir veredicto').click();
     fixture.detectChanges();
 
     expect(host.confirmed).toEqual([]);
     expect(text(dialog().querySelector('[role="alert"]'))).toContain('al menos 10 caracteres');
   });
 
-  it('con un motivo válido emite el texto recortado', () => {
-    const { host, button, write } = setup();
+  it('con una decisión y un motivo válidos emite ambos, el texto recortado', () => {
+    const { host, button, write, choose } = setup();
+    choose('ACCEPTED');
 
     write('   El veredicto contiene un error de captura.  ');
-    button('Habilitar corrección').click();
+    button('Corregir veredicto').click();
 
-    expect(host.confirmed).toEqual(['El veredicto contiene un error de captura.']);
+    expect(host.confirmed).toEqual([
+      { decision: 'ACCEPTED', reason: 'El veredicto contiene un error de captura.' },
+    ]);
   });
 
   it('el campo no admite más de 1000 caracteres', () => {
@@ -133,10 +196,10 @@ describe('VerdictCorrectionDialogComponent', () => {
     fixture.detectChanges();
     await fixture.whenStable();
 
-    expect(button('Habilitando').disabled).toBe(true);
+    expect(button('Corrigiendo').disabled).toBe(true);
     expect(button('Cancelar').disabled).toBe(true);
     expect(dialog().querySelector('textarea')!.disabled).toBe(true);
-    button('Habilitando').click();
+    button('Corrigiendo').click();
     expect(host.confirmed).toEqual([]);
   });
 
@@ -144,10 +207,10 @@ describe('VerdictCorrectionDialogComponent', () => {
     const { host, fixture, dialog, write } = setup();
     write('Motivo suficientemente largo.');
 
-    host.error.set('Este veredicto ya tiene una autorización de corrección activa.');
+    host.error.set('El veredicto está desactualizado: ya existe una decisión más reciente.');
     fixture.detectChanges();
 
-    expect(text(dialog())).toContain('ya tiene una autorización de corrección activa');
+    expect(text(dialog())).toContain('ya existe una decisión más reciente');
     expect((dialog().querySelector('textarea') as HTMLTextAreaElement).value).toBe(
       'Motivo suficientemente largo.',
     );
@@ -179,8 +242,8 @@ describe('VerdictCorrectionDialogComponent', () => {
 
 describe('correctionReasonError', () => {
   it.each([
-    ['', 'Indique el motivo de la habilitación.'],
-    ['   ', 'Indique el motivo de la habilitación.'],
+    ['', 'Indique el motivo de la corrección.'],
+    ['   ', 'Indique el motivo de la corrección.'],
     ['123456789', 'El motivo debe tener al menos 10 caracteres.'],
     ['x'.repeat(1001), 'El motivo no puede superar 1000 caracteres.'],
   ])('%j → %s', (reason, expected) => {

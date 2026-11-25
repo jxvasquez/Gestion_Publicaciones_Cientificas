@@ -1,0 +1,15 @@
+.table-wrap {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+
+  th,
+  td {
+    padding: var(--gpc-space-2, 0.5rem) var(--gpc-space-3, 0.75rem);
+    text-align: left;
+    border-bottom: 1px solid var(--gpc-border, #c9ced6);
+  }
+}

@@ -76,7 +76,7 @@ describe('audit.model', () => {
   describe('etiquetas', () => {
     it('traduce acciones y resultados conocidos y conserva los desconocidos', () => {
       expect(actionLabel('VERDICT_CORRECTION_AUTHORIZED')).toBe(
-        'Corrección de veredicto autorizada',
+        'Corrección de veredicto autorizada (heredado)',
       );
       expect(actionLabel('FUTURE_ACTION')).toBe('FUTURE_ACTION');
       expect(resultLabel('DENIED')).toBe('Denegado');

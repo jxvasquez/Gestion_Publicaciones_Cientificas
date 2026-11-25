@@ -33,10 +33,10 @@ describe('AuthStore', () => {
   });
 
   it('setSession guarda identidad, roles y access token en memoria', () => {
-    store.setSession({ user: USER, roles: ['AUTHOR', 'EDITOR'], access: 'access-1' });
+    store.setSession({ user: USER, roles: ['AUTHOR', 'ADMIN'], access: 'access-1' });
 
     expect(store.user()?.full_name).toBe('Ana López');
-    expect(store.roles()).toEqual(['AUTHOR', 'EDITOR']);
+    expect(store.roles()).toEqual(['AUTHOR', 'ADMIN']);
     expect(store.accessToken()).toBe('access-1');
     expect(store.status()).toBe<AuthStatus>('authenticated');
     expect(store.isAuthenticated()).toBe(true);
@@ -46,7 +46,7 @@ describe('AuthStore', () => {
   });
 
   it('markRefreshing conserva la sesión mientras el refresh está en vuelo', () => {
-    store.setSession({ user: USER, roles: ['EDITOR'], access: 'access-1' });
+    store.setSession({ user: USER, roles: ['ADMIN'], access: 'access-1' });
     store.markRefreshing();
 
     expect(store.status()).toBe<AuthStatus>('refreshing');
@@ -70,7 +70,7 @@ describe('AuthStore', () => {
     store.setRoles(['REVIEWER']);
 
     expect(store.hasAnyRole(['REVIEWER'])).toBe(true);
-    expect(store.hasAnyRole(['AUTHOR', 'EDITOR'])).toBe(false);
+    expect(store.hasAnyRole(['AUTHOR', 'ADMIN'])).toBe(false);
 
     store.clearRoles();
     expect(store.hasAnyRole(['REVIEWER'])).toBe(false);

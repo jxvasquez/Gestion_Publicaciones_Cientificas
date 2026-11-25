@@ -3,9 +3,8 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { API_BASE_URL } from '../../../core/http/api-base-url.token';
-import { EvaluationSnapshot } from '../../../core/models/reviewer.model';
+import { ConflictResult } from '../../../core/models/reviewer.model';
 import { errorEnvelope } from '../../author/testing/manuscript.fixtures';
-import { buildReviewerEvaluation } from '../testing/reviewer.fixtures';
 import { ConflictDialogComponent } from './conflict-dialog.component';
 
 const CONFLICT = '/api/v1/reviewer/assignments/a-1/conflict/';
@@ -13,7 +12,7 @@ const CONFLICT = '/api/v1/reviewer/assignments/a-1/conflict/';
 describe('ConflictDialogComponent', () => {
   let http: HttpTestingController;
   let fixture: ComponentFixture<ConflictDialogComponent>;
-  let declared: EvaluationSnapshot[];
+  let declared: ConflictResult[];
   let cancelled: number;
 
   beforeAll(() => {
@@ -70,13 +69,13 @@ describe('ConflictDialogComponent', () => {
     await fixture.whenStable();
   };
 
-  it('se abre y explica que bloquea la evaluación, avisa al Editor y no se deshace', async () => {
+  it('se abre y explica que libera la asignación sin penalización y no se deshace', async () => {
     await render();
 
     expect(dialog().hasAttribute('open')).toBe(true);
     const body = text(dialog());
-    expect(body).toContain('bloqueada');
-    expect(body).toContain('El Editor será avisado');
+    expect(body).toContain('libera sin penalización');
+    expect(body).toContain('otro revisor');
     expect(body).toContain('No se puede deshacer');
   });
 
@@ -102,27 +101,22 @@ describe('ConflictDialogComponent', () => {
     const request = http.expectOne(CONFLICT);
     expect(request.request.method).toBe('POST');
     expect(request.request.body).toEqual({});
-    request.flush(buildReviewerEvaluation({ id: 'ev-1', conflict_declared: true }), {
-      headers: { ETag: '"2"' },
-    });
+    request.flush({ assignment: 'a-1', status: 'REVOKED', release_cause: 'CONFLICT_OF_INTEREST' });
     await fixture.whenStable();
   });
 
-  it('con motivo lo envía recortado y entrega la evaluación bloqueada', async () => {
+  it('con motivo lo envía recortado y entrega la asignación liberada', async () => {
     await render();
     await type('  Fui director de tesis de un autor.  ');
 
     button('Declarar conflicto').click();
     const request = http.expectOne(CONFLICT);
     expect(request.request.body).toEqual({ reason: 'Fui director de tesis de un autor.' });
-    request.flush(buildReviewerEvaluation({ id: 'ev-1', conflict_declared: true }), {
-      headers: { ETag: '"2"' },
-    });
+    request.flush({ assignment: 'a-1', status: 'REVOKED', release_cause: 'CONFLICT_OF_INTEREST' });
     await fixture.whenStable();
 
     expect(declared).toHaveLength(1);
-    expect(declared[0].evaluation.conflict_declared).toBe(true);
-    expect(declared[0].etag).toBe('"2"');
+    expect(declared[0]).toEqual({ assignment: 'a-1', status: 'REVOKED', release_cause: 'CONFLICT_OF_INTEREST' });
   });
 
   it('mientras se envía bloquea los controles y no admite un segundo envío', async () => {
@@ -135,9 +129,7 @@ describe('ConflictDialogComponent', () => {
     expect(button('Declarando…').disabled).toBe(true);
     expect(button('Cancelar').disabled).toBe(true);
     button('Declarando…').click();
-    http.expectOne(CONFLICT).flush(buildReviewerEvaluation({ conflict_declared: true }), {
-      headers: { ETag: '"2"' },
-    });
+    http.expectOne(CONFLICT).flush({ assignment: 'a-1', status: 'REVOKED', release_cause: 'CONFLICT_OF_INTEREST' });
   });
 
   it('un error de red no da el conflicto por declarado y conserva el motivo', async () => {

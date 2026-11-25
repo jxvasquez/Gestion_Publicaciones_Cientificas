@@ -26,7 +26,7 @@ let nextId = 0;
 /**
  * Reporte confidencial de una posible fuga de identidad (plan sección 3.5, HU-16).
  *
- * * Es un canal **confidencial**: solo el Editor lo lee. El Autor no se
+ * * Es un canal **confidencial**: solo el Administrador lo lee. El Autor no se
  *   entera de que existe y nada del Revisor llega a él; el diálogo lo dice
  *   expresamente. Reportar no modifica la evaluación, el PDF ni el estado
  *   del manuscrito.

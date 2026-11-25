@@ -21,6 +21,9 @@ import {
   buildHistoryRow,
   buildReviewerEvaluation,
 } from './testing/reviewer.fixtures';
+import { StandingStubComponent } from '../../core/testing/stubs';
+import { ReviewerStandingComponent } from './reviewer-standing/reviewer-standing.component';
+import { AssignmentListComponent } from './assignment-list/assignment-list.component';
 
 /**
  * Integración del módulo Revisor con las rutas REALES de la aplicación
@@ -75,6 +78,10 @@ describe('Módulo Revisor: integración con las rutas reales', () => {
   });
 
   beforeEach(() => {
+    TestBed.overrideComponent(AssignmentListComponent, {
+      remove: { imports: [ReviewerStandingComponent] },
+      add: { imports: [StandingStubComponent] },
+    });
     TestBed.configureTestingModule({
       providers: [
         provideRouter(routes),
@@ -147,7 +154,7 @@ describe('Módulo Revisor: integración con las rutas reales', () => {
       },
     );
 
-    const OTHER_ROLES = ['EDITOR', 'AUTHOR', 'ADMIN'] as const;
+    const OTHER_ROLES = ['AUTHOR', 'ADMIN'] as const;
     it.each(
       OTHER_ROLES.flatMap((role) =>
         REVIEWER_ROUTES.map(([name, url]) => [role, name, url] as const),

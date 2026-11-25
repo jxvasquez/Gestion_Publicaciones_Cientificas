@@ -17,7 +17,7 @@ const PAYLOAD: ManuscriptPayload = {
   title: 'Título',
   abstract: 'Resumen',
   keywords: ['clima'],
-  area: 'Agronomía',
+  areas: ['agronomia'],
   language: 'es',
   authors: [
     {

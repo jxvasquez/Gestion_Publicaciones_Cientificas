@@ -21,8 +21,13 @@
     </div>
   </div>
   <div class="search__field">
-    <label for="catalog-area">Área</label>
-    <input id="catalog-area" type="text" formControlName="area" maxlength="120" />
+    <label for="catalog-area">Carrera</label>
+    <select id="catalog-area" formControlName="area">
+      <option value="">Todas</option>
+      @for (area of areas(); track area.code) {
+        <option [value]="area.code">{{ area.name }}</option>
+      }
+    </select>
   </div>
   <div class="search__field">
     <label for="catalog-keyword">Palabra clave</label>

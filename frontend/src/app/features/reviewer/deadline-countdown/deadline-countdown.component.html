@@ -5,6 +5,10 @@
 >
   @if (isExpired()) {
     <p class="countdown__value" role="status">Plazo vencido</p>
+    <p class="countdown__penalty">
+      Al vencer sin evaluación final, la asignación se revoca automáticamente y se restan 20
+      puntos de su ranking.
+    </p>
   } @else {
     @if (urgent()) {
       <span class="badge badge--warning countdown__warning">Próximo a vencer</span>

@@ -90,7 +90,12 @@
                   <td>
                     <a [routerLink]="['/app/author/manuscripts', row.id]">{{ row.code }}</a>
                   </td>
-                  <td class="manuscripts__title">{{ row.title || 'Sin título' }}</td>
+                  <td class="manuscripts__title">
+                    {{ row.title || 'Sin título' }}
+                    @for (area of row.areas; track area.code) {
+                      <span class="badge badge--info">{{ area.name }}</span>
+                    }
+                  </td>
                   <td>
                     <app-status-badge [status]="row.status" />
                     @if (!row.is_active) {

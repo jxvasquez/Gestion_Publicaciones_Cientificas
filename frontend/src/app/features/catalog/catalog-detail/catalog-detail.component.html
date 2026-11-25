@@ -23,8 +23,8 @@
             <h1 id="article-title">{{ item.title }}</h1>
             <p class="detail__meta">
               {{ item.code }}
-              @if (item.area) {
-                &ngsp;·&ngsp;<span class="badge badge--info">{{ item.area }}</span>
+              @for (area of item.areas; track area.code) {
+                &ngsp;·&ngsp;<span class="badge badge--info">{{ area.name }}</span>
               }
               @if (item.language) {
                 &ngsp;·&ngsp;<span class="badge badge--neutral">{{ language(item) }}</span>

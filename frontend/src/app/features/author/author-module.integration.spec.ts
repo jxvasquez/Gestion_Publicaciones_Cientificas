@@ -11,6 +11,7 @@ import { API_BASE_URL } from '../../core/http/api-base-url.token';
 import { Role } from '../../core/models/role.model';
 import { SessionUser } from '../../core/models/session-user.model';
 import { AUTHOR_ANA, buildManuscript, buildPage } from './testing/manuscript.fixtures';
+import { AREA_SERVICE_STUB } from '../../core/testing/stubs';
 
 /**
  * Integración del módulo Autor con las rutas REALES de la aplicación
@@ -49,6 +50,7 @@ describe('Módulo Autor: integración con las rutas reales', () => {
   beforeEach(() => {
     TestBed.configureTestingModule({
       providers: [
+        AREA_SERVICE_STUB,
         provideRouter(routes),
         NOTIFICATION_SERVICE_STUB,
         provideHttpClient(),
@@ -145,7 +147,7 @@ describe('Módulo Autor: integración con las rutas reales', () => {
     });
 
     it('una persona con Autor y Editor entra sin conmutar de rol', async () => {
-      signIn('AUTHOR', 'EDITOR');
+      signIn('AUTHOR', 'ADMIN');
       const { element, settle } = await open('/app/author/manuscripts');
       list().flush(buildPage([buildManuscript()]));
       await settle();
@@ -217,24 +219,24 @@ describe('Módulo Autor: integración con las rutas reales', () => {
       await first.settle();
 
       const select = first.element.querySelector('#filter-status') as HTMLSelectElement;
-      select.value = 'REQUIRES_CORRECTIONS';
+      select.value = 'CHANGES_REQUESTED';
       select.dispatchEvent(new Event('change'));
       (first.element.querySelector('form button[type="submit"]') as HTMLButtonElement).click();
       await first.settle();
       list().flush(buildPage([]));
       await first.settle();
       const persisted = router.url;
-      expect(persisted).toBe('/app/author/manuscripts?status=REQUIRES_CORRECTIONS');
+      expect(persisted).toBe('/app/author/manuscripts?status=CHANGES_REQUESTED');
 
       // «Recargar»: salir y volver a la misma URL pide lo mismo y rellena el filtro.
       await first.harness.navigateByUrl('/app/author/manuscripts/new');
       await first.harness.navigateByUrl(persisted);
       const reload = list();
-      expect(reload.request.params.get('status')).toBe('REQUIRES_CORRECTIONS');
+      expect(reload.request.params.get('status')).toBe('CHANGES_REQUESTED');
       reload.flush(buildPage([]));
       await first.settle();
       expect((first.element.querySelector('#filter-status') as HTMLSelectElement).value).toBe(
-        'REQUIRES_CORRECTIONS',
+        'CHANGES_REQUESTED',
       );
     });
   });

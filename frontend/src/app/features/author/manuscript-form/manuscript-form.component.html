@@ -98,21 +98,39 @@
         </div>
 
         <div class="field-row">
-          <div class="field">
-            <label for="area">Área de conocimiento</label>
-            <input
-              id="area"
-              type="text"
-              formControlName="area"
-              maxlength="120"
-              autocomplete="off"
-              [attr.aria-required]="strict()"
-              [attr.aria-invalid]="invalid('area')"
-            />
-            @if (invalid('area')) {
-              <p class="field__error" role="alert">{{ fieldMessage('area') }}</p>
+          <fieldset
+            class="field areas"
+            [attr.aria-required]="strict()"
+            [attr.aria-invalid]="invalid('areas')"
+            [attr.aria-describedby]="'areas-hint areas-count'"
+          >
+            <legend>Carreras o áreas</legend>
+            <p class="hint" id="areas-hint">
+              Elija de 1 a {{ maxAreas }} carreras del catálogo; así el sistema encuentra revisores
+              de su carrera.
+            </p>
+            @for (option of areaOptions(); track option.code) {
+              <label class="option">
+                <input
+                  type="checkbox"
+                  [value]="option.code"
+                  [checked]="isAreaSelected(option.code)"
+                  [disabled]="locked()"
+                  (change)="toggleArea(option.code, $any($event.target).checked)"
+                />
+                <span>{{ option.name }}</span>
+              </label>
             }
-          </div>
+            @if (areasLoadError()) {
+              <p class="field__error" role="alert">{{ areasLoadError() }}</p>
+            }
+            <p class="hint" id="areas-count" aria-live="polite">
+              {{ form.controls.areas.value.length }} de {{ maxAreas }}
+            </p>
+            @if (invalid('areas')) {
+              <p class="field__error" role="alert">{{ fieldMessage('areas') }}</p>
+            }
+          </fieldset>
           <div class="field">
             <label for="language">Idioma (código de dos letras)</label>
             <input

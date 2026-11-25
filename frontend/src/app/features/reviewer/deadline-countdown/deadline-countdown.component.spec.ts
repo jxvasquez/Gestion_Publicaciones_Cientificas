@@ -70,6 +70,13 @@ describe('DeadlineCountdownComponent', () => {
     expect(root().querySelector('[role="timer"]')).not.toBeNull();
   });
 
+  it('vencido, avisa de que se revoca la asignación y se restan 20 puntos', () => {
+    mount({ dueAt: '2026-10-27T11:00:00Z' });
+
+    expect(text('.countdown__penalty')).toContain('se revoca automáticamente');
+    expect(text('.countdown__penalty')).toContain('20');
+  });
+
   it('muestra la fecha límite en hora de Ecuador', () => {
     mount({ dueAt: '2026-11-08T16:00:00Z' });
 

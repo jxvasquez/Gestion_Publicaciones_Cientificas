@@ -27,7 +27,7 @@
 
     <p class="callout callout--info" role="note">
       Revisión a doble ciego. Su borrador es privado: no se comparte con el Autor hasta que lo
-      envíe, y los comentarios confidenciales solo los ve el Editor.
+      envíe, y si necesita comunicar algo confidencial use el reporte al Administrador.
     </p>
 
     @if (lockNotice(); as notice) {
@@ -84,49 +84,54 @@
       }
 
       <section class="card evaluation__section" aria-labelledby="score-title">
-        <h2 id="score-title">Puntuación</h2>
+        <h2 id="score-title">Rúbrica</h2>
         <p class="hint">
-          {{ min }} = muy bajo · {{ max }} = muy alto. Puede guardar sin completar todo.
+          Califique cada criterio del {{ min }} (Deficiente) al {{ max }} (Excelente). Un criterio en
+          3 o menos exige justificar con al menos {{ justificationMin }} caracteres. Puede guardar
+          sin completar todo.
         </p>
-        @for (criterion of criteria; track criterion.field) {
+        @for (criterion of criteria; track criterion.key) {
           <fieldset
             class="field"
-            [attr.aria-describedby]="describedBy(criterion.field)"
-            [attr.aria-invalid]="errorOf(criterion.field) ? 'true' : null"
+            [attr.aria-describedby]="describedBy(criterion.key)"
+            [attr.aria-invalid]="errorOf(criterion.key) ? 'true' : null"
           >
-            <legend>{{ criterion.label }}</legend>
-            <p class="hint" [id]="hintId(criterion.field)">{{ criterion.hint }}</p>
-            <div class="scale">
-              @for (score of scale; track score) {
-                <label class="scale__option">
+            <legend>{{ criterion.name }}</legend>
+            <p class="hint" [id]="hintId(criterion.key)">{{ criterion.help }}</p>
+            <div class="rubric">
+              @for (level of criterion.levels; track level.score) {
+                <label class="rubric__option">
                   <input
                     type="radio"
-                    [id]="fieldId(criterion.field) + (score === min ? '' : '-' + score)"
-                    [name]="fieldId(criterion.field)"
-                    [value]="score"
-                    [checked]="values()[criterion.field] === score"
+                    [id]="fieldId(criterion.key) + (level.score === min ? '' : '-' + level.score)"
+                    [name]="fieldId(criterion.key)"
+                    [value]="level.score"
+                    [checked]="values()[criterion.key] === level.score"
                     [disabled]="readOnly()"
-                    (change)="setScore(criterion.field, score)"
+                    (change)="setScore(criterion.key, level.score)"
                   />
-                  <span>{{ score }}</span>
+                  <span class="rubric__text">
+                    <strong>{{ level.score }} · {{ level.name }}.</strong>
+                    {{ level.descriptor }}
+                  </span>
                 </label>
               }
             </div>
-            @if (errorOf(criterion.field); as message) {
-              <p class="field__error" [id]="errorId(criterion.field)">{{ message }}</p>
+            @if (errorOf(criterion.key); as message) {
+              <p class="field__error" [id]="errorId(criterion.key)">{{ message }}</p>
             }
           </fieldset>
         }
       </section>
 
       <section class="card evaluation__section" aria-labelledby="recommendation-title">
-        <h2 id="recommendation-title">Recomendación</h2>
+        <h2 id="recommendation-title">Dictamen</h2>
         <fieldset
           class="field"
           [attr.aria-describedby]="describedBy('recommendation')"
           [attr.aria-invalid]="errorOf('recommendation') ? 'true' : null"
         >
-          <legend>Recomendación al Editor</legend>
+          <legend>Dictamen sobre el manuscrito</legend>
           <div class="options">
             @for (option of recommendations; track option.value; let first = $first) {
               <label class="option">
@@ -139,7 +144,7 @@
                   [disabled]="readOnly()"
                   (change)="setRecommendation(option.value)"
                 />
-                <span>{{ option.label }}</span>
+                <span>{{ option.label }} <span class="hint">· {{ option.help }}</span></span>
               </label>
             }
           </div>
@@ -154,7 +159,13 @@
         <div class="field">
           <label [for]="fieldId('comments_for_author')">Comentarios para el Autor</label>
           <p class="hint" [id]="hintId('comments_for_author')">
-            El Autor los leerá de forma anónima. Obligatorios para enviar.
+            El Autor los leerá de forma anónima como «Revisor N». Obligatorios para enviar;
+            @if (needsJustification()) {
+              con su calificación o dictamen necesitan al menos {{ justificationMin }} caracteres.
+            } @else {
+              con calificaciones de 4 o 5 y un dictamen de Aceptar o Revisión menor basta un
+              comentario breve.
+            }
           </p>
           <textarea
             [id]="fieldId('comments_for_author')"
@@ -164,24 +175,16 @@
             [readOnly]="readOnly()"
             [attr.aria-invalid]="errorOf('comments_for_author') ? 'true' : null"
             [attr.aria-describedby]="describedBy('comments_for_author')"
-            (input)="setText('comments_for_author', $any($event.target).value)"
+            (input)="setText($any($event.target).value)"
           ></textarea>
+          @if (needsJustification()) {
+            <p class="counter" [id]="counterId" aria-live="polite">
+              {{ commentLength() }}/{{ justificationMin }}
+            </p>
+          }
           @if (errorOf('comments_for_author'); as message) {
             <p class="field__error" [id]="errorId('comments_for_author')">{{ message }}</p>
           }
-        </div>
-
-        <div class="field">
-          <label [for]="confidentialId">Comentarios confidenciales para el Editor</label>
-          <p class="hint">Solo el Editor los ve; nunca llegan al Autor. Opcionales.</p>
-          <textarea
-            [id]="confidentialId"
-            rows="5"
-            [maxLength]="commentMax"
-            [value]="values().confidential_comments"
-            [readOnly]="readOnly()"
-            (input)="setText('confidential_comments', $any($event.target).value)"
-          ></textarea>
         </div>
       </section>
 

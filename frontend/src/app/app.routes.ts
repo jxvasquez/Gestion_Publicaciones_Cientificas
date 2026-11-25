@@ -120,46 +120,6 @@ export const routes: Routes = [
           ),
       },
       {
-        path: 'editor/submissions',
-        title: 'Nuevos envíos',
-        canActivate: [rolesGuard],
-        data: { roles: ['EDITOR'] as Role[] },
-        loadComponent: () =>
-          import('./features/editor/submission-inbox/submission-inbox.component').then(
-            (m) => m.SubmissionInboxComponent,
-          ),
-      },
-      {
-        path: 'editor/submissions/:id',
-        title: 'Detalle del envío',
-        canActivate: [rolesGuard],
-        data: { roles: ['EDITOR'] as Role[] },
-        loadComponent: () =>
-          import('./features/editor/submission-detail/submission-detail.component').then(
-            (m) => m.SubmissionDetailComponent,
-          ),
-      },
-      {
-        path: 'editor/assignments/expired',
-        title: 'Asignaciones vencidas',
-        canActivate: [rolesGuard],
-        data: { roles: ['EDITOR'] as Role[] },
-        loadComponent: () =>
-          import(
-            './features/editor/expired-assignments/expired-assignments.component'
-          ).then((m) => m.ExpiredAssignmentsComponent),
-      },
-      {
-        path: 'editor/incidents',
-        title: 'Incidentes confidenciales',
-        canActivate: [rolesGuard],
-        data: { roles: ['EDITOR'] as Role[] },
-        loadComponent: () =>
-          import('./features/editor/incident-list/incident-list.component').then(
-            (m) => m.IncidentListComponent,
-          ),
-      },
-      {
         path: 'reviewer/assignments',
         title: 'Mis asignaciones',
         canActivate: [rolesGuard],
@@ -218,6 +178,36 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/admin/audit-log-detail/audit-log-detail.component').then(
             (m) => m.AuditLogDetailComponent,
+          ),
+      },
+      {
+        path: 'admin/incidents',
+        title: 'Incidentes confidenciales',
+        canActivate: [rolesGuard],
+        data: { roles: ['ADMIN'] as Role[] },
+        loadComponent: () =>
+          import('./features/admin/incident-list/incident-list.component').then(
+            (m) => m.IncidentListComponent,
+          ),
+      },
+      {
+        path: 'admin/reviewers',
+        title: 'Padrón de revisores',
+        canActivate: [rolesGuard],
+        data: { roles: ['ADMIN'] as Role[] },
+        loadComponent: () =>
+          import('./features/admin/reviewer-roster/reviewer-roster.component').then(
+            (m) => m.ReviewerRosterComponent,
+          ),
+      },
+      {
+        path: 'admin/areas',
+        title: 'Carreras',
+        canActivate: [rolesGuard],
+        data: { roles: ['ADMIN'] as Role[] },
+        loadComponent: () =>
+          import('./features/admin/area-catalog/area-catalog.component').then(
+            (m) => m.AreaCatalogComponent,
           ),
       },
       {

@@ -1,3 +1,4 @@
+import { areaNames } from '../../../core/models/area.model';
 import { DatePipe } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
@@ -51,6 +52,7 @@ const INSTITUTIONAL_OFFSET = '-0500';
   styleUrl: './assignment-detail.component.scss',
 })
 export class AssignmentDetailComponent {
+  protected readonly areaNames = areaNames;
   private readonly service = inject(ReviewerService);
   private readonly route = inject(ActivatedRoute);
 
@@ -89,7 +91,7 @@ export class AssignmentDetailComponent {
   protected onLeakReported(): void {
     this.leakOpen.set(false);
     this.leakNotice.set(
-      'Reporte confidencial enviado. Solo el Editor lo verá y su evaluación no cambió.',
+      'Reporte confidencial enviado. Solo el Administrador lo verá y su evaluación no cambió.',
     );
   }
 

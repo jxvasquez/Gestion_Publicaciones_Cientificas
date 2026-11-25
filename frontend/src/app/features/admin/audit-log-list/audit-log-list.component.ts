@@ -14,9 +14,9 @@ import {
   resultLabel,
   shortHash,
   toAuditFilters,
+  actorRoleLabel,
 } from '../../../core/models/audit.model';
 import { Paginated } from '../../../core/models/paginated.model';
-import { ROLE_LABELS } from '../../../core/models/role.model';
 import { AuditService } from '../../../core/services/audit.service';
 import { EmptyStateComponent } from '../../../shared/components/empty-state.component';
 import { ErrorStateComponent } from '../../../shared/components/error-state.component';
@@ -108,7 +108,7 @@ export class AuditLogListComponent {
   }
 
   protected role(row: AuditEvent): string {
-    return row.actor_role ? ROLE_LABELS[row.actor_role] : '—';
+    return actorRoleLabel(row.actor_role);
   }
 
   protected action(row: AuditEvent): string {

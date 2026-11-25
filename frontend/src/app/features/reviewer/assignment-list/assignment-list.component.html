@@ -8,6 +8,12 @@
     </p>
   </header>
 
+  @if (flash) {
+    <p class="callout callout--success" role="status">{{ flash }}</p>
+  }
+
+  <app-reviewer-standing />
+
   @switch (viewState()) {
     @case ('loading') {
       <app-loading-spinner label="Cargando asignaciones…" />
@@ -28,7 +34,7 @@
               <tr>
                 <th scope="col">Manuscrito</th>
                 <th scope="col">Título</th>
-                <th scope="col">Área</th>
+                <th scope="col">Carreras</th>
                 <th scope="col">Versión</th>
                 <th scope="col">Fecha límite</th>
                 <th scope="col">Estado</th>
@@ -47,7 +53,7 @@
                     }
                   </td>
                   <td class="assignments__title">{{ row.manuscript_title || 'Sin título' }}</td>
-                  <td>{{ row.area }}</td>
+                  <td>{{ areaNames(row.areas) }}</td>
                   <td>
                     v{{ row.version_number }}
                     <span class="assignments__meta">Ronda {{ row.round_number }}</span>

@@ -1,0 +1,145 @@
+<section aria-labelledby="area-catalog-title">
+  <header class="list-header">
+    <h1 id="area-catalog-title">Carreras</h1>
+    <p class="list-header__count" role="status">
+      @if (viewState() === 'ready') {
+        {{ areas().length }} {{ areas().length === 1 ? 'carrera' : 'carreras' }}
+      }
+    </p>
+  </header>
+
+  <p class="note" role="note">
+    Las carreras del catálogo son las únicas que los Autores y los revisores pueden usar. El
+    sistema asigna revisores por coincidencia exacta de carrera.
+  </p>
+
+  <form class="card new-area" novalidate (submit)="$event.preventDefault(); create()">
+    <label for="new-area-name">Nueva carrera</label>
+    <div class="new-area__row">
+      <input
+        id="new-area-name"
+        type="text"
+        maxlength="120"
+        autocomplete="off"
+        [ngModel]="newName()"
+        (ngModelChange)="newName.set($event)"
+        name="name"
+      />
+      <button type="submit" class="btn btn--primary" [disabled]="creating()">
+        {{ creating() ? 'Creando…' : 'Crear carrera' }}
+      </button>
+    </div>
+  </form>
+
+  @if (notice()) {
+    <p class="callout callout--success" role="status">{{ notice() }}</p>
+  }
+  @if (actionError()) {
+    <p class="callout callout--error" role="alert">{{ actionError() }}</p>
+  }
+
+  @switch (viewState()) {
+    @case ('loading') {
+      <app-loading-spinner label="Cargando carreras…" />
+    }
+    @case ('error') {
+      <app-error-state [message]="error()?.userMessage ?? ''" (retry)="load()" />
+    }
+    @default {
+      @if (areas().length === 0) {
+        <app-empty-state message="Todavía no hay carreras en el catálogo." />
+      } @else {
+        <div class="card table-wrap" role="region" aria-label="Tabla de carreras" tabindex="0">
+          <table class="areas">
+            <caption class="visually-hidden">
+              Catálogo de carreras
+            </caption>
+            <thead>
+              <tr>
+                <th scope="col">Carrera</th>
+                <th scope="col">Código</th>
+                <th scope="col">Manuscritos</th>
+                <th scope="col">Revisores</th>
+                <th scope="col">Estado</th>
+                <th scope="col">Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (area of areas(); track area.code) {
+                <tr>
+                  <td>
+                    @if (editing() === area.code) {
+                      <label class="visually-hidden" [for]="'name-' + area.code">
+                        Nombre de {{ area.name }}
+                      </label>
+                      <input
+                        [id]="'name-' + area.code"
+                        type="text"
+                        maxlength="120"
+                        [ngModel]="draftName()"
+                        (ngModelChange)="draftName.set($event)"
+                        [name]="'name-' + area.code"
+                        (keydown.escape)="cancelEdit()"
+                      />
+                    } @else {
+                      {{ area.name }}
+                    }
+                  </td>
+                  <td>
+                    <code>{{ area.code }}</code>
+                  </td>
+                  <td>{{ area.manuscripts }}</td>
+                  <td>{{ area.reviewers }}</td>
+                  <td>
+                    <span class="badge" [class.badge--success]="area.is_active" [class.badge--neutral]="!area.is_active">
+                      {{ area.is_active ? 'Activa' : 'Inactiva' }}
+                    </span>
+                  </td>
+                  <td>
+                    <div class="areas__actions">
+                      @if (editing() === area.code) {
+                        <button type="button" class="btn btn--primary" (click)="saveName(area)">
+                          Guardar
+                        </button>
+                        <button type="button" class="btn btn--ghost" (click)="cancelEdit()">
+                          Cancelar
+                        </button>
+                      } @else {
+                        <button
+                          type="button"
+                          class="btn btn--ghost"
+                          [attr.aria-label]="'Renombrar ' + area.name"
+                          (click)="startEdit(area)"
+                        >
+                          Renombrar
+                        </button>
+                        <button
+                          type="button"
+                          [class]="area.is_active ? 'btn btn--danger' : 'btn btn--ghost'"
+                          [attr.aria-label]="(area.is_active ? 'Desactivar ' : 'Activar ') + area.name"
+                          (click)="askToggle(area)"
+                        >
+                          {{ area.is_active ? 'Desactivar' : 'Activar' }}
+                        </button>
+                      }
+                    </div>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    }
+  }
+
+  <app-confirm-dialog
+    [title]="pending()?.activate ? 'Activar carrera' : 'Desactivar carrera'"
+    [message]="confirmMessage()"
+    [confirmLabel]="pending()?.activate ? 'Activar' : 'Desactivar'"
+    [destructive]="pending()?.activate === false"
+    [open]="pending() !== null"
+    (confirmed)="confirmToggle()"
+    (cancelled)="pending.set(null)"
+  />
+</section>

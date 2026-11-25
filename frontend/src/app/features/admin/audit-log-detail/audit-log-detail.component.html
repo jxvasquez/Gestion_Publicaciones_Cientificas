@@ -109,10 +109,10 @@
               aria-haspopup="dialog"
               (click)="requestCorrection()"
             >
-              Habilitar corrección
+              Corregir veredicto
             </button>
             <p class="correction__hint">
-              La decisión anterior se conserva; el Editor registrará una nueva.
+              La decisión anterior se conserva; el Administrador registra la nueva decisión.
             </p>
           </div>
 
@@ -121,14 +121,14 @@
             [verdict]="entry.verdict ?? null"
             [busy]="correctionBusy()"
             [error]="correctionError()"
-            (confirmed)="authorizeCorrection($event)"
+            (confirmed)="correct($event)"
             (cancelled)="closeCorrection()"
           />
         }
 
         @if (correctionDone()) {
           <p class="correction__done" role="status">
-            Corrección habilitada. El Editor podrá registrar una nueva decisión; la anterior se
+            Veredicto corregido. La nueva decisión es la vigente; la anterior se
             conserva.
           </p>
         }

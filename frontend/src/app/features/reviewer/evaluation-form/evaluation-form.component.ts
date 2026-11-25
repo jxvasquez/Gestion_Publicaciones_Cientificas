@@ -1,22 +1,28 @@
 import { DatePipe } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { forkJoin, map, of, switchMap, tap } from 'rxjs';
 
 import { UnsavedChangesAware } from '../../../core/auth/unsaved-changes.guard';
 import { ApiError } from '../../../core/models/api-error.model';
-import { Recommendation } from '../../../core/models/editor.model';
 import {
   COMMENT_MAX_LENGTH,
+  ConflictResult,
   EvaluationSnapshot,
-  RECOMMENDATION_OPTIONS,
-  ReviewerAssignmentDetail,
-  ReviewerEvaluation,
-  SCORE_CRITERIA,
   MAX_SCORE,
   MIN_SCORE,
-  ScoreField,
+  ReviewerAssignmentDetail,
+  ReviewerEvaluation,
 } from '../../../core/models/reviewer.model';
+import {
+  JUSTIFICATION_MIN_LENGTH,
+  RECOMMENDATION_OPTIONS,
+  RUBRIC_CRITERIA,
+  RUBRIC_KEYS,
+  Recommendation,
+  RubricKey,
+  characterCount,
+} from '../../../core/models/rubric.model';
 import { ReviewerService } from '../../../core/services/reviewer.service';
 import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialog.component';
 import { ErrorStateComponent } from '../../../shared/components/error-state.component';
@@ -30,6 +36,7 @@ import {
   EvaluationField,
   EvaluationValues,
   isDirty,
+  justificationRequired,
   serverFieldErrors,
   submitErrors,
   toDraft,
@@ -41,7 +48,7 @@ const INSTITUTIONAL_OFFSET = '-0500';
 
 const SUBMITTED_NOTICE = 'Esta evaluación ya fue enviada y no admite cambios.';
 const CONFLICT_NOTICE =
-  'Declaró un conflicto de interés: la evaluación está bloqueada y el Editor decidirá cómo continuar.';
+  'Declaró un conflicto de interés: la asignación se liberó sin penalización y la evaluación está bloqueada.';
 const OVERDUE_NOTICE =
   'El plazo de evaluación venció. Su texto sigue en pantalla y el último borrador guardado se conserva, pero ya no puede guardarse ni enviarse.';
 
@@ -50,11 +57,12 @@ let nextId = 0;
 /**
  * Formulario de evaluación estructurado (plan sección 3.5, HU-15 y HU-16).
  *
- * * Cinco puntajes (1–5), recomendación, comentarios para el Autor,
- *   comentarios confidenciales y la declaración de no tener conflicto de
- *   interés. El borrador se guarda con huecos y es privado: no se comparte
- *   con el Autor. El envío final exige todo salvo los comentarios
- *   confidenciales y es irreversible, por eso pide confirmación.
+ * * Rúbrica de cinco criterios (1–5, cada nivel con su nombre y descriptor), uno de
+ *   cuatro dictámenes, comentarios para el Autor y la declaración de no tener
+ *   conflicto de interés. Los comentarios exigen 100 caracteres cuando algún criterio
+ *   es 3 o menos o el dictamen es Revisión mayor o Rechazar (contador visible solo
+ *   entonces). El borrador se guarda con huecos y es privado. El envío final es
+ *   irreversible, por eso pide confirmación.
  * * Bloqueo optimista: el `ETag` de la última lectura viaja en `If-Match`.
  *   Un `409` por versión no borra nada: el Revisor elige entre usar lo
  *   guardado o conservar su texto sobre la versión más reciente. Un `409`
@@ -85,21 +93,19 @@ let nextId = 0;
 export class EvaluationFormComponent implements UnsavedChangesAware {
   private readonly service = inject(ReviewerService);
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
 
   protected readonly assignmentId = this.route.snapshot.paramMap.get('id') ?? '';
   protected readonly offset = INSTITUTIONAL_OFFSET;
-  protected readonly criteria = SCORE_CRITERIA;
+  protected readonly criteria = RUBRIC_CRITERIA;
   protected readonly recommendations = RECOMMENDATION_OPTIONS;
   protected readonly min = MIN_SCORE;
   protected readonly max = MAX_SCORE;
-  protected readonly scale = Array.from(
-    { length: MAX_SCORE - MIN_SCORE + 1 },
-    (_, i) => MIN_SCORE + i,
-  );
   protected readonly commentMax = COMMENT_MAX_LENGTH;
+  protected readonly justificationMin = JUSTIFICATION_MIN_LENGTH;
 
   private readonly uid = nextId++;
-  protected readonly confidentialId = `evaluation-confidential-${this.uid}`;
+  protected readonly counterId = `evaluation-counter-${this.uid}`;
   protected readonly declarationId = `evaluation-declaration-${this.uid}`;
   protected readonly declarationErrorId = `evaluation-declaration-error-${this.uid}`;
 
@@ -162,6 +168,13 @@ export class EvaluationFormComponent implements UnsavedChangesAware {
 
   protected readonly dirty = computed(() => isDirty(this.values(), this.saved()));
 
+  /** El contador «N/100» solo aparece cuando FR-019 exige justificación. */
+  protected readonly needsJustification = computed(() => justificationRequired(this.values()));
+
+  protected readonly commentLength = computed(() =>
+    characterCount(this.values().comments_for_author),
+  );
+
   protected readonly canSave = computed(() => !this.readOnly() && !this.stale() && this.dirty());
 
   protected readonly canSubmit = computed(() => !this.readOnly() && !this.stale());
@@ -192,7 +205,7 @@ export class EvaluationFormComponent implements UnsavedChangesAware {
   protected readonly summary = computed(() => {
     const errors = this.errors();
     const order: (EvaluationField | 'declaration')[] = [
-      ...SCORE_CRITERIA.map((c) => c.field),
+      ...RUBRIC_KEYS,
       'recommendation',
       'comments_for_author',
       'declaration',
@@ -248,9 +261,10 @@ export class EvaluationFormComponent implements UnsavedChangesAware {
 
   protected describedBy(field: EvaluationField): string | null {
     const ids = [
-      field === 'comments_for_author' || SCORE_CRITERIA.some((c) => c.field === field)
+      field === 'comments_for_author' || RUBRIC_KEYS.includes(field as RubricKey)
         ? this.hintId(field)
         : null,
+      field === 'comments_for_author' && this.needsJustification() ? this.counterId : null,
       this.errorOf(field) ? this.errorId(field) : null,
     ].filter((id) => id !== null);
     return ids.length > 0 ? ids.join(' ') : null;
@@ -261,7 +275,7 @@ export class EvaluationFormComponent implements UnsavedChangesAware {
     document.getElementById(id)?.focus();
   }
 
-  protected setScore(field: ScoreField, score: number): void {
+  protected setScore(field: RubricKey, score: number): void {
     this.edit({ ...this.values(), [field]: score }, field);
   }
 
@@ -269,15 +283,15 @@ export class EvaluationFormComponent implements UnsavedChangesAware {
     this.edit({ ...this.values(), recommendation: value }, 'recommendation');
   }
 
-  protected setText(field: 'comments_for_author' | 'confidential_comments', value: string): void {
-    this.edit({ ...this.values(), [field]: value }, field);
+  protected setText(value: string): void {
+    this.edit({ ...this.values(), comments_for_author: value }, 'comments_for_author');
   }
 
-  private edit(next: EvaluationValues, field: EvaluationField | 'confidential_comments'): void {
+  private edit(next: EvaluationValues, field: EvaluationField): void {
     this.values.set(next);
     this.savedNotice.set('');
     this.actionError.set('');
-    if (field !== 'confidential_comments' && this.serverErrors()[field]) {
+    if (this.serverErrors()[field]) {
       this.serverErrors.update(({ [field]: _removed, ...rest }) => rest);
     }
   }
@@ -347,22 +361,23 @@ export class EvaluationFormComponent implements UnsavedChangesAware {
   }
 
   /**
-   * El servidor confirmó el conflicto: la evaluación queda bloqueada. El
-   * texto escrito sigue a la vista (solo lectura) y no se descarta.
+   * El servidor liberó la asignación sin penalización: ya no es del Revisor, así que
+   * vuelve a la bandeja con el aviso (el detalle respondería 404).
    */
-  protected onConflictDeclared(snapshot: EvaluationSnapshot): void {
+  protected onConflictDeclared(_result: ConflictResult): void {
     this.conflictOpen.set(false);
-    this.evaluation.set(snapshot.evaluation);
-    this.etag.set(snapshot.etag);
-    this.stale.set(false);
-    this.actionError.set('');
-    this.savedNotice.set('');
+    void this.router.navigate(['/app/reviewer/assignments'], {
+      state: {
+        notice:
+          'Conflicto de interés declarado: la asignación se liberó sin penalización y se cubrirá con otro revisor.',
+      },
+    });
   }
 
   protected onLeakReported(): void {
     this.leakOpen.set(false);
     this.leakNotice.set(
-      'Reporte confidencial enviado. Solo el Editor lo verá y su evaluación no cambió.',
+      'Reporte confidencial enviado. Solo el Administrador lo verá y su evaluación no cambió.',
     );
   }
 
@@ -429,14 +444,14 @@ function emptyEvaluation(): ReviewerEvaluation {
   return {
     id: null,
     status: 'DRAFT',
-    originality_score: null,
-    methodology_score: null,
-    clarity_score: null,
-    relevance_score: null,
-    ethics_score: null,
+    rubric_version: 2,
+    scientific_contribution: null,
+    methodological_rigor: null,
+    literature_grounding: null,
+    results_conclusions: null,
+    academic_writing: null,
     recommendation: null,
     comments_for_author: null,
-    confidential_comments: null,
     conflict_declared: false,
     submitted_at: null,
   };

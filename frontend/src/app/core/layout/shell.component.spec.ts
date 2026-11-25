@@ -53,7 +53,7 @@ describe('ShellComponent', () => {
         last_name: 'López',
         full_name: 'Ana López',
       },
-      roles: ['AUTHOR', 'EDITOR'],
+      roles: ['AUTHOR', 'REVIEWER'],
       access: 'access-1',
     });
 
@@ -64,7 +64,7 @@ describe('ShellComponent', () => {
 
     expect(element.textContent).toContain('Ana López');
     expect(element.textContent).toContain('Autor');
-    expect(element.textContent).toContain('Editor');
+    expect(element.textContent).toContain('Revisor');
   });
 
   it('no existe selector ni conmutador de rol', async () => {
@@ -87,10 +87,10 @@ describe('ShellComponent', () => {
     const element = fixture.nativeElement as HTMLElement;
 
     expect(element.textContent).toContain('Mis manuscritos');
-    expect(element.textContent).toContain('Nuevos envíos');
-    // Sin apartados de roles inexistentes.
-    expect(element.textContent).not.toContain('Mis asignaciones');
+    expect(element.textContent).toContain('Mis asignaciones');
+    // Sin apartados de roles inexistentes (ni del Editor, que ya no existe).
     expect(element.textContent).not.toContain('Auditoría');
+    expect(element.textContent).not.toContain('Nuevos envíos');
   });
 
   it('con roles retirados los módulos desaparecen en la misma sesión', async () => {
@@ -108,12 +108,12 @@ describe('ShellComponent', () => {
         last_name: 'López',
         full_name: 'Ana López',
       },
-      roles: ['EDITOR'],
+      roles: ['REVIEWER'],
       access: 'access-1',
     });
     await fixture.whenStable();
     expect(element().textContent).not.toContain('Mis manuscritos');
-    expect(element().textContent).toContain('Nuevos envíos');
+    expect(element().textContent).toContain('Mis asignaciones');
   });
 
   it('muestra la campana con etiqueta accesible y abre los avisos', async () => {

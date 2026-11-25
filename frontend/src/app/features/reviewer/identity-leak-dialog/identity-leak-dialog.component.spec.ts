@@ -84,13 +84,13 @@ describe('IdentityLeakDialogComponent', () => {
     await fixture.whenStable();
   };
 
-  it('se presenta como confidencial: solo el Editor lo ve y el Autor no se entera', async () => {
+  it('se presenta como confidencial: solo el Administrador lo ve y el Autor no se entera', async () => {
     await render();
 
     expect(dialog().hasAttribute('open')).toBe(true);
     const note = text(root().querySelector('[role="note"]'));
     expect(note).toContain('Reporte confidencial');
-    expect(note).toContain('Solo lo verá el Editor');
+    expect(note).toContain('Solo lo verá el Administrador');
     expect(note).toContain('El Autor no será informado');
     expect(note).toContain('su evaluación no cambia');
   });

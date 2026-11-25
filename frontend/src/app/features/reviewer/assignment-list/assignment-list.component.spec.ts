@@ -14,6 +14,8 @@ import { ReviewerAssignmentRow } from '../../../core/models/reviewer.model';
 import { errorEnvelope } from '../../author/testing/manuscript.fixtures';
 import { buildAssignmentPage, buildAssignmentRow } from '../testing/reviewer.fixtures';
 import { AssignmentListComponent, PAGE_SIZE } from './assignment-list.component';
+import { StandingStubComponent } from '../../../core/testing/stubs';
+import { ReviewerStandingComponent } from '../reviewer-standing/reviewer-standing.component';
 
 @Component({ template: '' })
 class BlankComponent {}
@@ -26,6 +28,10 @@ describe('AssignmentListComponent', () => {
   let router: Router;
 
   beforeEach(() => {
+    TestBed.overrideComponent(AssignmentListComponent, {
+      remove: { imports: [ReviewerStandingComponent] },
+      add: { imports: [StandingStubComponent] },
+    });
     TestBed.configureTestingModule({
       providers: [
         provideRouter([
@@ -80,7 +86,7 @@ describe('AssignmentListComponent', () => {
         buildAssignmentRow({
           manuscript_code: 'GPC-2026-000007',
           manuscript_title: 'Suelos del páramo',
-          area: 'Edafología',
+          areas: [{ code: 'edafologia', name: 'Edafología' }],
           version_number: 2,
           round_number: 1,
           due_at: '2026-11-11T15:00:00Z',

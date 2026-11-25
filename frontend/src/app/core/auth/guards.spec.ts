@@ -101,7 +101,7 @@ describe('rolesGuard', () => {
     TestBed.inject(AuthStore).setSession(SESSION);
     const result = TestBed.runInInjectionContext(() =>
       rolesGuard(
-        routeWithData({ roles: ['AUTHOR', 'EDITOR'] }),
+        routeWithData({ roles: ['AUTHOR', 'ADMIN'] }),
         stateWithUrl('/app/author/manuscripts'),
       ),
     );
@@ -209,15 +209,15 @@ describe('rutas internas con guards (integración)', () => {
     const router = TestBed.inject(Router);
     TestBed.inject(AuthStore).setSession({
       user: USER,
-      roles: ['AUTHOR', 'EDITOR'],
+      roles: ['AUTHOR', 'REVIEWER'],
       access: 'access-1',
     });
 
     expect(await router.navigateByUrl('/app/author/manuscripts')).toBe(true);
     expect(router.url).toBe('/app/author/manuscripts');
 
-    expect(await router.navigateByUrl('/app/editor/submissions')).toBe(true);
-    expect(router.url).toBe('/app/editor/submissions');
+    expect(await router.navigateByUrl('/app/reviewer/assignments')).toBe(true);
+    expect(router.url).toBe('/app/reviewer/assignments');
 
     // Sin el rol ADMIN: 403 visual, no 404 ni login. El guard redirige,
     // así que la navegación al destino original no se completa.

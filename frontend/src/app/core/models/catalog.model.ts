@@ -1,3 +1,5 @@
+import { AcademicArea } from './area.model';
+
 import { ParamMap } from '@angular/router';
 
 /**
@@ -19,7 +21,7 @@ export interface CatalogArticle {
   authors: PublicAuthor[];
   abstract: string;
   keywords: string[];
-  area: string;
+  areas: AcademicArea[];
   language: string;
   published_at: string;
   version_number: number;

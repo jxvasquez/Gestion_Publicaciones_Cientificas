@@ -75,6 +75,23 @@ describe('AssignmentDetailComponent', () => {
     );
 
   describe('contenido', () => {
+    it('lista todas las carreras del manuscrito', async () => {
+      const base = buildAssignmentDetail();
+      const { element } = await open(
+        buildAssignmentDetail({
+          manuscript: {
+            ...base.manuscript,
+            areas: [
+              { code: 'agronomia', name: 'Agronomía' },
+              { code: 'derecho', name: 'Derecho' },
+            ],
+          },
+        }),
+      );
+
+      expect(text(element.querySelector('.data'))).toContain('Agronomía, Derecho');
+    });
+
     it('muestra código, título, resumen, área, ronda, versión y plazo', async () => {
       const dueAt = isoFromNow(7);
       const { element } = await open(buildAssignmentDetail({ due_at: dueAt }));

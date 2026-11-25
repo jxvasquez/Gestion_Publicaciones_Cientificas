@@ -44,7 +44,7 @@ const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
  *   `archived`, `page`): recargar o compartir el enlace conserva la
  *   vista. Un parámetro manipulado a mano que no es válido se ignora
  *   en lugar de provocar un `400`.
- * * La edición solo se ofrece en `DRAFT` o `REQUIRES_CORRECTIONS`.
+ * * La edición solo se ofrece en `DRAFT` o `CHANGES_REQUESTED`.
  */
 @Component({
   selector: 'app-manuscript-list',

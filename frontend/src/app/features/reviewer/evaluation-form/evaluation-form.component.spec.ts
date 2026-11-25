@@ -6,7 +6,7 @@ import {
 } from '@angular/common/http/testing';
 import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { Router, provideRouter } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { vi } from 'vitest';
 
@@ -149,15 +149,18 @@ describe('EvaluationFormComponent', () => {
 
       const legends = Array.from(element.querySelectorAll('form legend')).map((l) => text(l));
       expect(legends).toEqual([
-        'Originalidad',
-        'Metodología',
-        'Claridad',
-        'Relevancia',
-        'Ética',
-        'Recomendación al Editor',
+        'Pertinencia y Contribución Científica',
+        'Rigor Metodológico y Reproducibilidad',
+        'Estado del Arte y Sustento Bibliográfico',
+        'Validez de Resultados y Conclusiones',
+        'Redacción Académica y Estructura Formal',
+        'Dictamen sobre el manuscrito',
       ]);
-      expect(element.querySelectorAll('form input[type="radio"]').length).toBe(5 * 5 + 3);
-      expect(element.querySelectorAll('form textarea').length).toBe(2);
+      expect(element.querySelectorAll('form input[type="radio"]').length).toBe(5 * 5 + 4);
+      expect(element.querySelectorAll('form textarea').length).toBe(1);
+      // Cada opción muestra su nivel, su nombre y su descriptor.
+      expect(text(element)).toContain('1 · Deficiente.');
+      expect(text(element)).toContain('5 · Excelente.');
       expect(text(element)).toContain('Evaluación: Efecto del clima en cultivos andinos');
       expect(text(element)).toContain('Su borrador es privado');
       expect(element.querySelector('app-deadline-countdown')).not.toBeNull();
@@ -166,12 +169,12 @@ describe('EvaluationFormComponent', () => {
     it('carga el borrador guardado en los controles', async () => {
       const { element } = await open(buildCompleteEvaluation(), '"3"');
 
-      expect(radio(element, 'originality_score', '4').checked).toBe(true);
-      expect(radio(element, 'methodology_score', '3').checked).toBe(true);
-      expect(radio(element, 'recommendation', 'REQUIRES_CORRECTIONS').checked).toBe(true);
-      const areas = element.querySelectorAll<HTMLTextAreaElement>('textarea');
-      expect(areas[0].value).toBe('Aclarar la metodología.');
-      expect(areas[1].value).toBe('Revisar la muestra.');
+      expect(radio(element, 'scientific_contribution', '4').checked).toBe(true);
+      expect(radio(element, 'methodological_rigor', '4').checked).toBe(true);
+      expect(radio(element, 'recommendation', 'MINOR_REVISION').checked).toBe(true);
+      const areas = element.querySelectorAll<HTMLTextAreaElement>('form textarea');
+      expect(areas).toHaveLength(1);
+      expect(areas[0]!.value).toBe('Aclarar la metodología.');
     });
 
     it('si la carga falla explica el error y permite reintentar', async () => {
@@ -196,26 +199,25 @@ describe('EvaluationFormComponent', () => {
   describe('borrador', () => {
     it('se guarda sin completar los demás campos y no pide la declaración', async () => {
       const view = await open();
-      await choose(view, 'originality_score', '4');
+      await choose(view, 'scientific_contribution', '4');
 
       button(view.element, 'Guardar borrador').click();
       await view.settle();
       const request = flushSave(
         '"0"',
-        buildReviewerEvaluation({ id: 'ev-1', originality_score: 4 }),
+        buildReviewerEvaluation({ id: 'ev-1', scientific_contribution: 4 }),
         '"1"',
       );
       await view.settle();
 
       expect(request.request.body).toEqual({
-        originality_score: 4,
-        methodology_score: null,
-        clarity_score: null,
-        relevance_score: null,
-        ethics_score: null,
+        scientific_contribution: 4,
+        methodological_rigor: null,
+        literature_grounding: null,
+        results_conclusions: null,
+        academic_writing: null,
         recommendation: null,
         comments_for_author: null,
-        confidential_comments: null,
       });
       expect(text(view.element)).toContain('Borrador guardado.');
       expect(view.element.querySelector('.field__error')).toBeNull();
@@ -256,7 +258,7 @@ describe('EvaluationFormComponent', () => {
       const { element } = await open();
 
       expect(text(element)).toContain('no se comparte con el Autor');
-      expect(text(element)).toContain('solo los ve el Editor');
+      expect(text(element)).toContain('reporte al Administrador');
     });
 
     it('avisa de cambios sin guardar hasta que se guardan', async () => {
@@ -308,8 +310,9 @@ describe('EvaluationFormComponent', () => {
       http.expectNone(SUBMIT);
     });
 
-    it('los comentarios confidenciales son opcionales', async () => {
-      const view = await open(buildCompleteEvaluation({ confidential_comments: null }), '"2"');
+    it('con todo alto y un dictamen leve basta un comentario breve y no hay campo confidencial', async () => {
+      const view = await open(buildCompleteEvaluation({ comments_for_author: 'Bien.' }), '"2"');
+      expect(view.element.textContent).not.toContain('confidenciales para el Editor');
       await declare(view);
 
       button(view.element, 'Enviar evaluación').click();
@@ -354,7 +357,7 @@ describe('EvaluationFormComponent', () => {
       expect(text(view.element)).toContain('Evaluación enviada');
       expect(text(view.element)).toContain('27/10/2026 10:00');
       expect(view.element.querySelector('textarea')!.readOnly).toBe(true);
-      expect(radio(view.element, 'ethics_score', '5').disabled).toBe(true);
+      expect(radio(view.element, 'academic_writing', '5').disabled).toBe(true);
       expect(view.component.hasUnsavedChanges()).toBe(false);
     });
 
@@ -421,7 +424,7 @@ describe('EvaluationFormComponent', () => {
 
       http.expectOne(SUBMIT).flush(
         errorEnvelope('VALIDATION_ERROR', 'Complete la evaluación antes de enviarla.', {
-          clarity_score: ['Este campo es obligatorio para enviar la evaluación.'],
+          literature_grounding: ['Este campo es obligatorio para enviar la evaluación.'],
         }),
         { status: 400, statusText: 'Bad Request' },
       );
@@ -555,7 +558,7 @@ describe('EvaluationFormComponent', () => {
       expect(view.element.querySelectorAll<HTMLTextAreaElement>('textarea')[0].value).toBe(
         'Aclarar la metodología.',
       );
-      expect(radio(view.element, 'clarity_score', '5').checked).toBe(true);
+      expect(radio(view.element, 'literature_grounding', '5').checked).toBe(true);
     });
 
     it('409 de estado (por ejemplo, ya enviada): bloquea con el mensaje del servidor', async () => {
@@ -692,7 +695,7 @@ describe('EvaluationFormComponent', () => {
       );
     });
 
-    it('declarar el conflicto bloquea el formulario y deja el texto a la vista', async () => {
+    it('declarar el conflicto libera la asignación y devuelve a la bandeja con el aviso', async () => {
       const view = await open(buildCompleteEvaluation(), '"2"');
       await type(view, 0, 'Texto sin guardar');
       button(view.element, 'Declarar conflicto de interés').click();
@@ -705,20 +708,11 @@ describe('EvaluationFormComponent', () => {
       await view.settle();
       http
         .expectOne((r) => r.url === '/api/v1/reviewer/assignments/a-1/conflict/')
-        .flush(buildCompleteEvaluation({ conflict_declared: true }), { headers: { ETag: '"3"' } });
+        .flush({ assignment: 'a-1', status: 'REVOKED', release_cause: 'CONFLICT_OF_INTEREST' });
       await view.settle();
 
-      expect(dialog.hasAttribute('open')).toBe(false);
-      expect(text(view.element)).toContain('Declaró un conflicto de interés');
-      const area = view.element.querySelector('textarea')!;
-      expect(area.readOnly).toBe(true);
-      expect(area.value).toBe('Texto sin guardar');
-      expect(radio(view.element, 'clarity_score', '5').disabled).toBe(true);
-      expect(button(view.element, 'Guardar borrador').disabled).toBe(true);
-      expect(button(view.element, 'Enviar evaluación').disabled).toBe(true);
-      expect(text(view.element.querySelector('.special'))).not.toContain(
-        'Declarar conflicto de interés',
-      );
+      // La asignación ya no es suya (el detalle respondería 404): vuelve a la bandeja.
+      expect(TestBed.inject(Router).url).toBe('/app/reviewer/assignments');
     });
 
     it('si el servidor no lo confirma, el formulario sigue editable', async () => {
@@ -737,7 +731,7 @@ describe('EvaluationFormComponent', () => {
       expect(dialog.hasAttribute('open')).toBe(true);
       expect(text(dialog)).toContain('No fue posible conectar');
       expect(view.element.querySelector('textarea')!.readOnly).toBe(false);
-      expect(text(view.element)).not.toContain('Declaró un conflicto de interés');
+      expect(TestBed.inject(Router).url).not.toBe('/app/reviewer/assignments');
     });
 
     it('reportar una fuga avisa al Revisor sin tocar la evaluación', async () => {

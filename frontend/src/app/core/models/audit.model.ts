@@ -1,6 +1,6 @@
 import { ParamMap } from '@angular/router';
 
-import { Role } from './role.model';
+import { ROLE_LABELS, Role } from './role.model';
 
 /**
  * Auditoría global del Administrador (plan secciones 2.7 y 2.8, HU-17).
@@ -18,7 +18,8 @@ export interface AuditEvent {
   id: string;
   occurred_at: string;
   actor_id: string | null;
-  actor_role: Role | null;
+  /** `null` es el sistema; `EDITOR` es el rol retirado, que solo sobrevive en el historial. */
+  actor_role: string | null;
   action: string;
   entity_type: string;
   entity_id: string | null;
@@ -39,30 +40,52 @@ export interface AuditVerdict {
   decided_at: string;
 }
 
+/** Etiqueta del actor: «Sistema» sin actor y «Editor (rol retirado)» para el rol heredado. */
+export function actorRoleLabel(role: string | null): string {
+  if (role === null) {
+    return 'Sistema';
+  }
+  if (role === 'EDITOR') {
+    return 'Editor (rol retirado)';
+  }
+  return ROLE_LABELS[role as Role] ?? role;
+}
+
 /**
  * Detalle de un evento. `can_authorize_correction` solo llega en los eventos
  * de veredicto y lo decide el backend con la misma regla del endpoint de
- * autorización: la SPA nunca lo infiere.
+ * corrección: la SPA nunca lo infiere.
  */
 export interface AuditEventDetail extends AuditEvent {
   can_authorize_correction?: boolean;
   verdict?: AuditVerdict;
 }
 
-/** Máximos del motivo con que el Administrador habilita una corrección (el servidor aplica los mismos). */
+/** Límites del motivo con que el Administrador corrige un veredicto (el servidor aplica los mismos). */
 export const CORRECTION_REASON_MIN_LENGTH = 10;
 export const CORRECTION_REASON_MAX_LENGTH = 1000;
 
-/** Respuesta de `POST /api/v1/admin/verdicts/{id}/authorize-correction/`: sin autores, evaluaciones ni PDF. */
-export interface CorrectionAuthorized {
-  id: string;
-  verdict_id: string;
-  manuscript_code: string;
-  decision: string;
-  decided_at: string;
+/** Decisiones que el Administrador puede registrar al corregir. */
+export type CorrectionDecision = 'ACCEPTED' | 'REJECTED' | 'CHANGES_REQUESTED';
+
+/** Cuerpo de `POST /api/v1/admin/verdicts/{id}/correct/`. */
+export interface CorrectionRequest {
+  decision: CorrectionDecision;
   reason: string;
-  authorized_at: string;
-  is_active: boolean;
+  observations?: string;
+}
+
+/** Respuesta de la corrección: sin autores, evaluaciones ni PDF. */
+export interface CorrectionResult {
+  manuscript_code: string;
+  verdict: {
+    id: string;
+    decision: string;
+    origin: string;
+    created_at: string;
+    previous_verdict: string;
+  };
+  correction: { id: string; reason: string; authorized_at: string; consumed_at: string };
 }
 
 /** Filtros del listado; todos opcionales y combinables. */
@@ -93,15 +116,25 @@ export const AUDIT_ACTIONS: ReadonlyArray<{ value: string; label: string }> = [
   { value: 'MANUSCRIPT_VERSION_SUBMITTED', label: 'Nueva versión enviada' },
   { value: 'MANUSCRIPT_WITHDRAWN', label: 'Manuscrito retirado' },
   { value: 'MANUSCRIPT_FILE_DOWNLOADED', label: 'Archivo del manuscrito descargado' },
-  { value: 'ASSIGNMENT_CREATED', label: 'Revisor asignado' },
-  { value: 'ASSIGNMENT_REVOKED', label: 'Asignación revocada' },
+  { value: 'ASSIGNMENT_CREATED', label: 'Revisor asignado (heredado)' },
+  { value: 'AUTO_ASSIGNMENT_CREATED', label: 'Revisor asignado por el sistema' },
+  { value: 'ASSIGNMENT_SLOT_UNFILLED', label: 'Cupo sin revisor elegible' },
+  { value: 'ASSIGNMENT_RELEASED', label: 'Asignación liberada' },
+  { value: 'ASSIGNMENT_REVOKED', label: 'Asignación revocada (heredado)' },
+  { value: 'RANKING_ADJUSTED', label: 'Ranking ajustado' },
+  { value: 'TIE_BREAK_STARTED', label: 'Desempate iniciado' },
+  { value: 'INCIDENT_DOCUMENT_VIEWED', label: 'Documento de incidente consultado' },
+  { value: 'REVIEWER_PROFILE_UPDATED', label: 'Perfil de revisor actualizado' },
+  { value: 'ACADEMIC_AREA_CREATED', label: 'Carrera creada' },
+  { value: 'ACADEMIC_AREA_UPDATED', label: 'Carrera modificada' },
+  { value: 'ROLE_REVOKED', label: 'Rol revocado' },
   { value: 'ASSIGNMENT_EXPIRED', label: 'Asignación vencida' },
   { value: 'EVALUATION_SUBMITTED', label: 'Evaluación enviada' },
   { value: 'CONFLICT_OF_INTEREST_DECLARED', label: 'Conflicto de interés declarado' },
   { value: 'IDENTITY_LEAK_REPORTED', label: 'Incidente reportado' },
   { value: 'INCIDENT_RESOLVED', label: 'Incidente resuelto' },
   { value: 'VERDICT_REGISTERED', label: 'Veredicto registrado' },
-  { value: 'VERDICT_CORRECTION_AUTHORIZED', label: 'Corrección de veredicto autorizada' },
+  { value: 'VERDICT_CORRECTION_AUTHORIZED', label: 'Corrección de veredicto autorizada (heredado)' },
   { value: 'VERDICT_CORRECTED', label: 'Veredicto corregido' },
   { value: 'CATALOG_DOCUMENT_DOWNLOADED', label: 'PDF del catálogo descargado' },
   { value: 'AUDIT_QUERIED', label: 'Auditoría consultada' },
@@ -131,7 +164,8 @@ const DETAIL_LABELS: Readonly<Record<string, string>> = {
 export const DECISION_LABELS: Readonly<Record<string, string>> = {
   ACCEPTED: 'Aceptado',
   REJECTED: 'Rechazado',
-  REQUIRES_CORRECTIONS: 'Requiere correcciones',
+  CHANGES_REQUESTED: 'Cambios solicitados',
+  REQUIRES_CORRECTIONS: 'Requiere correcciones (heredado)',
 };
 
 export function actionLabel(action: string): string {
