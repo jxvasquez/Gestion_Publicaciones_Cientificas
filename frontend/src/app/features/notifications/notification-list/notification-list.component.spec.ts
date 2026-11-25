@@ -25,7 +25,7 @@ describe('NotificationListComponent', () => {
         provideRouter([
           { path: 'app/notifications', component: NotificationListComponent },
           // Destino de los enlaces de los avisos de prueba.
-          { path: 'app/editor/submissions/:id', children: [] },
+          { path: 'app/admin/incidents', children: [] },
         ]),
         provideHttpClient(withInterceptors([authInterceptor, errorInterceptor])),
         provideHttpClientTesting(),

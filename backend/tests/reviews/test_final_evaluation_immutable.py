@@ -21,7 +21,6 @@ from tests.reviews.support import make_assignment, make_reviewer, submitted
 pytestmark = pytest.mark.django_db
 
 REVIEWER = "/api/v1/reviewer/assignments/"
-EDITOR = "/api/v1/editor/"
 FULL = {
     "scientific_contribution": 4,
     "methodological_rigor": 4,

@@ -23,7 +23,7 @@ Ejecute `POST /auth/login/` desde Swagger, copie `data.access` de la respuesta y
 | Aspecto | Regla |
 |---|---|
 | Prefijo y versión | Todo vive bajo `/api/v1/`. El health también se sirve sin versión en `/api/health/` (lo usan Docker y los scripts de operación). |
-| Recursos | Rutas por recurso en inglés (`/manuscripts/`, `/catalog/`, `/notifications/`). Los módulos por rol llevan prefijo (`/editor/`, `/reviewer/`, `/admin/`). |
+| Recursos | Rutas por recurso en inglés (`/manuscripts/`, `/catalog/`, `/notifications/`). Los módulos por rol llevan prefijo (`/reviewer/`, `/admin/`); ya no existe `/editor/`. |
 | Métodos | `GET` lee, `POST` crea o ejecuta una acción, `PUT` guarda un borrador, `PATCH` modifica parcialmente. No existe `DELETE` sobre recursos de negocio: el retiro es lógico. |
 | Formato | JSON (`application/json`); las cargas de PDF usan `multipart/form-data` con el archivo en el campo `file`. |
 | Fechas | ISO 8601 en la zona horaria institucional. |
@@ -124,7 +124,7 @@ Los errores internos responden un `500` genérico y **nunca** revelan trazas ni 
 | `VERSION_CONFLICT` | 409 | Cambió el recurso mientras se editaba (bloqueo optimista). |
 | `ASSIGNMENT_CONFLICT` | 409 | Ya hay una asignación activa. |
 | `VERDICT_CONFLICT` | 409 | Ya existe un veredicto para esa versión. |
-| `CORRECTION_NOT_AUTHORIZED` | 409 | Falta la habilitación del Administrador. |
+| `CORRECTION_NOT_AUTHORIZED` | 409 | El veredicto ya no es corregible (por ejemplo, ya fue sustituido por otra corrección). |
 | `PDF_TOO_LARGE` | 413 | El PDF supera los 50 MB. |
 | `PDF_UNSUPPORTED` | 415 | Tipo de contenido no soportado. |
 | `AUTH_LOCKED`, `RATE_LIMITED` | 429 | Demasiados intentos; respeta `Retry-After`. |
@@ -159,7 +159,7 @@ curl -sk 'https://HOST/api/v1/catalog/?search=glaciares&page_size=5'
 |---|---|---|
 | `X-Request-ID` | Toda respuesta (opcional en la solicitud) | Correlaciona la solicitud con el log y con `meta.request_id`. |
 | `ETag` / `If-Match` | Manuscritos y evaluaciones | **Bloqueo optimista**: lea el `ETag`, envíelo en `If-Match` al modificar; si cambió, `409`. |
-| `Idempotency-Key` | Envío, nueva versión, veredicto y autorización de corrección | Hace seguro reintentar un `POST`: la misma clave repite la respuesta guardada, marcada con `Idempotent-Replayed: true`. |
+| `Idempotency-Key` | Envío, nueva versión y corrección de veredicto | Hace seguro reintentar un `POST`: la misma clave repite la respuesta guardada, marcada con `Idempotent-Replayed: true`. |
 | `Retry-After` | Respuestas `429` | Segundos de espera. |
 
 ## Descargas de PDF
@@ -168,7 +168,7 @@ Los PDF **no** pasan por la aplicación. Django autoriza la solicitud (rol, rela
 
 ## Doble ciego en la API
 
-Las respuestas al Revisor se construyen con serializadores de lista blanca: nunca incluyen nombre, correo ni filiación del Autor, ni el nombre del archivo original. El Autor, a su vez, solo recibe los comentarios que el Revisor escribió para él.
+Las respuestas al Revisor se construyen con serializadores de lista blanca: nunca incluyen nombre, correo ni filiación del Autor, ni el nombre del archivo original. El Autor, a su vez, solo recibe los comentarios que cada Revisor escribió para él, etiquetados «Revisor 1», «Revisor 2»… sin identidad.
 
 ## Catálogo de endpoints
 
@@ -220,23 +220,11 @@ Tabla generada del schema OpenAPI (las rutas van bajo `/api/v1`). La fuente de v
 | `GET` | `/catalog/{code}/` | Ver un artículo publicado | Pública |
 | `GET` | `/catalog/{code}/document/` | Descargar el PDF de un artículo publicado | Pública |
 
-#### Editor
+#### Carreras
 
 | Método | Ruta | Qué hace | Acceso |
 |---|---|---|---|
-| `GET` | `/editor/assignments/expired/` | Asignaciones vencidas | Sesión |
-| `POST` | `/editor/assignments/{id}/revoke/` | Revocar una asignación | Sesión |
-| `GET` | `/editor/incidents/` | Incidentes confidenciales | Sesión |
-| `POST` | `/editor/incidents/{id}/resolve/` | Resolver un incidente | Sesión |
-| `GET` | `/editor/manuscripts/{id}/assignments/` | Historial de asignaciones | Sesión |
-| `POST` | `/editor/manuscripts/{id}/assignments/` | Asignar un revisor | Sesión |
-| `GET` | `/editor/manuscripts/{id}/evaluations/` | Evaluaciones finales de un manuscrito | Sesión |
-| `GET` | `/editor/manuscripts/{id}/verdicts/` | Historial de veredictos | Sesión |
-| `POST` | `/editor/manuscripts/{id}/verdicts/` | Registrar un veredicto | Sesión |
-| `GET` | `/editor/reviewers/` | Revisores elegibles | Sesión |
-| `GET` | `/editor/submissions/` | Bandeja de envíos | Sesión |
-| `GET` | `/editor/submissions/{id}/` | Detalle de un envío | Sesión |
-| `POST` | `/editor/submissions/{id}/start-review/` | Iniciar la revisión | Sesión |
+| `GET` | `/areas/` | Carreras o áreas activas del catálogo | Pública |
 
 #### Revisor
 
@@ -252,14 +240,24 @@ Tabla generada del schema OpenAPI (las rutas van bajo `/api/v1`). La fuente de v
 | `POST` | `/reviewer/assignments/{id}/identity-leak/` | Reportar una filtración de identidad | Sesión |
 | `GET` | `/reviewer/evaluations/` | Historial de mis evaluaciones | Sesión |
 | `GET` | `/reviewer/evaluations/{id}/` | Ver una evaluación final | Sesión |
+| `GET` | `/reviewer/standing/` | Mi desempeño (ranking y cupo) | Sesión |
+| `GET` | `/reviewer/standing/adjustments/` | Historial de ajustes de mi ranking | Sesión |
 
 #### Administración
 
 | Método | Ruta | Qué hace | Acceso |
 |---|---|---|---|
+| `GET` | `/admin/areas/` | Catálogo de carreras | Sesión |
+| `POST` | `/admin/areas/` | Crear una carrera | Sesión |
+| `PATCH` | `/admin/areas/{code}/` | Renombrar, desactivar o reactivar una carrera | Sesión |
 | `GET` | `/admin/audit/` | Consultar la auditoría | Sesión |
 | `GET` | `/admin/audit/{id}/` | Ver un evento de auditoría | Sesión |
-| `POST` | `/admin/verdicts/{id}/authorize-correction/` | Autorizar la corrección de un veredicto | Sesión |
+| `GET` | `/admin/incidents/` | Reportes confidenciales | Sesión |
+| `GET` | `/admin/incidents/{id}/document/` | PDF sanitizado de la versión reportada | Sesión |
+| `POST` | `/admin/incidents/{id}/resolve/` | Resolver un incidente | Sesión |
+| `GET` | `/admin/reviewers/` | Padrón de revisores | Sesión |
+| `PATCH` | `/admin/reviewers/{user_id}/` | Modificar carreras y disponibilidad de un revisor | Sesión |
+| `POST` | `/admin/verdicts/{id}/correct/` | Corregir un veredicto | Sesión |
 
 #### Notificaciones
 

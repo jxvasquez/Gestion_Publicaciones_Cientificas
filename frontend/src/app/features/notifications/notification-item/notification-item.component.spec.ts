@@ -116,7 +116,7 @@ describe('NotificationItemComponent', () => {
   it('el enlace interno lleva a la ruta del aviso y emite que se abrió', () => {
     const { host, link } = setup();
 
-    expect(link()!.getAttribute('href')).toBe('/app/editor/submissions/s-1');
+    expect(link()!.getAttribute('href')).toBe('/app/admin/incidents');
     link()!.click();
 
     expect(host.opened).toEqual([host.notice()]);

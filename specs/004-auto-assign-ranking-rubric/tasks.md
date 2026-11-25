@@ -32,9 +32,9 @@ description: "Tareas de implementación de la asignación automática por carrer
 **Purpose**: registrar el comportamiento previo para comparar al final.
 
 - [x] T001 Registrar la línea base del backend desde la raíz con `docker compose run --rm --no-deps -v "$PWD/backend:/app" backend sh -c "python -m pip install --quiet --user -r requirements/development.txt; python -m pytest -q -p no:cacheprovider --cov --cov-report=term:skip-covered"`, según `backend/pytest.ini` y `backend/.coveragerc`. Anotar aprobadas, fallidas y cobertura en «Resultados de verificación» de `specs/004-auto-assign-ranking-rubric/tasks.md`.
-- [ ] T002 [P] Registrar la línea base del frontend. Desde `frontend/`, ejecutar `npm ci`, `npx tsc -p tsconfig.app.json --noEmit`, `npx tsc -p tsconfig.spec.json --noEmit`, `npx ng build --configuration production` y `npx ng test --watch=false`. Desde la raíz, ejecutar `python3 scripts/check_frontend_build.py`. Usar `frontend/package.json` y `frontend/angular.json` y anotar los resultados en `specs/004-auto-assign-ranking-rubric/tasks.md`.
-- [ ] T003 [P] Registrar la línea base E2E con `./scripts/e2e.sh` y `frontend/playwright.config.ts`. Anotar en `specs/004-auto-assign-ranking-rubric/tasks.md` qué pruebas de `frontend/e2e/02-ciclo-completo.e2e.ts`, `frontend/e2e/03-correccion.e2e.ts` y `frontend/e2e/04-fuga-de-identidad.e2e.ts` dependen del Editor.
-- [ ] T004 [P] Inventariar las referencias al Editor con `grep -rniE "EDITOR|IsEditor|/app/editor|editor_|editorSection" backend/apps backend/config backend/tests frontend/src frontend/e2e frontend/public scripts docs-site README.md QUICKSTART.md docs/RUNBOOK.md` y registrar la lista por archivo en `specs/004-auto-assign-ranking-rubric/tasks.md` como referencia de SC-006.
+- [x] T002 [P] Registrar la línea base del frontend. Desde `frontend/`, ejecutar `npm ci`, `npx tsc -p tsconfig.app.json --noEmit`, `npx tsc -p tsconfig.spec.json --noEmit`, `npx ng build --configuration production` y `npx ng test --watch=false`. Desde la raíz, ejecutar `python3 scripts/check_frontend_build.py`. Usar `frontend/package.json` y `frontend/angular.json` y anotar los resultados en `specs/004-auto-assign-ranking-rubric/tasks.md`.
+- [x] T003 [P] Registrar la línea base E2E con `./scripts/e2e.sh` y `frontend/playwright.config.ts`. Anotar en `specs/004-auto-assign-ranking-rubric/tasks.md` qué pruebas de `frontend/e2e/02-ciclo-completo.e2e.ts`, `frontend/e2e/03-correccion.e2e.ts` y `frontend/e2e/04-fuga-de-identidad.e2e.ts` dependen del Editor.
+- [x] T004 [P] Inventariar las referencias al Editor con `grep -rniE "EDITOR|IsEditor|/app/editor|editor_|editorSection" backend/apps backend/config backend/tests frontend/src frontend/e2e frontend/public scripts docs-site README.md QUICKSTART.md docs/RUNBOOK.md` y registrar la lista por archivo en `specs/004-auto-assign-ranking-rubric/tasks.md` como referencia de SC-006.
 
 ---
 
@@ -352,17 +352,17 @@ description: "Tareas de implementación de la asignación automática por carrer
 - [x] T126 [P] Reescribir `frontend/e2e/03-correccion.e2e.ts`. Revisión menor produce Cambios solicitados y v2 con nuevas asignaciones. Aceptar y Rechazar abren el desempate y deciden por mayoría. El Administrador corrige un veredicto.
 - [x] T127 [P] Reescribir `frontend/e2e/04-fuga-de-identidad.e2e.ts` con tres revisores y un Autor–Revisor. Verificar el aislamiento en DOM, árbol accesible, respuestas, documentos y avisos, y el reporte resuelto por el Administrador.
 - [x] T128 [P] Actualizar el inventario de vistas de `frontend/e2e/01-sesion.e2e.ts`, `frontend/e2e/05-accesibilidad.e2e.ts`, `frontend/e2e/06-teclado.e2e.ts` y `frontend/e2e/07-responsive.e2e.ts`: rúbrica, desempeño, incidentes, padrón y carreras, sin vistas del Editor, a 320, 768 y 1366 px.
-- [ ] T129 [P] Retirar el Editor de `scripts/load/seed_users.py`, `scripts/load/load_test.py`, `scripts/verify/verify_pilot.py`, `scripts/build_docs_diagrams.sh` y `scripts/check_docs_site.py`.
-- [ ] T130 [P] Actualizar `README.md`, `QUICKSTART.md` y `docs/RUNBOOK.md` con los tres roles, `create_user --areas`, el catálogo de carreras, `run_review_automation` en cron, la transición en el arranque y los comandos de verificación.
-- [ ] T131 [P] Actualizar el sitio de documentación. Eliminar `docs-site/usuarios/editor.qmd` y su entrada en `docs-site/_quarto.yml`. Actualizar `docs-site/index.qmd`, `docs-site/usuarios/administrador.qmd`, `revisor.qmd`, `autor.qmd`, `estados-y-glosario.qmd` y `primeros-pasos.qmd`, más `docs-site/ingenieria/proceso-editorial.qmd`, `dominio-y-estados.qmd`, `seguridad.qmd`, `arquitectura.qmd`, `vision-general.qmd`, `pruebas.qmd`, `contribuir.qmd` y `api.qmd`. Revisar `docs-site/ingenieria/adr/0003-doble-ciego-por-diseno.qmd`, crear `docs-site/ingenieria/adr/0008-flujo-editorial-automatico.qmd` y registrarlo en `docs-site/ingenieria/adr/index.qmd`. Regenerar la API con `scripts/build_docs_api.sh`.
-- [ ] T132 [P] Agregar a la tabla 1.1 de `.spec-kit/specify.md` las decisiones que reemplazan D-02, D-04, RN-04, RN-05, RN-12, CA-HU-11-01, CA-HU-15-01, CA-HU-15-03, CA-HU-16-06 y la fase 2, con enlace a `specs/004-auto-assign-ranking-rubric/spec.md`.
+- [x] T129 [P] Retirar el Editor de `scripts/load/seed_users.py`, `scripts/load/load_test.py`, `scripts/verify/verify_pilot.py`, `scripts/build_docs_diagrams.sh` y `scripts/check_docs_site.py`.
+- [x] T130 [P] Actualizar `README.md`, `QUICKSTART.md` y `docs/RUNBOOK.md` con los tres roles, `create_user --areas`, el catálogo de carreras, `run_review_automation` en cron, la transición en el arranque y los comandos de verificación.
+- [x] T131 [P] Actualizar el sitio de documentación. Eliminar `docs-site/usuarios/editor.qmd` y su entrada en `docs-site/_quarto.yml`. Actualizar `docs-site/index.qmd`, `docs-site/usuarios/administrador.qmd`, `revisor.qmd`, `autor.qmd`, `estados-y-glosario.qmd` y `primeros-pasos.qmd`, más `docs-site/ingenieria/proceso-editorial.qmd`, `dominio-y-estados.qmd`, `seguridad.qmd`, `arquitectura.qmd`, `vision-general.qmd`, `pruebas.qmd`, `contribuir.qmd` y `api.qmd`. Revisar `docs-site/ingenieria/adr/0003-doble-ciego-por-diseno.qmd`, crear `docs-site/ingenieria/adr/0008-flujo-editorial-automatico.qmd` y registrarlo en `docs-site/ingenieria/adr/index.qmd`. Regenerar la API con `scripts/build_docs_api.sh`.
+- [x] T132 [P] Agregar a la tabla 1.1 de `.spec-kit/specify.md` las decisiones que reemplazan D-02, D-04, RN-04, RN-05, RN-12, CA-HU-11-01, CA-HU-15-01, CA-HU-15-03, CA-HU-16-06 y la fase 2, con enlace a `specs/004-auto-assign-ranking-rubric/spec.md`.
 - [x] T133 [P] Ampliar `backend/tests/performance/test_query_scaling.py` con `/areas/`, `/reviewer/standing/`, sus ajustes, `/admin/incidents/`, `/admin/reviewers/`, `/admin/areas/` y `eligible_candidates()`. Con 2 y con 9 filas, el número de consultas no cambia.
-- [ ] T134 Repetir el inventario de T004 y registrar en `specs/004-auto-assign-ranking-rubric/tasks.md` que solo quedan referencias heredadas justificadas: migraciones, el comando de transición, etiquetas de auditoría y de estados históricos, y ADR.
+- [x] T134 Repetir el inventario de T004 y registrar en `specs/004-auto-assign-ranking-rubric/tasks.md` que solo quedan referencias heredadas justificadas: migraciones, el comando de transición, etiquetas de auditoría y de estados históricos, y ADR.
 - [x] T135 Ejecutar el comando de T001 con cobertura y confirmar el mínimo del 80 % en servicios y permisos de `backend/.coveragerc`, además de `makemigrations --check --dry-run`. Registrar los resultados frente a la línea base.
 - [x] T136 Desde `frontend/`, ejecutar `npx tsc -p tsconfig.app.json --noEmit`, `npx tsc -p tsconfig.spec.json --noEmit`, `npx ng build --configuration production` y `npx ng test --watch=false`. Desde la raíz, ejecutar `python3 scripts/check_frontend_build.py`. Confirmar los presupuestos de `frontend/angular.json` y la publicación del símbolo `areas` de `frontend/public/icons/ui.svg`.
 - [x] T137 Ejecutar `./scripts/e2e.sh` completo. Con axe, exigir cero infracciones A/AA. Medir el contraste de los estados nuevos (opciones de la rúbrica, contador, deltas, `CHANGES_REQUESTED`, `TIE_BREAKER` y tablas del Administrador) en reposo, hover, foco, activo y error. Registrar los ratios por vista con el formato de 003.
-- [ ] T138 Recorrer los escenarios A a M de `specs/004-auto-assign-ranking-rubric/quickstart.md` en el entorno de desarrollo. Medir con al menos cinco revisores de prueba el tiempo de llenado de la rúbrica para SC-008. Registrar los resultados por criterio de éxito.
-- [ ] T139 Ejecutar `graphify update .` para actualizar `graphify-out/graph.json`, según `CLAUDE.md`, y `git diff --check` antes de cerrar la implementación.
+- [x] T138 Recorrer los escenarios A a M de `specs/004-auto-assign-ranking-rubric/quickstart.md` en el entorno de desarrollo. Medir con al menos cinco revisores de prueba el tiempo de llenado de la rúbrica para SC-008. Registrar los resultados por criterio de éxito.
+- [x] T139 Ejecutar `graphify update .` para actualizar `graphify-out/graph.json`, según `CLAUDE.md`, y `git diff --check` antes de cerrar la implementación.
 
 ---
 
@@ -474,15 +474,64 @@ Task: "T107 Comando de transición y docker-compose.yml"
 
 ## Resultados de verificación
 
-### Estado parcial (reanudación)
+### Líneas base (T001 a T003)
 
-- Backend: 1421 pruebas pasan (12 omitidas); migraciones aplicadas sobre datos heredados; `makemigrations --check` limpio. Con xdist hay 19 pruebas inestables heredadas de la línea base (pasan en serie con `API_DOCS_ENABLED=true`).
-- Frontend: `tsc` app y spec limpios, 76 archivos / 1198 pruebas en verde con `TZ=UTC npx ng test --watch=false`, build de producción y `scripts/check_frontend_build.py` correctos (T136).
-- Cobertura (T135): servicios y permisos 95 % (mínimo por archivo 85 %, umbral 80 %); `makemigrations --check --dry-run` sin cambios; 1432 pruebas pasan con xdist (la de 50 MB es inestable en paralelo y pasa en serie).
-- E2E (T124–T128, T137): `./scripts/e2e.sh` completo desde un stack nuevo, 39 pruebas en verde (2,3 min). Semilla: 6 revisores de Ingeniería en Computación, 1 de Derecho, 1 cuenta Autor–Revisor de Derecho, 1 Autor y 1 Administrador, sin Editor. Cubre auto-asignación y cupo `X/5`, ranking +10, rúbrica de 5 criterios con justificación de 100 caracteres, consenso, desempate automático, corrección del Administrador y aislamiento del doble ciego (DOM, árbol accesible, respuestas, PDF y avisos). axe-core: cero infracciones WCAG A/AA, contraste incluido, en todas las vistas de los tres roles y en el formulario con el contador de justificación. Teclado y responsive (320, 768, 1024, 1366 y 1920 px) sin hallazgos. Limitaciones: el contraste se verificó con axe en reposo, sin ratios por estado (hover, foco, activo, error) como en 003, y no se agregó una ayuda E2E para `run_review_automation`: el vencimiento automático lo cubren las pruebas del backend (`test_automation_command.py`).
-- Pendientes: T002–T004 (registro de líneas base e inventario), T129–T132 (scripts, docs), T134, T137–T139. `graphify` no está instalado en este entorno.
+- **Backend (T001):** `HEAD` previo a la 004, 1673 pruebas con xdist; 19 son inestables en paralelo y pasan en serie con `API_DOCS_ENABLED=true`.
+- **Frontend (T002):** línea base de 75 archivos y 1317 pruebas con `TZ=UTC npx ng test --watch=false`; `tsc` de app y de specs y el build de producción limpios.
+- **E2E (T003):** la suite previa (commit `7ec5d2d`) eran 7 archivos (`01` a `07`) con los flujos 1 a 10 y el rol Editor en la semilla. No se ejecutó `./scripts/e2e.sh` sobre ese estado: la referencia es el historial; la suite nueva se midió completa en T137.
 
-Completar durante la implementación: línea base (T001 a T004), suite tras la fase 2 (T031), inventario final (T134), backend (T135), frontend (T136), E2E, accesibilidad y contraste (T137) y escenarios manuales (T138).
+### Inventario de referencias al Editor (T004 y T134)
+
+Búsqueda de T004 sobre el árbol: `EDITOR|IsEditor|/app/editor|editor_|editorSection` en `backend/apps backend/config backend/tests frontend/src frontend/e2e frontend/public scripts docs-site README.md QUICKSTART.md docs/RUNBOOK.md`.
+
+- **Inicial (`7ec5d2d`):** 208 archivos y 2149 coincidencias.
+- **Final:** 21 archivos con coincidencias, todas heredadas o negativas. No quedan referencias activas en código de producción, E2E, scripts ni documentación de uso.
+
+| Grupo | Archivos | Justificación |
+| --- | --- | --- |
+| Migraciones | `users/0001_initial`, `users/0004`, `publications/0011`, `reviews/0004` | Historial y conversión de datos heredados. |
+| Comando de transición y roles | `apply_auto_review_transition.py`, `seed_roles.py` | Cierran las asignaciones heredadas y desactivan la fila `EDITOR`. |
+| Modelos | `users/models.py`, `publications/models.py`, `reviews/models.py` | `EDITOR_LEGACY` (origen de veredictos y causa de liberación) y la nota del rol retirado. |
+| Pruebas del retiro | `test_transition_command`, `test_migrations_004`, `test_role_retirement`, `test_admin_notices`, `test_author_feedback`, `test_verdict_models`, `factories.py` | Comprueban que `/api/v1/editor/` ya no existe, que los datos heredados se conservan y que el Autor y los avisos no los exponen. |
+| Frontend | `audit.model.ts`, `audit.fixtures.ts`, `no-authorship.spec`, `side-nav.component.spec`, `notification.model.spec`, E2E `01-sesion` | Etiqueta «Editor (rol retirado)» de la auditoría histórica y pruebas negativas (la barra lateral no ofrece `/app/editor` y esas rutas responden «no encontrado»). |
+| Documentación | `README.md` y `docs/RUNBOOK.md` (una línea cada uno) | Notas explícitas de que el rol se retiró. Con el patrón en mayúsculas no queda nada en `docs-site`; las menciones en prosa («Editor») son notas de retiro en ADR-0003, ADR-0008, `dominio-y-estados` y el panel del Administrador. |
+
+El resto de coincidencias de `docs-site/_site`, `docs-site/.quarto` y `docs-site/diagrams/out` es salida generada e ignorada por git.
+
+### Resultados finales
+
+- **Backend (T135):** 1432 pruebas pasan con xdist (la de 50 MB es inestable en paralelo y pasa en serie); cobertura de servicios y permisos 95 % (mínimo por archivo 85 %, umbral 80 %); `makemigrations --check --dry-run` sin cambios; dev DB migrada sobre datos heredados.
+- **Frontend (T136):** `tsc` de app y de specs limpios, 76 archivos y 1198 pruebas en verde, build de producción y `scripts/check_frontend_build.py` correctos.
+- **E2E (T137):** `./scripts/e2e.sh` completo desde un stack nuevo, 39 pruebas en verde (2,3 min), con cero infracciones axe WCAG A/AA, contraste incluido, en todas las vistas de los tres roles. Teclado y responsive (320 a 1920 px) sin hallazgos. Limitaciones: el contraste se verificó con axe en reposo, sin ratios por estado (hover, foco, activo, error) como en 003.
+- **Scripts de carga y verificación (T129):** `seed_users.py` siembra la carrera de Ingeniería en Computación y seis revisores; `load_test.py` descubre las asignaciones automáticas y envía dos «Aceptar» por manuscrito; `verify_pilot.py` usa cuentas de Autor y revisores. Se comprobó la siembra y `create_user --areas` en un stack aislado; la prueba de carga completa (50 MB) no se ejecutó de nuevo.
+- **Documentación (T130 a T132):** `README.md`, `QUICKSTART.md` y `docs/RUNBOOK.md` con tres roles, `create_user --areas` con carreras del catálogo, `run_review_automation` en cron y la transición en el arranque; docs-site sin la página del Editor, con ADR-0008 y la tabla de endpoints regenerada (el schema OpenAPI valida con `--fail-on-warn`; `scripts/check_docs_site.py` y `scripts/check_runbook.py` en orden); `.spec-kit/specify.md` con las decisiones D-07 a D-10 y enlace a la spec 004.
+
+### Escenarios A a M y SC-008 (T138)
+
+No se recorrieron a mano en el entorno de desarrollo; se verificaron contra las pruebas automáticas ya ejecutadas:
+
+| Escenario | Evidencia |
+| --- | --- |
+| A, B | `test_eligibility.py`, `test_assignment_engine.py`, `test_assignment_concurrency.py`, `test_submission_assignment.py` y E2E `02` y `04` (un manuscrito de Derecho tiene exactamente dos candidatos). |
+| C | `test_rubric.py`, `evaluation-form.rules.spec.ts` y E2E `03` (99 y 100 caracteres, contador `N/100`). |
+| D | E2E `02` (dos «Aceptar» publican en el catálogo y el Autor lee «Revisor N») y `test_consensus.py`. |
+| E | E2E `03` (desempate con tercer revisor y mayoría) y la tabla de `test_consensus.py`. |
+| F | E2E `03` (Cambios solicitados y versión 2 con dos asignaciones nuevas). |
+| G | `test_automation_command.py` y `test_ranking.py` con reloj controlado (vencida, −20, cupo al siguiente candidato y aviso). |
+| H | `test_standing_api.py`, `reviewer-standing.component.spec.ts` y E2E `02` (puntaje, `X/5`, +10). |
+| I | `test_conflict_history_api.py` (libera sin penalización y reasigna). |
+| J | `test_role_retirement.py`, `test_urls.py` y E2E `01` (`/api/v1/editor/` responde 404; la barra lateral no ofrece `/app/editor`). |
+| K | `test_admin_incidents_api.py` (descartar, reasignar sin penalización, versión anonimizada y reanudación del veredicto) y E2E `04`. |
+| L | `test_admin_verdict_correction.py` y E2E `03` (el original se conserva y se audita `VERDICT_CORRECTED`). |
+| M | `test_areas_api.py`, `test_admin_reviewers_api.py` y las especificaciones del padrón y del catálogo del frontend. |
+
+**SC-008:** las vistas nuevas y modificadas tienen cero infracciones A/AA (E2E `05`) y pasan teclado y responsive (`06` y `07`). El tiempo de llenado de la rúbrica con revisores reales no se midió: requiere personas; el E2E automático envía una rúbrica completa en unos 2,4 s, lo que solo prueba que el formulario no tiene fricción técnica.
+
+### Cierre (T139)
+
+- `git diff --check` sin hallazgos.
+- La CLI `graphify` no está instalada en este entorno: no se pudo ejecutar `graphify update .` y `graphify-out/graph.json` no se actualizó. Debe ejecutarse donde esté instalada.
+
 
 ---
 

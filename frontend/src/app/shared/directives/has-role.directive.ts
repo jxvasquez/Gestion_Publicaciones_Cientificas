@@ -16,7 +16,7 @@ import { Role } from '../../core/models/role.model';
  * sesión tiene al menos uno de los roles indicados.
  *
  * Uso:
- * `<button *appHasRole="['EDITOR']">…</button>`
+ * `<button *appHasRole="['ADMIN']">…</button>`
  * `<nav *appHasRole="'ADMIN'">…</nav>`
  *
  * Es una ayuda de interfaz: el backend vuelve a validar cada acción.

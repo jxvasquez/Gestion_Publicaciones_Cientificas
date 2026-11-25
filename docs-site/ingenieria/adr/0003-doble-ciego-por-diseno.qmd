@@ -15,10 +15,10 @@ El anonimato no depende de «acordarse de ocultar» campos: la información proh
 1. **Serializadores de lista blanca** para el Revisor. Solo se serializan los campos autorizados; añadir un campo nuevo al modelo no lo expone por accidente.
 2. **Alcance por asignación.** Las consultas del Revisor parten de `Assignment.objects.for_reviewer(user)`, nunca del repositorio global de manuscritos. Lo ajeno responde `404`.
 3. **Copia sanitizada del PDF.** El Revisor recibe una copia sin `/Info`, XMP, `/PieceInfo`, anotaciones ni contenido activo, con un nombre genérico. El original nunca se le entrega.
-4. **Comentarios separados.** La evaluación distingue *comentarios para el autor* y *comentarios confidenciales*; el Autor solo recibe los primeros.
+4. **Un solo texto, para el Autor.** Desde la spec 004 la evaluación solo tiene *comentarios para el autor*, que este lee como «Revisor N». Ya no hay comentarios confidenciales ni Editor que los lea.
 5. **Avisos que respetan el ciego** en ambos sentidos.
 6. **Canal confidencial de incidentes:** si el contenido del documento delata al Autor, el Revisor lo reporta sin que el Autor llegue a saberlo.
-7. El Editor y el Administrador sí pueden conocer ambas identidades (RN-06).
+7. Solo el Administrador puede conocer ambas identidades (RN-06; el rol Editor se retiró, ADR-0008).
 
 ## Alternativas consideradas
 

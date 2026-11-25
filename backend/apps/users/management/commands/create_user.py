@@ -11,7 +11,7 @@ class Command(BaseCommand):
     """Crea una cuenta o le añade roles; imprime la contraseña generada una sola vez."""
 
     help = (
-        "Crea una cuenta institucional con sus roles (AUTHOR, REVIEWER, EDITOR, ADMIN). "
+        "Crea una cuenta institucional con sus roles (AUTHOR, REVIEWER, ADMIN). "
         "Sin --password genera una aleatoria y la muestra una sola vez."
     )
 

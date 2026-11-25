@@ -81,11 +81,11 @@ docker compose exec backend python manage.py create_user "$ADMIN_ID" \
 La contraseña inicial se muestra **una sola vez**: anótala. En producción las cuentas se crean **siempre** con `create_user` (el Django Admin no existe):
 
 ```bash
-# Otra cuenta (Editor, o Revisor con áreas de especialidad):
+# Otra cuenta (Autor, o Revisor con carreras del catálogo; no existe el rol Editor):
 docker compose exec backend python manage.py create_user <identificador> \
-  --first-name <Nombre> --last-name <Apellidos> --email <correo> --role EDITOR
+  --first-name <Nombre> --last-name <Apellidos> --email <correo> --role AUTHOR
 docker compose exec backend python manage.py create_user <identificador> \
-  --first-name <Nombre> --last-name <Apellidos> --email <correo> --role REVIEWER --areas "Agronomía,Medicina"
+  --first-name <Nombre> --last-name <Apellidos> --email <correo> --role REVIEWER --areas "Ingeniería en Computación,Derecho"
 ```
 
 **No ejecutes `seed_dev_users` en producción** (se niega a correr sin una variable explícita).
@@ -152,8 +152,7 @@ Contraseña de todas: `Gpc-dev-2026`.
 | Identificador | Rol |
 |---|---|
 | `autor`, `autor2` | Autor |
-| `editor` | Editor |
-| `revisor`, `revisor2` | Revisor |
+| `revisor`, `revisor2`, `revisor3` | Revisor |
 | `admin` | Administrador |
 | `autor.revisor` | Autor y Revisor a la vez |
 

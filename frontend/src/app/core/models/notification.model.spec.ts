@@ -20,7 +20,7 @@ describe('toNoticeFilter', () => {
 });
 
 describe('internalLink', () => {
-  it.each(['/app/editor/submissions/s-1', '/app/reviewer/assignments', '/app/editor/incidents'])(
+  it.each(['/app/author/manuscripts/s-1', '/app/reviewer/assignments', '/app/admin/incidents'])(
     '%s es una ruta interna',
     (link) => {
       expect(internalLink(link)).toBe(link);

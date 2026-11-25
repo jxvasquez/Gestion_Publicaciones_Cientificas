@@ -9,7 +9,7 @@ export function buildNoticePayload(overrides: Partial<NoticePayload> = {}): Noti
     manuscript_title: 'Efecto del clima en cultivos andinos',
     action: 'Registrar el veredicto',
     due_at: null,
-    link: '/app/editor/submissions/s-1',
+    link: '/app/admin/incidents',
     ...overrides,
   };
 }

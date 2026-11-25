@@ -13,7 +13,7 @@ Los objetivos que guían el diseño:
 2. Todo manuscrito sigue un flujo de estados claro y verificable.
 3. Se protege la identidad del Autor y del Revisor durante la evaluación.
 4. Versiones, metadatos y decisiones se conservan de forma **inmutable**.
-5. El plazo de evaluación (20 días) se controla sin revocaciones automáticas.
+5. El plazo de evaluación (20 días) se controla automáticamente: al vencer, el sistema revoca, resta 20 puntos al Revisor y reasigna.
 6. El catálogo público solo muestra artículos aceptados y vigentes.
 7. El Administrador dispone de una auditoría completa e inalterable.
 

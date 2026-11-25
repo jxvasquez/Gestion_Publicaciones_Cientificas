@@ -1,6 +1,6 @@
 ---
 title: "Soy Administrador"
-subtitle: "Auditar el sistema y habilitar correcciones de veredicto"
+subtitle: "Incidentes, revisores, carreras, correcciones de veredicto y auditoría"
 ---
 
 El Administrador vela por la integridad del proceso. Dispone de **evidencia inmutable** de las acciones críticas, pero **no ve ni modifica manuscritos, evaluaciones ni PDF**: su ámbito es la auditoría.
@@ -47,9 +47,23 @@ docker compose exec backend python manage.py verify_integrity
 
 ## Autorizar la corrección de un veredicto
 
-Un veredicto registrado no se edita. Si el Editor necesita corregir una decisión, solicita su habilitación y usted la concede desde el detalle del veredicto, indicando un **motivo de 10 a 1000 caracteres**. La respuesta muestra solo datos públicos del manuscrito (código, decisión y fechas), nunca autores, evaluaciones ni PDF.
+Un veredicto registrado no se edita: se **corrige** registrando uno nuevo. Desde el detalle del evento «Veredicto registrado» en la auditoría, pulse **Corregir veredicto**, elija la nueva decisión (con observaciones si es «Cambios solicitados») y escriba un **motivo de 10 a 1000 caracteres**. La decisión anterior se conserva, la nueva pasa a ser la vigente y el catálogo la sigue.
 
-La autorización queda en el historial del manuscrito y en la auditoría, y se consume cuando el Editor registra la nueva decisión.
+La corrección queda en el historial del manuscrito y en la auditoría. Ya no existe el rol Editor: esta tarea y la resolución de incidentes son del Administrador.
+
+## Incidentes confidenciales
+
+**Incidentes** lista los reportes de los Revisores (posible fuga de identidad u otro motivo), con el manuscrito, la descripción y quién reportó. Solo usted los ve; el Autor nunca sabe que existen. Cada reporte abierto se resuelve con confirmación:
+
+- **Solicitar versión anonimizada:** abre una nueva ronda de cambios para el Autor.
+- **Reasignar Revisor:** libera la asignación y el sistema cubre el cupo con otro Revisor elegible.
+- **Descartar reporte:** lo cierra sin cambiar el manuscrito.
+
+## Revisores y carreras
+
+**Revisores** es el padrón: carreras, disponibilidad, ranking y carga (`X/5`), con filtros por carrera, disponibilidad y búsqueda. Editar carreras o disponibilidad no altera las asignaciones vigentes; solo afecta a las nuevas.
+
+**Carreras** es el catálogo cerrado que usan Autores y Revisores: puede crear, renombrar (el código no cambia) y activar o desactivar. Desactivar conserva manuscritos, Revisores e historial; solo deja de ofrecerse.
 
 ## Cuentas y roles
 

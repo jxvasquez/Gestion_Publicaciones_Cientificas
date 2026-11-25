@@ -20,12 +20,12 @@
 | Ámbito | Flujo editorial completo de manuscritos académicos |
 | Cobertura funcional | 22 requisitos funcionales (RF-01 a RF-22) |
 | Módulos incluidos | Autenticación y panel unificado; Panel del Autor; Panel del Editor; Panel del Revisor; Catálogo y Auditoría; Trazabilidad e Historial; Notificaciones transversales |
-| Fuera de alcance | Ranking automatizado de revisores (Fase 2), evaluaciones paralelas con más de un revisor y procesos editoriales no descritos en este documento |
+| Fuera de alcance | Procesos editoriales no descritos en este documento (el ranking y la evaluación por dos revisores ya no lo están: ver D-07 a D-10) |
 | Nivel de detalle | Especificación funcional verificable, previa a la planificación técnica |
 
 ### 1.1 Decisiones vigentes que ajustan el dossier
 
-Estas decisiones prevalecen sobre cualquier redacción anterior del dossier y deben considerarse al leer las historias:
+Estas decisiones prevalecen sobre cualquier redacción anterior del dossier y deben considerarse al leer las historias. Las decisiones D-07 a D-10 (spec 004) reemplazan las referencias al Editor, al Revisor único y al plazo sin revocación automática que aparecen más abajo:
 
 | Código | Decisión vigente | Impacto |
 |---|---|---|
@@ -35,6 +35,10 @@ Estas decisiones prevalecen sobre cualquier redacción anterior del dossier y de
 | D-04 | Si el Revisor no evalúa al cumplirse **20 días exactos**, el Editor puede revocar la asignación y reasignar el manuscrito. | Incorpora una regla de control del plazo no detallada en el dossier original. |
 | D-05 | Toda iteración conserva un registro inmutable con el **PDF exacto** y los **metadatos tal como se enviaron** en esa ronda. | Amplía el alcance de RF-06, RF-10 y RF-21 con trazabilidad documental completa. |
 | D-06 | El contador de **rondas de corrección** es visible para Autor, Revisor y Editor. | Se separa del contador de versiones para evitar ambigüedad. |
+| D-07 | **Sustituye a D-02 y D-04, RN-04, RN-05 y RN-12 (spec 004).** Cada versión recibe **dos Revisores** asignados automáticamente por coincidencia exacta de carrera, con un tercero de desempate ante un 1 contra 1. Al vencer los 20 días el **sistema** revoca, penaliza y reasigna; el veredicto sale por consenso. | Ver [`specs/004-auto-assign-ranking-rubric/spec.md`](../specs/004-auto-assign-ranking-rubric/spec.md). |
+| D-08 | **Se retira el rol Editor** (spec 004). La resolución de incidentes (CA-HU-16-06) y la corrección de veredictos pasan al Administrador; desaparece el Panel del Editor y su bandeja. | Sustituye los módulos y criterios del Editor, entre ellos CA-HU-11-01 (lista de elegibles, ahora automática). |
+| D-09 | **Rúbrica de cinco criterios** (1 a 5) y dictamen de cuatro valores, con justificación de 100 caracteres si algún criterio es 3 o menos o el dictamen es revisión mayor o rechazo; no hay comentarios confidenciales. | Sustituye CA-HU-15-01 y CA-HU-15-03. |
+| D-10 | **Ranking de Revisores** (base 100, +10 a tiempo, −20 por plazo vencido) y tope de 5 asignaciones activas. | Adelanta la «Fase 2» del apartado 16 y su fuera de alcance. |
 
 ---
 

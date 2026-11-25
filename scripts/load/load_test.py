@@ -6,7 +6,8 @@ levanta ``scripts/load_test.sh`` (nunca contra la base de trabajo) y recorre,
 siempre por el puerto público de Nginx:
 
 1. login de ``LOAD_USERS`` autores a la vez;
-2. siembra de artículos aceptados por la API real (autor, editor, revisor);
+2. siembra de artículos aceptados por la API real (autor y revisores: el sistema asigna
+   a dos revisores de la carrera y el consenso acepta con dos «Aceptar»);
 3. catálogo con ``LOAD_USERS`` personas concurrentes (SC-11: p95 < 2 s);
 4. descargas concurrentes: PDF del catálogo (``X-Accel-Redirect``) y copia
    sanitizada del revisor;
@@ -40,6 +41,11 @@ from dataclasses import dataclass, field
 from urllib.parse import urlparse
 
 MIB = 1024 * 1024
+
+# Carrera del catálogo que siembra scripts/load/seed_users.py y seis revisores que la comparten
+# (cada manuscrito recibe a dos; con el tope de 5 activas hay cupo para toda la siembra).
+AREA_CODE = "ingenieria-en-computacion"
+REVIEWERS = tuple(f"reviewer-{n}" for n in range(1, 7))
 PDF_LIMIT = 50 * MIB  # límite de Django por PDF (MAX_PDF_SIZE_MB)
 NGINX_BODY_LIMIT = 60 * MIB  # client_max_body_size
 
@@ -375,10 +381,9 @@ class Scenario:
         self.report.check("los logins concurrentes responden 200", ok == users, f"{ok}/{users}")
         p95 = percentile(self.report.timings["login"], 95)
         self.report.check("p95 del login menor a 10 s", p95 < 10, f"p95={p95:.2f} s")
-        for who in ("editor", "reviewer"):
+        for who in REVIEWERS:
             self.tokens[who] = self.login(f"load-{who}") or ""
-        self.report.check("editor y revisor inician sesión",
-                          bool(self.tokens["editor"] and self.tokens["reviewer"]))
+        self.report.check("los revisores inician sesión", all(self.tokens[who] for who in REVIEWERS))
 
     # -- 2. siembra por la API real ---------------------------------------
     def create_submitted(self, index: int, pdf: bytes, phase: str) -> tuple[str, str] | None:
@@ -392,7 +397,7 @@ class Scenario:
             json_body={
                 "title": f"Artículo de carga {index:02d} {uuid.uuid4().hex[:6]}",
                 "abstract": "Resumen del estudio de carga.", "keywords": ["carga", "prueba"],
-                "area": "Agronomía", "language": "es", "authors": authors,
+                "areas": [AREA_CODE], "language": "es", "authors": authors,
             },
         )
         if status != 201:
@@ -411,54 +416,47 @@ class Scenario:
         )
         return (manuscript_id, as_json(payload)["code"]) if status == 201 else None
 
-    def start_review(self, manuscript_id: str, code: str) -> str | None:
-        """Asigna al revisor y devuelve el id de su asignación (se busca por código)."""
-        me = self.api.call("GET", "/api/v1/auth/me/", phase="setup", token=self.tokens["reviewer"])
-        reviewer_id = as_json(me[2])["user"]["id"]
-        status, _, _ = self.api.call(
-            "POST", f"/api/v1/editor/submissions/{manuscript_id}/start-review/", phase="setup",
-            token=self.tokens["editor"], json_body={"reviewer_id": reviewer_id},
-        )
-        if status != 200:
-            return None
-        _, _, payload = self.api.call(
-            "GET", "/api/v1/reviewer/assignments/", phase="setup", token=self.tokens["reviewer"]
-        )
-        for row in as_json(payload).get("results", []):
-            if row.get("manuscript_code") == code:
-                return row.get("id")
-        return None
+    def assignments_of(self, code: str) -> list[tuple[str, str]]:
+        """Los revisores con asignación activa sobre el código y su id: [(clave, asignación)].
 
-    def accept(self, manuscript_id: str, assignment_id: str) -> bool:
-        reviewer = self.tokens["reviewer"]
-        base = f"/api/v1/reviewer/assignments/{assignment_id}/evaluation/"
+        La asignación es automática (dos revisores de la carrera), así que se descubre
+        preguntando a cada revisor por su bandeja.
+        """
+        found: list[tuple[str, str]] = []
+        for who in REVIEWERS:
+            _, _, payload = self.api.call(
+                "GET", "/api/v1/reviewer/assignments/?page_size=100", phase="setup",
+                token=self.tokens[who],
+            )
+            for row in as_json(payload).get("results", []):
+                if row.get("manuscript_code") == code and row.get("status") == "ACTIVE":
+                    found.append((who, row["id"]))
+        return found
+
+    def accept(self, assignments: list[tuple[str, str]]) -> bool:
+        """Cada revisor asignado envía «Aceptar»: el consenso decide Aceptado y publica."""
+        if len(assignments) != 2:
+            return False
         evaluation = {
-            "originality_score": 4, "methodology_score": 4, "clarity_score": 4,
-            "relevance_score": 4, "ethics_score": 4, "recommendation": "ACCEPT",
-            "comments_for_author": "Trabajo sólido.", "confidential_comments": "Sin observaciones.",
+            "scientific_contribution": 4, "methodological_rigor": 4, "literature_grounding": 4,
+            "results_conclusions": 4, "academic_writing": 4, "recommendation": "ACCEPTED",
+            "comments_for_author": "Trabajo sólido.",
         }
-        status, headers, _ = self.api.call(
-            "PUT", base, phase="setup", token=reviewer, json_body=evaluation,
-            headers={"If-Match": '"0"'},
-        )
-        if status != 200:
-            return False
-        status, _, _ = self.api.call(
-            "POST", f"{base}submit/", phase="setup", token=reviewer,
-            headers={"If-Match": headers.get("etag", '"1"')},
-        )
-        if status != 200:
-            return False
-        status, headers, _ = self.api.call(
-            "GET", f"/api/v1/editor/submissions/{manuscript_id}/", phase="setup",
-            token=self.tokens["editor"],
-        )
-        status, _, _ = self.api.call(
-            "POST", f"/api/v1/editor/manuscripts/{manuscript_id}/verdicts/", phase="setup",
-            token=self.tokens["editor"], json_body={"decision": "ACCEPTED"},
-            headers={"Idempotency-Key": uuid.uuid4().hex, "If-Match": headers.get("etag", '"0"')},
-        )
-        return status == 201
+        for who, assignment_id in assignments:
+            base = f"/api/v1/reviewer/assignments/{assignment_id}/evaluation/"
+            status, headers, _ = self.api.call(
+                "PUT", base, phase="setup", token=self.tokens[who], json_body=evaluation,
+                headers={"If-Match": '"0"'},
+            )
+            if status != 200:
+                return False
+            status, _, _ = self.api.call(
+                "POST", f"{base}submit/", phase="setup", token=self.tokens[who],
+                headers={"If-Match": headers.get("etag", '"1"')},
+            )
+            if status != 200:
+                return False
+        return True
 
     def phase_seed(self) -> None:
         count = self.args.articles
@@ -469,15 +467,16 @@ class Scenario:
         for index in range(count):
             size = self.big_size if index == 0 else 64 * 1024
             created = self.create_submitted(index, make_pdf(size), "setup")
-            assignment = self.start_review(*created) if created else None
-            if created and assignment and self.accept(created[0], assignment):
+            assigned = self.assignments_of(created[1]) if created else []
+            if created and self.accept(assigned):
                 accepted.append(created[0])
         self.report.check("artículos aceptados en el catálogo", len(accepted) == count,
                           f"{len(accepted)}/{count}")
         # Un manuscrito más, con el PDF grande, que queda EN REVISIÓN para la
         # descarga sanitizada del revisor.
         created = self.create_submitted(count, make_pdf(self.big_size), "setup")
-        self.review_assignment = self.start_review(*created) if created else None
+        assigned = self.assignments_of(created[1]) if created else []
+        self.review_login, self.review_assignment = assigned[0] if assigned else ("", None)
         self.report.check("manuscrito grande en revisión para la descarga del revisor",
                           bool(self.review_assignment))
 
@@ -494,7 +493,7 @@ class Scenario:
         def person(i: int) -> int:
             bad = 0
             paths = ["/api/v1/catalog/", "/api/v1/catalog/?search=carga", "/api/v1/catalog/?page=1&page_size=5",
-                     f"/api/v1/catalog/{self.codes[i % len(self.codes)]}/", "/api/v1/catalog/?area=Agronom%C3%ADa",
+                     f"/api/v1/catalog/{self.codes[i % len(self.codes)]}/", f"/api/v1/catalog/?area={AREA_CODE}",
                      "/api/v1/catalog/?search=prueba&language=es"]
             for path in paths[:rounds]:
                 status, _, _ = self.api.call("GET", path, phase="catalog")
@@ -533,7 +532,7 @@ class Scenario:
         def reviewer_download(i: int) -> tuple[int, int]:
             status, _, payload = self.api.call(
                 "GET", f"/api/v1/reviewer/assignments/{self.review_assignment}/document/",
-                phase="download_sanitized", token=self.tokens["reviewer"],
+                phase="download_sanitized", token=self.tokens[self.review_login],
             )
             return status, len(payload)
 
@@ -568,7 +567,7 @@ class Scenario:
             created = self.api.call(
                 "POST", "/api/v1/manuscripts/", phase="upload_setup", token=token,
                 json_body={"title": f"Carga grande {i} {uuid.uuid4().hex[:6]}",
-                           "abstract": "Resumen.", "keywords": ["carga"], "area": "Agronomía",
+                           "abstract": "Resumen.", "keywords": ["carga"], "areas": [AREA_CODE],
                            "language": "es", "authors": [{
                                "full_name": f"Autor{base + i:02d} Carga",
                                "email": f"load-author-{base + i:02d}@carga.invalid",
@@ -640,7 +639,7 @@ class Scenario:
         created = self.api.call(
             "POST", "/api/v1/manuscripts/", phase="edge_setup", token=token,
             json_body={"title": f"Borde {uuid.uuid4().hex[:6]}", "abstract": "Resumen.",
-                       "keywords": ["borde"], "area": "Agronomía", "language": "es",
+                       "keywords": ["borde"], "areas": [AREA_CODE], "language": "es",
                        "authors": [{"full_name": f"Autor{index:02d} Carga",
                                     "email": f"load-author-{index:02d}@carga.invalid",
                                     "affiliation": "UNL", "is_corresponding": True}]},

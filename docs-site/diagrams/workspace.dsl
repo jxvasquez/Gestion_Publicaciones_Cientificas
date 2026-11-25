@@ -4,16 +4,15 @@ workspace "Sistema de Gestión de Publicaciones Científicas" "Modelo C4 (nivele
 
     model {
         autor = person "Autor" "Registra, envía y corrige manuscritos."
-        revisor = person "Revisor" "Evalúa a ciegas el manuscrito que se le asigna."
-        editor = person "Editor" "Coordina el proceso, asigna al Revisor y registra el veredicto."
-        admin = person "Administrador" "Consulta la auditoría y habilita correcciones de veredicto."
+        revisor = person "Revisor" "Evalúa a ciegas, con una rúbrica de cinco criterios, el manuscrito que el sistema le asigna por carrera."
+        admin = person "Administrador" "Resuelve incidentes, gestiona revisores y carreras, corrige veredictos y consulta la auditoría."
         publico = person "Público" "Consulta el catálogo de artículos aceptados sin iniciar sesión."
 
         smtp = softwareSystem "Servidor de correo institucional" "Entrega los avisos por correo electrónico." "Externo"
 
-        gpc = softwareSystem "Sistema de Gestión de Publicaciones Científicas" "Centraliza el ciclo editorial de los manuscritos: envío, revisión doble ciego, veredicto, catálogo público y auditoría." {
+        gpc = softwareSystem "Sistema de Gestión de Publicaciones Científicas" "Centraliza el ciclo editorial de los manuscritos: envío, revisión doble ciego, veredicto por consenso, catálogo público y auditoría." {
 
-            spa = container "SPA" "Interfaz web por rol: Autor, Revisor, Editor, Administrador y catálogo público." "Angular, TypeScript" "Navegador"
+            spa = container "SPA" "Interfaz web por rol: Autor, Revisor, Administrador y catálogo público." "Angular, TypeScript" "Navegador"
 
             web = container "Nginx" "Termina TLS, sirve la SPA, reenvía /api/, limita la carga a 60 MB y entrega los PDF por ubicaciones internas." "Nginx 1.27"
 
@@ -22,7 +21,7 @@ workspace "Sistema de Gestión de Publicaciones Científicas" "Modelo C4 (nivele
                 contrato = component "Contrato JSON" "Envuelve toda respuesta en success, message, data, errors y meta; normaliza los errores." "Renderer y manejador de excepciones de DRF"
                 usuarios = component "Cuentas y sesión" "Credenciales institucionales, JWT, renovación en cookie, roles y tablero." "App users"
                 publicaciones = component "Manuscritos y catálogo" "Borradores, envío formal, versiones inmutables, veredictos y catálogo público." "App publications"
-                revisiones = component "Revisión doble ciego" "Asignaciones, evaluaciones, conflictos de interés e incidentes confidenciales." "App reviews"
+                revisiones = component "Revisión doble ciego" "Asignación automática por carrera, ranking, rúbrica, consenso con desempate, conflictos e incidentes confidenciales." "App reviews"
                 auditoria = component "Auditoría encadenada" "Eventos inmutables con huella SHA-256 encadenada." "App audit"
                 avisos = component "Avisos" "Notificaciones en el panel y por correo, con reintentos." "App notifications"
                 openapi = component "Documentación OpenAPI" "Schema OpenAPI 3 y Swagger UI." "drf-spectacular"
@@ -32,19 +31,17 @@ workspace "Sistema de Gestión de Publicaciones Científicas" "Modelo C4 (nivele
 
             volumen = container "Volumen de PDF" "PDF originales, copias sanitizadas y copias públicas del catálogo." "Volumen Docker media_data" "Almacén"
 
-            tareas = container "Tareas programadas" "Marca plazos vencidos, reintenta avisos, respalda y verifica la integridad." "cron del host y comandos de gestión de Django"
+            tareas = container "Tareas programadas" "Revoca y reasigna por plazo vencido, reintenta avisos, respalda y verifica la integridad." "cron del host y comandos de gestión de Django"
         }
 
         # Personas y sistemas externos
         autor -> spa "Registra y corrige manuscritos"
         revisor -> spa "Evalúa manuscritos asignados"
-        editor -> spa "Coordina y decide"
-        admin -> spa "Consulta la auditoría"
+        admin -> spa "Resuelve incidentes, gestiona el padrón y consulta la auditoría"
         publico -> spa "Busca y lee artículos"
         autor -> gpc "Registra y corrige manuscritos"
         revisor -> gpc "Evalúa manuscritos asignados"
-        editor -> gpc "Coordina y decide"
-        admin -> gpc "Consulta la auditoría"
+        admin -> gpc "Resuelve incidentes, gestiona el padrón y consulta la auditoría"
         publico -> gpc "Busca y lee artículos"
         gpc -> smtp "Envía avisos" "SMTP"
 

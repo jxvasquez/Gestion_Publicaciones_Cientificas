@@ -16,7 +16,7 @@
   </bpmn:collaboration>
 
   <bpmn:process id="Process_Editorial" name="Proceso editorial" isExecutable="false">
-    <bpmn:documentation>Ciclo de vida de un manuscrito: del envío del Autor al veredicto del Editor, con la evaluación doble ciego del Revisor y el plazo de 20 días calendario. Las tareas se nombran con el verbo en infinitivo.</bpmn:documentation>
+    <bpmn:documentation>Ciclo de vida de un manuscrito: del envío del Autor al veredicto por consenso, con asignación automática por carrera, la evaluación doble ciego de dos Revisores con rúbrica de cinco criterios, un tercer Revisor de desempate ante un 1 contra 1 y el plazo de 20 días calendario. Las tareas se nombran con el verbo en infinitivo.</bpmn:documentation>
 
     <bpmn:laneSet id="LaneSet_Editorial">
       <bpmn:lane id="Lane_Autor" name="Autor">
@@ -31,7 +31,7 @@
         <bpmn:flowNodeRef>Task_ValidarPdf</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>Task_AuditarNotificar</bpmn:flowNodeRef>
       </bpmn:lane>
-      <bpmn:lane id="Lane_Editor" name="Editor">
+      <bpmn:lane id="Lane_Editor" name="Asignación y consenso (automático)">
         <bpmn:flowNodeRef>Task_RevisarEnvio</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>Task_PasarRevision</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>Task_Asignar</bpmn:flowNodeRef>
@@ -76,29 +76,29 @@
       <bpmn:outgoing>Flow_6</bpmn:outgoing>
     </bpmn:serviceTask>
 
-    <!-- Editor -->
-    <bpmn:task id="Task_RevisarEnvio" name="Revisar envío">
+    <!-- Asignación y consenso: lo hace el sistema -->
+    <bpmn:task id="Task_RevisarEnvio" name="Buscar revisores elegibles por carrera">
       <bpmn:incoming>Flow_6</bpmn:incoming>
       <bpmn:outgoing>Flow_7</bpmn:outgoing>
     </bpmn:task>
-    <bpmn:task id="Task_PasarRevision" name="Pasar a revisión">
+    <bpmn:task id="Task_PasarRevision" name="Asignar a dos revisores">
       <bpmn:incoming>Flow_7</bpmn:incoming>
       <bpmn:outgoing>Flow_8</bpmn:outgoing>
     </bpmn:task>
-    <bpmn:task id="Task_Asignar" name="Seleccionar y asignar revisor">
+    <bpmn:task id="Task_Asignar" name="Completar cupos por ranking y carga">
       <bpmn:incoming>Flow_8</bpmn:incoming>
       <bpmn:incoming>Flow_Reasignar</bpmn:incoming>
       <bpmn:outgoing>Flow_9</bpmn:outgoing>
     </bpmn:task>
-    <bpmn:task id="Task_Revocar" name="Revocar asignación">
+    <bpmn:task id="Task_Revocar" name="Revocar, restar 20 puntos y reasignar">
       <bpmn:incoming>Flow_Vencido</bpmn:incoming>
       <bpmn:outgoing>Flow_Reasignar</bpmn:outgoing>
     </bpmn:task>
-    <bpmn:task id="Task_RevisarEvaluacion" name="Revisar evaluación">
+    <bpmn:task id="Task_RevisarEvaluacion" name="Calcular consenso">
       <bpmn:incoming>Flow_Evaluado</bpmn:incoming>
       <bpmn:outgoing>Flow_10</bpmn:outgoing>
     </bpmn:task>
-    <bpmn:task id="Task_Veredicto" name="Registrar veredicto">
+    <bpmn:task id="Task_Veredicto" name="Registrar veredicto (o asignar desempate)">
       <bpmn:incoming>Flow_10</bpmn:incoming>
       <bpmn:outgoing>Flow_11</bpmn:outgoing>
     </bpmn:task>
@@ -140,7 +140,7 @@
         <bpmn:incoming>Flow_S2</bpmn:incoming>
         <bpmn:outgoing>Flow_S3</bpmn:outgoing>
       </bpmn:task>
-      <bpmn:task id="Task_EnviarEvaluacion" name="Enviar evaluación">
+      <bpmn:task id="Task_EnviarEvaluacion" name="Enviar evaluación con rúbrica">
         <bpmn:incoming>Flow_S3</bpmn:incoming>
       </bpmn:task>
       <bpmn:sequenceFlow id="Flow_S1" sourceRef="Task_Consultar" targetRef="Task_Descargar" />
@@ -179,7 +179,7 @@
                        sourceRef="Gateway_Decision" targetRef="End_Rechazado">
       <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">decisión = RECHAZADO</bpmn:conditionExpression>
     </bpmn:sequenceFlow>
-    <bpmn:sequenceFlow id="Flow_Correcciones" name="Requiere correcciones"
+    <bpmn:sequenceFlow id="Flow_Correcciones" name="Cambios solicitados"
                        sourceRef="Gateway_Decision" targetRef="Task_EditarMetadatos" />
     <bpmn:sequenceFlow id="Flow_12" sourceRef="Task_EditarMetadatos" targetRef="Task_NuevaVersion" />
     <bpmn:sequenceFlow id="Flow_Reenvio" sourceRef="Task_NuevaVersion" targetRef="Task_ValidarPdf" />
@@ -233,7 +233,7 @@
         <dc:Bounds x="860" y="250" width="100" height="80" />
       </bpmndi:BPMNShape>
 
-      <!-- Editor -->
+      <!-- Asignación y consenso: lo hace el sistema -->
       <bpmndi:BPMNShape id="Task_RevisarEnvio_di" bpmnElement="Task_RevisarEnvio">
         <dc:Bounds x="1000" y="390" width="100" height="80" />
       </bpmndi:BPMNShape>
