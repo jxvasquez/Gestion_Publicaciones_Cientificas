@@ -2,7 +2,7 @@ import { expect, Page, test } from '@playwright/test';
 
 import { visit } from './support/a11y';
 import { loginUi } from './support/ui';
-import { buildWorld, screens, World } from './support/world';
+import { accountFor, buildWorld, screens, World } from './support/world';
 
 /**
  * Responsive (TSK-92): en escritorio y en tableta, horizontal y vertical, ninguna pantalla
@@ -13,6 +13,7 @@ const VIEWPORTS = [
   { name: 'portátil 1366×768', width: 1366, height: 768 },
   { name: 'tableta horizontal 1024×768', width: 1024, height: 768 },
   { name: 'tableta vertical 768×1024', width: 768, height: 1024 },
+  { name: 'móvil 320×640', width: 320, height: 640 },
 ];
 
 let world: World;
@@ -87,11 +88,11 @@ test('control: el verificador detecta un desborde y un control fuera de pantalla
   expect(problems).toContain('Fuera del ancho');
 });
 
-for (const role of [null, 'author', 'editor', 'reviewer', 'admin'] as const) {
+for (const role of [null, 'author', 'reviewer', 'admin'] as const) {
   test(`sin desbordes ni controles inaccesibles (${role ?? 'público'})`, async ({ page }) => {
     await page.setViewportSize({ width: 1920, height: 1080 });
     if (role) {
-      await loginUi(page, role);
+      await loginUi(page, accountFor(role, world));
     }
     const problems: string[] = [];
     for (const screen of screens(world).filter((s) => s.role === role)) {

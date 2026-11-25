@@ -4,7 +4,7 @@ import { visit } from './support/a11y';
 import { ACCOUNTS, PASSWORD } from './support/env';
 import { tabThrough } from './support/keyboard';
 import { loginUi } from './support/ui';
-import { buildWorld, screens, World } from './support/world';
+import { accountFor, buildWorld, screens, World } from './support/world';
 
 /**
  * Teclado y foco (TSK-92): todo control visible se alcanza con Tab, muestra un indicador de
@@ -60,13 +60,13 @@ test('catálogo: buscar y abrir una ficha solo con el teclado', async ({ page })
   await expect(page).toHaveURL(new RegExp(`/catalog/${world.accepted.code}$`));
 });
 
-const roles = ['author', 'editor', 'reviewer', 'admin'] as const;
+const roles = ['author', 'reviewer', 'admin'] as const;
 for (const role of [null, ...roles]) {
   test(`Tab alcanza todos los controles con foco visible (${role ?? 'público'})`, async ({
     page,
   }) => {
     if (role) {
-      await loginUi(page, role);
+      await loginUi(page, accountFor(role, world));
     }
     const problems: string[] = [];
     for (const screen of screens(world).filter((s) => s.role === role)) {
@@ -88,7 +88,7 @@ test('un diálogo atrapa el foco, se cierra con Escape y devuelve el foco al bot
   page,
 }) => {
   await loginUi(page, 'author');
-  await visit(page, `/app/author/manuscripts/${world.submitted.id}`);
+  await visit(page, `/app/author/manuscripts/${world.review.id}`);
   const opener = page.getByRole('button', { name: 'Dar de baja' });
   await opener.focus();
   await page.keyboard.press('Enter');

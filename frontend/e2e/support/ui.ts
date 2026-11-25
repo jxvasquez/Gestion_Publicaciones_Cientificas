@@ -30,3 +30,57 @@ export async function filterAudit(page: Page, action: string, manuscriptId: stri
   await page.getByLabel('Manuscrito (id)').fill(manuscriptId);
   await page.getByRole('button', { name: 'Filtrar' }).click();
 }
+
+/** Los cinco criterios de la rúbrica, con el nombre que ve el Revisor. */
+export const CRITERIA = [
+  'Pertinencia y Contribución Científica',
+  'Rigor Metodológico y Reproducibilidad',
+  'Estado del Arte y Sustento Bibliográfico',
+  'Validez de Resultados y Conclusiones',
+  'Redacción Académica y Estructura Formal',
+] as const;
+
+/** Elige un nivel (1 a 5) de un criterio en el formulario de evaluación. */
+export async function scoreCriterion(page: Page, criterion: string, score: number): Promise<void> {
+  await page
+    .getByRole('group', { name: new RegExp(`^${criterion}`) })
+    .locator('label')
+    .filter({ hasText: new RegExp(`^\\s*${score} · `) })
+    .click();
+}
+
+/** Llena la rúbrica completa, el dictamen y los comentarios; no envía. */
+export async function fillRubric(
+  page: Page,
+  scores: readonly number[],
+  verdict: 'Aceptar' | 'Revisión menor' | 'Revisión mayor' | 'Rechazar',
+  comments: string,
+): Promise<void> {
+  for (const [index, criterion] of CRITERIA.entries()) {
+    await scoreCriterion(page, criterion, scores[index]);
+  }
+  await page.getByRole('radio', { name: new RegExp(`^${verdict}`) }).check();
+  await page.getByLabel('Comentarios para el Autor').fill(comments);
+}
+
+/** Declara la ausencia de conflicto y confirma el envío definitivo. */
+export async function sendEvaluation(page: Page): Promise<void> {
+  await page
+    .getByLabel('Declaro que no tengo ningún conflicto de interés con este manuscrito.')
+    .check();
+  await page.getByRole('button', { name: 'Enviar evaluación' }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Enviar evaluación' }).click();
+  await expect(page.getByRole('heading', { name: 'Evaluación enviada' })).toBeVisible();
+}
+
+/** Número que muestra una métrica de «Mi desempeño» (por ejemplo, el puntaje de ranking). */
+export async function standingMetric(page: Page, label: string): Promise<string> {
+  const metric = page.locator('.kpi-card__metric').filter({ hasText: label });
+  return (await metric.locator('dd').first().innerText()).trim();
+}
+
+/** «3/5»: asignaciones activas sobre el tope, tal como se ven en «Mi desempeño». */
+export async function activeSlots(page: Page): Promise<string> {
+  const metric = page.locator('.kpi-card__metric').filter({ hasText: 'Asignaciones activas' });
+  return (await metric.locator('[aria-hidden="true"]').first().innerText()).trim();
+}
