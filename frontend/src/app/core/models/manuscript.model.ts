@@ -7,20 +7,35 @@
  * evaluación que el Autor puede leer (`AuthorEvaluationFeedbackSerializer`).
  */
 
+import { AcademicArea } from './area.model';
+
 export type ManuscriptStatus =
-  'DRAFT' | 'SUBMITTED' | 'UNDER_REVIEW' | 'REQUIRES_CORRECTIONS' | 'ACCEPTED' | 'REJECTED';
+  | 'DRAFT'
+  | 'SUBMITTED'
+  | 'UNDER_REVIEW'
+  | 'TIE_BREAKER'
+  | 'CHANGES_REQUESTED'
+  | 'ACCEPTED'
+  | 'REJECTED';
+
+/** Estado heredado: solo aparece en historiales anteriores a la revisión automática. */
+export const LEGACY_STATUS = 'REQUIRES_CORRECTIONS';
 
 export const MANUSCRIPT_STATUSES: readonly ManuscriptStatus[] = [
   'DRAFT',
   'SUBMITTED',
   'UNDER_REVIEW',
-  'REQUIRES_CORRECTIONS',
+  'TIE_BREAKER',
+  'CHANGES_REQUESTED',
   'ACCEPTED',
   'REJECTED',
 ];
 
-/** Estados en los que el Autor puede editar los metadatos (RN, HU-07). */
-export const EDITABLE_STATUSES: readonly ManuscriptStatus[] = ['DRAFT', 'REQUIRES_CORRECTIONS'];
+/** Estados en los que el Autor puede editar los metadatos y las carreras (RN, HU-07). */
+export const EDITABLE_STATUSES: readonly ManuscriptStatus[] = ['DRAFT', 'CHANGES_REQUESTED'];
+
+/** Decisión del veredicto (automático o corregido por el Administrador). */
+export type VerdictDecision = 'ACCEPTED' | 'REJECTED' | 'CHANGES_REQUESTED';
 
 export interface ManuscriptAuthor {
   full_name: string;
@@ -37,16 +52,23 @@ export interface DraftFileSummary {
   uploaded_at: string;
 }
 
+/** Reseña de un revisor, identificada solo por «Revisor N»: nunca su identidad. */
+export interface FeedbackReview {
+  label: string;
+  comments_for_author: string;
+}
+
 /**
- * Lo único que el Autor lee de una evaluación: los comentarios escritos
- * para él, la decisión del Editor y sus observaciones. La interfaz no
- * declara (ni renderiza) el revisor, los comentarios confidenciales ni
- * las puntuaciones.
+ * Lo único que el Autor lee de las evaluaciones: la decisión, su origen y las
+ * reseñas «Revisor N». La interfaz no declara (ni renderiza) identidades,
+ * puntajes, dictámenes individuales ni el ranking.
  */
 export interface EvaluationFeedback {
-  comments_for_author: string;
   decision: string;
+  decided_at: string;
+  origin: string;
   observations: string | null;
+  reviews: FeedbackReview[];
 }
 
 export interface Manuscript {
@@ -55,7 +77,7 @@ export interface Manuscript {
   title: string;
   abstract: string;
   keywords: string[];
-  area: string;
+  areas: AcademicArea[];
   language: string;
   status: ManuscriptStatus;
   current_round: number;
@@ -153,7 +175,11 @@ export interface VersionDownload {
 }
 
 /** Estados en los que la baja lógica exige un motivo (CA-HU-08-02). */
-export const WITHDRAWAL_REASON_REQUIRED: readonly ManuscriptStatus[] = ['UNDER_REVIEW', 'ACCEPTED'];
+export const WITHDRAWAL_REASON_REQUIRED: readonly ManuscriptStatus[] = [
+  'UNDER_REVIEW',
+  'TIE_BREAKER',
+  'ACCEPTED',
+];
 
 export function requiresWithdrawalReason(status: ManuscriptStatus): boolean {
   return WITHDRAWAL_REASON_REQUIRED.includes(status);
@@ -176,7 +202,8 @@ export interface ManuscriptPayload {
   title: string;
   abstract: string;
   keywords: string[];
-  area: string;
+  /** Códigos de 1 a 3 carreras activas. */
+  areas: string[];
   language: string;
   authors: AuthorPayload[];
 }
@@ -192,7 +219,7 @@ export interface ManuscriptListParams {
   page_size?: number;
 }
 
-/** El Autor edita solo en `DRAFT` o `REQUIRES_CORRECTIONS` y si no está dado de baja. */
+/** El Autor edita solo en `DRAFT` o `CHANGES_REQUESTED` y si no está dado de baja. */
 export function isEditable(manuscript: Pick<Manuscript, 'status' | 'is_active'>): boolean {
   return manuscript.is_active && EDITABLE_STATUSES.includes(manuscript.status);
 }
@@ -206,20 +233,26 @@ export interface NextAction {
 const NEXT_ACTION_BY_STATUS: Record<ManuscriptStatus, NextAction> = {
   DRAFT: {
     short: 'Completar y enviar',
-    detail: 'Complete los datos, adjunte el PDF y envíe el manuscrito al Editor.',
+    detail: 'Complete los datos, elija sus carreras, adjunte el PDF y envíe el manuscrito a revisión.',
   },
   SUBMITTED: {
-    short: 'En espera del Editor',
-    detail: 'El Editor revisará el envío y lo pasará a revisión. No requiere acción de su parte.',
+    short: 'En espera de revisores',
+    detail:
+      'El sistema asigna dos revisores de su carrera en cuanto haya candidatos elegibles. No requiere acción de su parte.',
   },
   UNDER_REVIEW: {
     short: 'En revisión',
-    detail: 'El manuscrito está siendo evaluado. No requiere acción de su parte.',
+    detail: 'El manuscrito está siendo evaluado por dos revisores. No requiere acción de su parte.',
   },
-  REQUIRES_CORRECTIONS: {
+  TIE_BREAKER: {
+    short: 'En desempate',
+    detail:
+      'Los dos primeros dictámenes no coinciden: un tercer revisor decidirá por mayoría. No requiere acción de su parte.',
+  },
+  CHANGES_REQUESTED: {
     short: 'Enviar nueva versión',
     detail:
-      'Atienda las observaciones, edite los datos si hace falta y envíe una nueva versión con el PDF corregido.',
+      'Atienda los comentarios de los revisores, edite los datos si hace falta y envíe una nueva versión con el PDF corregido.',
   },
   ACCEPTED: {
     short: 'Publicado',

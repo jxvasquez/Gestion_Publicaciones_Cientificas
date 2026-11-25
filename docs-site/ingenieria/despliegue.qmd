@@ -88,7 +88,7 @@ Se instalan desde `scripts/cron/gpc.cron`; usan `flock` para que no se solapen.
 
 | Frecuencia | Tarea | Comando |
 |---|---|---|
-| Cada minuto | Marcar asignaciones vencidas | `manage.py mark_expired_assignments` |
+| Cada minuto | Ciclo de revisión: revocar y reasignar por plazo vencido, completar cupos y decisiones pendientes | `manage.py run_review_automation` |
 | Cada minuto | Enviar y reintentar avisos | `manage.py send_pending_notifications` |
 | Diaria, 02:15 | Respaldo de PostgreSQL y del volumen | `scripts/backup.sh` |
 | Diaria, 03:00 | Limpiar claves de idempotencia caducadas | `manage.py cleanup_idempotency_keys` |

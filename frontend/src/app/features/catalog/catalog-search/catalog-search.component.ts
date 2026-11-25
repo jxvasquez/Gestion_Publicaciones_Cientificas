@@ -1,4 +1,6 @@
-import { Component, effect, inject, input, output } from '@angular/core';
+import { AcademicArea } from '../../../core/models/area.model';
+import { AreaService } from '../../../core/services/area.service';
+import { Component, effect, inject, input, output, signal } from '@angular/core';
 import { NonNullableFormBuilder, ReactiveFormsModule } from '@angular/forms';
 
 import {
@@ -25,6 +27,10 @@ import {
 })
 export class CatalogSearchComponent {
   private readonly formBuilder = inject(NonNullableFormBuilder);
+  private readonly areaService = inject(AreaService);
+
+  /** Carreras activas del catálogo; el filtro envía `area=<code>`. */
+  protected readonly areas = signal<AcademicArea[]>([]);
 
   /** Filtros vigentes (los de la URL); el formulario los refleja. */
   readonly filters = input<CatalogFilters>({});
@@ -58,6 +64,7 @@ export class CatalogSearchComponent {
   );
 
   constructor() {
+    this.areaService.list().subscribe({ next: (areas) => this.areas.set(areas) });
     effect(() => {
       const filters = this.filters();
       this.form.reset(

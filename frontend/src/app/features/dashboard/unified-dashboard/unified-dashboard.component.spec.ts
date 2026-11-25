@@ -65,11 +65,10 @@ describe('UnifiedDashboardComponent', () => {
     await fixture.whenStable();
 
     flush(
-      dashboardOf(['AUTHOR', 'REVIEWER', 'EDITOR', 'ADMIN'], {
+      dashboardOf(['AUTHOR', 'REVIEWER', 'ADMIN'], {
         author: ok({ manuscripts: 3 }),
-        reviewer: ok({ pending: 0 }),
-        editor: ok(),
-        admin: ok({ audit_events: 42 }),
+        reviewer: ok({ ranking_score: 0 }),
+        admin: ok({ open_incidents: 42 }),
       }),
     );
     await fixture.whenStable();
@@ -77,11 +76,9 @@ describe('UnifiedDashboardComponent', () => {
     const element = fixture.nativeElement as HTMLElement;
     expect(element.querySelector('app-author-summary')).not.toBeNull();
     expect(element.querySelector('app-reviewer-summary')).not.toBeNull();
-    expect(element.querySelector('app-editor-summary')).not.toBeNull();
     expect(element.querySelector('app-admin-summary')).not.toBeNull();
     expect(element.querySelector('app-author-summary dd')?.textContent?.trim()).toBe('3');
     expect(element.querySelector('app-reviewer-summary dd')?.textContent?.trim()).toBe('0');
-    expect(element.querySelector('app-editor-summary app-empty-state')).not.toBeNull();
     expect(element.querySelector('app-admin-summary dd')?.textContent?.trim()).toBe('42');
     // Una sola petición al backend por carga.
     httpMock.verify();
@@ -90,17 +87,16 @@ describe('UnifiedDashboardComponent', () => {
   it('el nombre de cada rol aparece una sola vez en su tarjeta, no duplicado', async () => {
     const fixture = await render();
     flush(
-      dashboardOf(['AUTHOR', 'REVIEWER', 'EDITOR', 'ADMIN'], {
+      dashboardOf(['AUTHOR', 'REVIEWER', 'ADMIN'], {
         author: ok({ manuscripts: 3 }),
-        reviewer: ok({ pending: 1 }),
-        editor: ok({ new_submissions: 7 }),
-        admin: ok({ audit_events: 42 }),
+        reviewer: ok({ ranking_score: 1 }),
+        admin: ok({ open_incidents: 42 }),
       }),
     );
     await fixture.whenStable();
 
     const element = fixture.nativeElement as HTMLElement;
-    const names = { author: 'Autor', reviewer: 'Revisor', editor: 'Editor', admin: 'Administrador' };
+    const names = { author: 'Autor', reviewer: 'Revisor', admin: 'Administrador' };
     for (const [key, name] of Object.entries(names)) {
       const card = element.querySelector(`[data-section="${key}"]`) as HTMLElement;
       const headings = Array.from(card.querySelectorAll('h1, h2, h3, h4')).map((h) =>
@@ -113,17 +109,17 @@ describe('UnifiedDashboardComponent', () => {
   it('una sección fallida conserva el nombre del rol, porque no hay tarjeta resumen que lo muestre', async () => {
     const fixture = await render();
     flush(
-      dashboardOf(['AUTHOR', 'EDITOR'], {
+      dashboardOf(['AUTHOR', 'ADMIN'], {
         author: ok({ manuscripts: 5 }),
-        editor: failed('No se pudo cargar esta sección. Intente de nuevo.'),
+        admin: failed('No se pudo cargar esta sección. Intente de nuevo.'),
       }),
     );
     await fixture.whenStable();
 
     const element = fixture.nativeElement as HTMLElement;
-    const card = element.querySelector('[data-section="editor"]') as HTMLElement;
+    const card = element.querySelector('[data-section="admin"]') as HTMLElement;
     expect(Array.from(card.querySelectorAll('h1, h2, h3, h4')).map((h) => h.textContent?.trim())).toEqual(
-      ['Editor'],
+      ['Administrador'],
     );
     expect(card.querySelector('app-error-state')).not.toBeNull();
   });
@@ -140,7 +136,7 @@ describe('UnifiedDashboardComponent', () => {
     const element = fixture.nativeElement as HTMLElement;
     expect(element.querySelector('app-reviewer-summary')).not.toBeNull();
     expect(element.querySelector('app-author-summary')).toBeNull();
-    expect(element.querySelector('app-editor-summary')).toBeNull();
+    expect(element.querySelector('app-admin-summary')).toBeNull();
     expect(element.querySelector('app-admin-summary')).toBeNull();
     expect(Array.from(element.querySelectorAll('a'), (link) => link.getAttribute('href'))).toEqual([
       '/app/reviewer/assignments',
@@ -151,9 +147,9 @@ describe('UnifiedDashboardComponent', () => {
   it('el fallo de una sección no oculta las demás y ofrece Reintentar', async () => {
     const fixture = await render();
     flush(
-      dashboardOf(['AUTHOR', 'EDITOR'], {
+      dashboardOf(['AUTHOR', 'ADMIN'], {
         author: ok({ manuscripts: 5 }),
-        editor: failed('No se pudo cargar esta sección. Intente de nuevo.'),
+        admin: failed('No se pudo cargar esta sección. Intente de nuevo.'),
       }),
     );
     await fixture.whenStable();
@@ -162,27 +158,27 @@ describe('UnifiedDashboardComponent', () => {
     // La sección sana sigue visible con sus datos.
     expect(element.querySelector('app-author-summary')).not.toBeNull();
     // La fallida muestra el aviso reintentable del backend.
-    const editorSection = element.querySelector('[data-section="editor"]');
-    expect(editorSection?.querySelector('app-error-state')).not.toBeNull();
-    expect(editorSection?.textContent).toContain('Intente de nuevo');
-    const retryButton = editorSection?.querySelector<HTMLButtonElement>('button');
+    const adminSection = element.querySelector('[data-section="admin"]');
+    expect(adminSection?.querySelector('app-error-state')).not.toBeNull();
+    expect(adminSection?.textContent).toContain('Intente de nuevo');
+    const retryButton = adminSection?.querySelector<HTMLButtonElement>('button');
     expect(retryButton?.textContent).toContain('Reintentar');
 
     // Reintentar: vuelve a llamar al panel una única vez y restaura.
     retryButton?.click();
     await fixture.whenStable();
     flush(
-      dashboardOf(['AUTHOR', 'EDITOR'], {
+      dashboardOf(['AUTHOR', 'ADMIN'], {
         author: ok({ manuscripts: 5 }),
-        editor: ok({ new_submissions: 1 }),
+        admin: ok({ open_incidents: 1 }),
       }),
     );
     await fixture.whenStable();
 
     const restored = fixture.nativeElement as HTMLElement;
-    const editorAfter = restored.querySelector('[data-section="editor"]');
-    expect(editorAfter?.querySelector('app-editor-summary')).not.toBeNull();
-    expect(editorAfter?.querySelector('app-error-state')).toBeNull();
+    const adminAfter = restored.querySelector('[data-section="admin"]');
+    expect(adminAfter?.querySelector('app-admin-summary')).not.toBeNull();
+    expect(adminAfter?.querySelector('app-error-state')).toBeNull();
     httpMock.verify();
   });
 
@@ -221,9 +217,8 @@ describe('UnifiedDashboardComponent', () => {
   it('no existe paso de selección de rol ni selector en el panel', async () => {
     const fixture = await render();
     flush(
-      dashboardOf(['AUTHOR', 'EDITOR'], {
+      dashboardOf(['AUTHOR', 'ADMIN'], {
         author: ok(),
-        editor: ok(),
       }),
     );
     await fixture.whenStable();

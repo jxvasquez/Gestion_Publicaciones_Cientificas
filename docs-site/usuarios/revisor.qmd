@@ -3,7 +3,7 @@ title: "Soy Revisor"
 subtitle: "Evaluar un manuscrito a ciegas, dentro del plazo"
 ---
 
-Como Revisor usted evalúa los manuscritos que el Editor le asigna. La evaluación es **doble ciego**: usted no sabe quién escribió el manuscrito y el Autor no sabrá quién lo evaluó.
+Como Revisor usted evalúa los manuscritos que el sistema le asigna **automáticamente**: cada versión recibe dos Revisores cuya carrera coincide exactamente con la del manuscrito. La evaluación es **doble ciego**: usted no sabe quién escribió el manuscrito y el Autor no sabrá quién lo evaluó.
 
 ## El recorrido de una asignación
 
@@ -20,13 +20,15 @@ flowchart LR
     G --> J[Evaluación inmutable]
 ```
 
-## Mis asignaciones y el plazo
+## Mis asignaciones, el cupo y el plazo
 
-En **Mis asignaciones** ve su bandeja con el estado de cada una (activa, completada, revocada o vencida). Cada asignación tiene un plazo de **20 días calendario**, contados desde el instante exacto en que se le asignó.
+En **Mis asignaciones** ve su bandeja con el estado de cada una y, arriba, **Mi desempeño**: su puntaje de ranking, sus asignaciones activas como **«X/5»** (el tope es 5), las evaluadas a tiempo, los plazos vencidos y el historial de ajustes. Cada asignación tiene un plazo de **20 días calendario**, contados desde el instante exacto en que se le asignó.
+
+El sistema elige a los Revisores por coincidencia exacta de carrera, sin el Autor ni los coautores, por **ranking** (mayor primero) y menor carga. Empieza con 100 puntos.
 
 ::: {.callout-warning}
-## Si el plazo vence
-Pasados los 20 días el sistema marca la asignación como **vencida**: **ya no puede guardar el borrador ni enviar la evaluación**, y el Editor decide si la revoca y reasigna. Nada se revoca solo, pero conviene evaluar a tiempo; si necesita más margen, avise al Editor antes de que venza.
+## Ranking y plazo
+Entregar la evaluación final **a tiempo suma 10 puntos**. Si el plazo vence sin evaluación final, el sistema **revoca la asignación, le resta 20 puntos y reasigna el manuscrito a otro Revisor**: ya no puede guardar ni enviar. Conviene evaluar a tiempo.
 :::
 
 ## El detalle ciego
@@ -39,20 +41,26 @@ Solo puede descargar el documento mientras la asignación está **activa**. Reci
 
 ## Completar la evaluación
 
-El formulario es estructurado. Puntúe cada criterio del **1 al 5**:
+La rúbrica tiene cinco criterios técnicos. Puntúe cada uno del **1 (Deficiente) al 5 (Excelente)**; cada nivel muestra su descriptor:
 
 | Criterio | Qué valora |
 |---|---|
-| Originalidad | Aporte novedoso. |
-| Metodología | Rigor del método. |
-| Claridad | Calidad de la redacción y la estructura. |
-| Relevancia | Importancia para el área. |
-| Ética | Cumplimiento de las normas éticas. |
+| Pertinencia y Contribución Científica | Relación con la carrera y aporte del trabajo. |
+| Rigor Metodológico y Reproducibilidad | Calidad del método y posibilidad de reproducirlo. |
+| Estado del Arte y Sustento Bibliográfico | Fundamento en la literatura. |
+| Validez de Resultados y Conclusiones | Si las conclusiones se sostienen. |
+| Redacción Académica y Estructura Formal | Claridad, estructura y formato. |
 
-Luego elija su **recomendación** —*Aceptar*, *Requiere correcciones* o *Rechazar*— y escriba dos tipos de comentarios:
+Luego elija su **dictamen** —*Aceptar*, *Revisión menor*, *Revisión mayor* o *Rechazar*— y escriba los **comentarios para el Autor**, que él leerá como «Revisor N», sin su identidad. Ya no hay comentarios confidenciales: si necesita comunicar algo reservado, use el reporte al Administrador.
 
-- **Comentarios para el autor:** el Autor los verá junto con el veredicto.
-- **Comentarios confidenciales:** solo los ve el Editor.
+::: {.callout-important}
+## Cuándo se exige justificación
+Si **cualquier criterio es 3 o menos**, o el dictamen es *Revisión mayor* o *Rechazar*, los comentarios deben tener **al menos 100 caracteres**; un contador le muestra cuántos lleva. Con puntajes de 4 o 5 y *Aceptar* o *Revisión menor* basta un comentario breve.
+:::
+
+## Cómo se decide el veredicto
+
+No lo decide una persona. Cuando los dos Revisores envían su evaluación, el sistema aplica el **consenso**: dos aceptaciones dan *Aceptado* (y se publica), dos rechazos dan *Rechazado* y los demás casos dan *Cambios solicitados*. Si un Revisor acepta y el otro rechaza, se asigna **automáticamente un tercer Revisor** que desempata por mayoría.
 
 ### Borrador y envío final
 
@@ -62,7 +70,7 @@ Luego elija su **recomendación** —*Aceptar*, *Requiere correcciones* o *Recha
 
 ## Declarar un conflicto de interés
 
-Si reconoce un conflicto (por ejemplo, conoce al Autor), declárelo. La evaluación se bloquea (ya no puede guardar ni enviar) y el Editor recibe el aviso; la asignación sigue activa hasta que él decida. El motivo es opcional pero útil.
+Si reconoce un conflicto (por ejemplo, conoce al Autor), declárelo. La asignación se **libera sin penalización**, vuelve a su bandeja con un aviso y el sistema asigna a otro Revisor elegible. El motivo es opcional pero útil.
 
 ## Reportar una filtración de identidad
 
@@ -72,17 +80,17 @@ Si el contenido del documento delata al Autor, **repórtelo de forma confidencia
 - no lo ve el Autor;
 - permite elegir el tipo (*posible fuga de identidad* u *otro*) y describir lo ocurrido.
 
-Solo puede tener un reporte abierto por asignación. El Editor lo resuelve pidiendo una versión anonimizada o reasignando el manuscrito.
+Solo puede tener un reporte abierto por asignación. El Administrador lo resuelve pidiendo una versión anonimizada, reasignando el manuscrito o descartándolo.
 
 ## Mi historial
 
-**Ver mi historial** lista sus evaluaciones finales (los borradores nunca aparecen), con la decisión editorial posterior cuando existe. Es de solo lectura y no muestra manuscritos retirados ni que usted haya coescrito.
+**Ver mi historial** lista sus evaluaciones finales (los borradores nunca aparecen), con la decisión posterior del consenso cuando existe. Es de solo lectura y no muestra manuscritos retirados ni que usted haya coescrito.
 
 ## Problemas frecuentes
 
 | Situación | Causa probable | Solución |
 |---|---|---|
-| No puedo descargar el PDF | La asignación ya no está activa. | Consulte con el Editor. |
-| No puedo guardar mi evaluación | Declaró un conflicto, la asignación se revocó o venció, o ya envió la evaluación. | Contacte al Editor. |
+| No puedo descargar el PDF | La asignación ya no está activa. | Consulte con el Administrador. |
+| No puedo guardar mi evaluación | Declaró un conflicto, la asignación se revocó o venció, o ya envió la evaluación. | Contacte al Administrador. |
 | «Los datos cambiaron mientras los editaba» | Se guardó desde otra pestaña. | Recargue y repita. |
-| No veo un manuscrito que esperaba | Solo ve lo asignado a usted y activo. | Pregunte al Editor. |
+| No veo un manuscrito que esperaba | Solo ve lo asignado a usted y activo. | Pregunte al Administrador. |

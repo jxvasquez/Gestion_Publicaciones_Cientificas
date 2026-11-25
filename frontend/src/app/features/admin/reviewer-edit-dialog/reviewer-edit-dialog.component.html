@@ -1,0 +1,61 @@
+<dialog
+  #dialog
+  class="edit-dialog"
+  [attr.aria-labelledby]="titleId"
+  (cancel)="onCancelRequested($event)"
+>
+  <h2 [id]="titleId">Editar revisor</h2>
+
+  @if (reviewer(); as current) {
+    <p>
+      <strong>{{ current.full_name }}</strong> ({{ current.email }})
+    </p>
+    <p class="edit-dialog__hint">
+      Los cambios no modifican las asignaciones vigentes: afectan solo a las nuevas.
+    </p>
+  }
+
+  <fieldset class="edit-dialog__field" [disabled]="busy()">
+    <legend>Carreras</legend>
+    @for (option of options(); track option.code) {
+      <label class="edit-dialog__option">
+        <input
+          type="checkbox"
+          [value]="option.code"
+          [checked]="selected().includes(option.code)"
+          (change)="toggle(option.code, $any($event.target).checked)"
+        />
+        {{ option.name }}
+      </label>
+    }
+    @if (selected().length === 0) {
+      <p class="edit-dialog__hint" role="note">
+        Sin carreras el revisor no es elegible para ninguna asignación.
+      </p>
+    }
+  </fieldset>
+
+  <label class="edit-dialog__option" [for]="availableId">
+    <input
+      [id]="availableId"
+      type="checkbox"
+      [checked]="available()"
+      [disabled]="busy()"
+      (change)="available.set($any($event.target).checked)"
+    />
+    Disponible para recibir asignaciones nuevas
+  </label>
+
+  @if (error()) {
+    <p class="edit-dialog__error" role="alert">{{ error() }}</p>
+  }
+
+  <div class="edit-dialog__actions">
+    <button type="button" class="btn btn--ghost" [disabled]="busy()" (click)="dismiss()">
+      Cancelar
+    </button>
+    <button type="button" class="btn btn--primary" [disabled]="busy()" (click)="save()">
+      {{ busy() ? 'Guardando…' : 'Guardar cambios' }}
+    </button>
+  </div>
+</dialog>

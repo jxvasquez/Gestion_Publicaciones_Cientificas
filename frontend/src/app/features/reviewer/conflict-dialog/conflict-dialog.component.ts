@@ -14,7 +14,7 @@ import { FormsModule } from '@angular/forms';
 import { ApiError } from '../../../core/models/api-error.model';
 import {
   CONFLICT_REASON_MAX_LENGTH,
-  EvaluationSnapshot,
+  ConflictResult,
 } from '../../../core/models/reviewer.model';
 import { ReviewerService } from '../../../core/services/reviewer.service';
 
@@ -30,7 +30,7 @@ let nextId = 0;
  * * **Solo da el conflicto por declarado cuando el servidor lo confirma.**
  *   Ante un error (red, `409`, `503`) el diálogo sigue abierto, muestra el
  *   motivo del fallo y conserva el texto escrito.
- * * Emite `declared` con la evaluación ya bloqueada y su `ETag`; quien lo
+ * * Emite `declared` con la asignación ya liberada sin penalización; quien lo
  *   aloja cierra el diálogo (`open`) y actualiza su estado.
  * * Nunca toca datos de los autores: el conflicto se declara sin
  *   identificarlos.
@@ -54,7 +54,7 @@ export class ConflictDialogComponent {
   readonly unsavedChanges = input(false, { transform: booleanAttribute });
 
   /** El servidor confirmó el conflicto: trae la evaluación ya bloqueada. */
-  readonly declared = output<EvaluationSnapshot>();
+  readonly declared = output<ConflictResult>();
 
   /** Se dispara al cancelar, incluido el cierre con Esc. */
   readonly cancelled = output<void>();
@@ -94,9 +94,9 @@ export class ConflictDialogComponent {
     this.busy.set(true);
     this.error.set('');
     this.service.declareConflict(this.assignmentId(), this.reason().trim() || null).subscribe({
-      next: (snapshot) => {
+      next: (result) => {
         this.busy.set(false);
-        this.declared.emit(snapshot);
+        this.declared.emit(result);
       },
       error: (error: ApiError) => {
         this.busy.set(false);

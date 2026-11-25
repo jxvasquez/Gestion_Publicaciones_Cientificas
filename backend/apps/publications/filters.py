@@ -8,7 +8,7 @@ withdrawn manuscripts. A malformed value is a ``400``, never ignored.
 from __future__ import annotations
 
 from django.contrib.postgres.search import SearchQuery
-from django.db.models import Q, QuerySet
+from django.db.models import Exists, OuterRef, Q, QuerySet
 from rest_framework import serializers
 
 from apps.publications.models import Manuscript
@@ -48,7 +48,13 @@ def apply_filters(queryset: QuerySet, query_params) -> QuerySet:
     if "status" in params:
         queryset = queryset.filter(status=params["status"])
     if "area" in params:
-        queryset = queryset.filter(area__iexact=params["area"])
+        queryset = queryset.filter(
+            Exists(
+                Manuscript.areas.through.objects.filter(
+                    manuscript_id=OuterRef("pk"), academicarea__code__iexact=params["area"]
+                )
+            )
+        )
     if "date_from" in params:
         queryset = queryset.filter(created_at__date__gte=params["date_from"])
     if "date_to" in params:

@@ -1,0 +1,137 @@
+<section aria-labelledby="roster-title">
+  <header class="list-header">
+    <h1 id="roster-title">Revisores</h1>
+    <p class="list-header__count" role="status">
+      @if (viewState() === 'ready') {
+        {{ total() }} {{ total() === 1 ? 'revisor' : 'revisores' }}
+      }
+    </p>
+  </header>
+
+  <form class="card filters" (submit)="$event.preventDefault(); applyFilter({ search: search() || null })">
+    <div class="field">
+      <label for="roster-area">Carrera</label>
+      <select
+        id="roster-area"
+        [ngModel]="filters().area ?? ''"
+        (ngModelChange)="applyFilter({ area: $event || null })"
+        name="area"
+      >
+        <option value="">Todas</option>
+        @for (area of areaOptions(); track area.code) {
+          <option [value]="area.code">{{ area.name }}</option>
+        }
+      </select>
+    </div>
+    <div class="field">
+      <label for="roster-available">Disponibilidad</label>
+      <select
+        id="roster-available"
+        [ngModel]="filters().available === undefined ? '' : '' + filters().available"
+        (ngModelChange)="applyFilter({ available: $event || null })"
+        name="available"
+      >
+        <option value="">Todos</option>
+        <option value="true">Disponibles</option>
+        <option value="false">No disponibles</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="roster-search">Buscar</label>
+      <input
+        id="roster-search"
+        type="search"
+        autocomplete="off"
+        placeholder="Nombre, correo o identificador"
+        [ngModel]="search()"
+        (ngModelChange)="search.set($event)"
+        name="search"
+      />
+    </div>
+    <button type="submit" class="btn btn--ghost">Buscar</button>
+  </form>
+
+  @if (notice()) {
+    <p class="callout callout--success" role="status">{{ notice() }}</p>
+  }
+
+  @switch (viewState()) {
+    @case ('loading') {
+      <app-loading-spinner label="Cargando revisores…" />
+    }
+    @case ('error') {
+      <app-error-state [message]="error()?.userMessage ?? ''" (retry)="reload()" />
+    }
+    @default {
+      @if (rows().length === 0) {
+        <app-empty-state message="No hay revisores con esos filtros." />
+      } @else {
+        <div class="card table-wrap" role="region" aria-label="Tabla de revisores" tabindex="0">
+          <table class="areas">
+            <caption class="visually-hidden">
+              Padrón de revisores, ordenado por ranking
+            </caption>
+            <thead>
+              <tr>
+                <th scope="col">Revisor</th>
+                <th scope="col">Carreras</th>
+                <th scope="col">Ranking</th>
+                <th scope="col">Activas</th>
+                <th scope="col">A tiempo</th>
+                <th scope="col">Vencidas</th>
+                <th scope="col">Estado</th>
+                <th scope="col">Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of rows(); track row.id) {
+                <tr>
+                  <td>
+                    {{ row.full_name }}<br />
+                    <span class="muted">{{ row.email }}</span>
+                  </td>
+                  <td>{{ areaNames(row) }}</td>
+                  <td>{{ row.ranking_score }}</td>
+                  <td>{{ row.active_assignments }}/{{ row.max_active_assignments }}</td>
+                  <td>{{ row.on_time_evaluations }}</td>
+                  <td>{{ row.missed_deadlines }}</td>
+                  <td>
+                    <span class="badge" [class.badge--success]="row.is_available" [class.badge--neutral]="!row.is_available">
+                      {{ row.is_available ? 'Disponible' : 'No disponible' }}
+                    </span>
+                  </td>
+                  <td>
+                    <button
+                      type="button"
+                      class="btn btn--ghost"
+                      [attr.aria-label]="'Editar a ' + row.full_name"
+                      (click)="edit(row)"
+                    >
+                      Editar
+                    </button>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        <app-pagination
+          [page]="currentPage()"
+          [pageSize]="pageSize"
+          [totalItems]="total()"
+          (pageChange)="goToPage($event)"
+        />
+      }
+    }
+  }
+
+  <app-reviewer-edit-dialog
+    [open]="editing() !== null"
+    [reviewer]="editing()"
+    [areas]="areaOptions()"
+    [busy]="saving()"
+    [error]="editError()"
+    (saved)="save($event)"
+    (cancelled)="editing.set(null)"
+  />
+</section>

@@ -38,11 +38,11 @@
               <tr>
                 <th scope="col">Manuscrito</th>
                 <th scope="col">Título</th>
-                <th scope="col">Área</th>
+                <th scope="col">Carreras</th>
                 <th scope="col">Versión</th>
                 <th scope="col">Su recomendación</th>
                 <th scope="col">Enviada</th>
-                <th scope="col">Resultado editorial</th>
+                <th scope="col">Resultado</th>
                 <th scope="col"><span class="visually-hidden">Acciones</span></th>
               </tr>
             </thead>
@@ -51,7 +51,7 @@
                 <tr>
                   <td>{{ row.manuscript_code }}</td>
                   <td class="history__title">{{ row.manuscript_title || 'Sin título' }}</td>
-                  <td>{{ row.area }}</td>
+                  <td>{{ areaNames(row.areas) }}</td>
                   <td>
                     v{{ row.version_number }}
                     <span class="history__meta">Ronda {{ row.round_number }}</span>
@@ -91,10 +91,10 @@
                               Evaluación de {{ detail.manuscript_code }}
                             </h2>
                             <dl class="scores">
-                              @for (criterion of criteria; track criterion.field) {
+                              @for (criterion of criteriaOf(detail); track criterion.label) {
                                 <div class="scores__row">
                                   <dt>{{ criterion.label }}</dt>
-                                  <dd>{{ detail[criterion.field] }} / {{ maxScore }}</dd>
+                                  <dd>{{ criterion.score }} / {{ maxScore }}</dd>
                                 </div>
                               }
                             </dl>

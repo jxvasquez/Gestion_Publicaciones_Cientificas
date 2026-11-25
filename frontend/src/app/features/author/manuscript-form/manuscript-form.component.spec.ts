@@ -21,6 +21,7 @@ import {
   errorEnvelope,
 } from '../testing/manuscript.fixtures';
 import { ManuscriptFormComponent } from './manuscript-form.component';
+import { AREA_SERVICE_STUB } from '../../../core/testing/stubs';
 
 @Component({ template: '' })
 class BlankComponent {}
@@ -42,6 +43,7 @@ describe('ManuscriptFormComponent', () => {
   beforeEach(() => {
     TestBed.configureTestingModule({
       providers: [
+        AREA_SERVICE_STUB,
         provideRouter([
           { path: 'app/author/manuscripts/new', component: ManuscriptFormComponent },
           { path: 'app/author/manuscripts/:id/edit', component: ManuscriptFormComponent },
@@ -97,11 +99,17 @@ describe('ManuscriptFormComponent', () => {
       type(element, `#author-affiliation-${index}`, author.affiliation);
   };
 
+  const checkArea = (element: HTMLElement, code: string, checked: boolean) => {
+    const box = element.querySelector<HTMLInputElement>(`fieldset.areas input[value="${code}"]`)!;
+    box.checked = checked;
+    box.dispatchEvent(new Event('change', { bubbles: true }));
+  };
+
   const fillGeneral = (element: HTMLElement) => {
     type(element, '#title', '  Efecto del clima  ');
     type(element, '#abstract', 'Resumen del estudio.');
     type(element, '#keywords', 'clima, Cultivos ; clima');
-    type(element, '#area', 'Agronomía');
+    checkArea(element, 'agronomia', true);
     type(element, '#language', 'es');
   };
 
@@ -145,7 +153,7 @@ describe('ManuscriptFormComponent', () => {
         title: 'Efecto del clima',
         abstract: 'Resumen del estudio.',
         keywords: ['clima', 'Cultivos'],
-        area: 'Agronomía',
+        areas: ['agronomia'],
         language: 'es',
         authors: [
           {
@@ -172,7 +180,7 @@ describe('ManuscriptFormComponent', () => {
       await settle();
 
       expect(element.querySelector('.notice--warning')?.textContent).toContain(
-        'Título, Resumen, Palabras clave, Área de conocimiento, Idioma',
+        'Título, Resumen, Palabras clave, Carreras o áreas, Idioma',
       );
 
       await submit(element, settle);
@@ -182,7 +190,7 @@ describe('ManuscriptFormComponent', () => {
         title: '',
         abstract: '',
         keywords: [],
-        area: '',
+        areas: [],
         language: '',
       });
       request.flush(buildManuscript(), { status: 201, statusText: 'Created' });
@@ -514,7 +522,7 @@ describe('ManuscriptFormComponent', () => {
     });
 
     it('en Requiere correcciones los metadatos obligatorios no pueden quedar vacíos', async () => {
-      const { element, settle } = await edit({ status: 'REQUIRES_CORRECTIONS' });
+      const { element, settle } = await edit({ status: 'CHANGES_REQUESTED' });
       expect(element.querySelector('.notice--warning')).toBeNull();
       type(element, '#title', '');
       type(element, '#keywords', '');
@@ -528,7 +536,7 @@ describe('ManuscriptFormComponent', () => {
       ).toBe('true');
     });
 
-    it.each(MANUSCRIPT_STATUSES.filter((s) => s !== 'DRAFT' && s !== 'REQUIRES_CORRECTIONS'))(
+    it.each(MANUSCRIPT_STATUSES.filter((s) => s !== 'DRAFT' && s !== 'CHANGES_REQUESTED'))(
       'en %s el formulario queda bloqueado y explica por qué',
       async (status: ManuscriptStatus) => {
         const { element, settle } = await edit({ status });
@@ -617,6 +625,62 @@ describe('ManuscriptFormComponent', () => {
         (a) => a.textContent?.trim() === 'Cancelar',
       ) as HTMLAnchorElement;
       expect(cancel.getAttribute('href')).toBe('/app/author/manuscripts/m-1');
+    });
+  });
+
+  describe('carreras (FR-008)', () => {
+    it('ofrece las carreras activas del catálogo como casillas dentro de un fieldset con legend', async () => {
+      const { element } = await create();
+
+      const group = element.querySelector('fieldset.areas')!;
+      expect(group.querySelector('legend')?.textContent?.trim()).toBe('Carreras o áreas');
+      expect(
+        Array.from(group.querySelectorAll('input[type="checkbox"]'), (box) => (box as HTMLInputElement).value),
+      ).toEqual(['agronomia', 'derecho', 'edafologia']);
+    });
+
+    it('muestra el contador «N de 3» y avisa al pasar de tres carreras', async () => {
+      const { element, settle } = await create();
+      expect((element.querySelector('#areas-count')?.textContent ?? '').trim()).toBe('0 de 3');
+
+      for (const code of ['agronomia', 'derecho']) checkArea(element, code, true);
+      await settle();
+      expect((element.querySelector('#areas-count')?.textContent ?? '').trim()).toBe('2 de 3');
+
+      checkArea(element, 'edafologia', true);
+      await settle();
+      expect((element.querySelector('#areas-count')?.textContent ?? '').trim()).toBe('3 de 3');
+      expect(element.querySelector('fieldset.areas .field__error')).toBeNull();
+    });
+
+    it('envía los códigos elegidos', async () => {
+      const { element, settle } = await create();
+      fillAuthor(element, 0, { affiliation: 'UNL' });
+      checkArea(element, 'derecho', true);
+      checkArea(element, 'agronomia', true);
+      await settle();
+
+      await submit(element, settle);
+
+      const request = http.expectOne('/api/v1/manuscripts/');
+      expect((request.request.body as { areas: string[] }).areas).toEqual(['derecho', 'agronomia']);
+      request.flush(buildManuscript(), { status: 201, statusText: 'Created' });
+    });
+
+    it('muestra el error del servidor en las carreras con role="alert"', async () => {
+      const { element, settle } = await create();
+      fillAuthor(element, 0, { affiliation: 'UNL' });
+      await submit(element, settle);
+
+      http.expectOne('/api/v1/manuscripts/').flush(
+        errorEnvelope('VALIDATION_ERROR', 'Datos inválidos.', {
+          areas: ['Seleccione como máximo 3 carreras o áreas.'],
+        }),
+        { status: 400, statusText: 'Bad Request' },
+      );
+      await settle();
+
+      expect(element.querySelector('fieldset.areas [role="alert"]')?.textContent).toContain('máximo 3');
     });
   });
 });

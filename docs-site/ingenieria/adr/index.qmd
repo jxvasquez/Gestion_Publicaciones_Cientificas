@@ -16,6 +16,7 @@ Un **ADR** (*Architecture Decision Record*) deja por escrito una decisión impor
 | [0005](0005-auditoria-encadenada.qmd) | Auditoría encadenada, inmutable y obligatoria | Aceptada |
 | [0006](0006-django-admin-apagado.qmd) | Django Admin apagado en producción | Aceptada |
 | [0007](0007-contrato-json-universal.qmd) | Contrato JSON universal y versionado `/api/v1/` | Aceptada |
+| [0008](0008-flujo-editorial-automatico.qmd) | Flujo editorial automático: sin Editor, asignación por carrera, ranking, rúbrica y consenso | Aceptada |
 
 ## Formato
 

@@ -46,8 +46,8 @@
                 }
                 <p class="article__meta">
                   {{ article.code }}
-                  @if (article.area) {
-                    &ngsp;·&ngsp;<span class="badge badge--info">{{ article.area }}</span>
+                  @for (area of article.areas; track area.code) {
+                    &ngsp;·&ngsp;<span class="badge badge--info">{{ area.name }}</span>
                   }
                   @if (article.language) {
                     &ngsp;·&ngsp;<span class="badge badge--neutral">{{ language(article) }}</span>

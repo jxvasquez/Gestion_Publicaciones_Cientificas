@@ -35,14 +35,17 @@ erDiagram
 
 | Entidad | Para qué sirve | Notas de diseño |
 |---|---|---|
+| `AcademicArea` | Carrera o área del catálogo cerrado. | `code` único e inmutable; `is_active` solo deja de ofrecerla (nunca borra asociaciones). |
 | `Manuscript` | Metadatos y estado editorial. | `code` único de seguimiento; `is_active` para el retiro lógico; `lock_version` para el bloqueo optimista; disparador que prohíbe `DELETE`. |
 | `ManuscriptVersion` | Una iteración enviada. | **Append-only**: guarda el PDF exacto, su sello SHA-256 y la instantánea canónica de los metadatos de esa ronda. |
-| `CorrectionRound` | Ronda abierta por «Requiere correcciones». | El envío inicial es la ronda 0. Contador independiente de las versiones. |
+| `CorrectionRound` | Ronda abierta por «Cambios solicitados». | El envío inicial es la ronda 0. Contador independiente de las versiones. |
 | `StatusEvent` | Historial de cambios de estado. | Append-only. |
-| `Assignment` | Revisor asignado a una versión. | Un solo Revisor activo por manuscrito; `due_at` = `assigned_at` + 20 días. |
-| `Evaluation` | Borrador privado que se vuelve evaluación final. | Final = inmutable. Cinco puntuaciones de 1 a 5, recomendación y dos textos de comentarios. |
-| `Verdict` | Decisión editorial. | Append-only; nunca se edita. |
-| `VerdictCorrection` | Habilitación del Administrador para corregir un veredicto. | Sin ella, una segunda decisión sobre la misma versión se rechaza. |
+| `ReviewerProfile` | Carreras, disponibilidad y `ranking_score` (base 100) del Revisor. | Las carreras son una relación con el catálogo. |
+| `Assignment` | Revisor asignado a una versión, en un cupo (`slot` 1 y 2; 3 es el desempate). | Dos Revisores por versión; `due_at` = `assigned_at` + 20 días; un disparador de PostgreSQL rechaza la sexta asignación activa de un Revisor. |
+| `RankingAdjustment` | Ajuste de ranking: +10 a tiempo, −20 por plazo vencido. | Append-only; guarda el puntaje resultante. |
+| `Evaluation` | Borrador privado que se vuelve evaluación final. | Final = inmutable. Rúbrica de cinco criterios (1 a 5), dictamen y comentarios para el Autor (100 caracteres si hay puntajes bajos o dictamen severo). Las filas anteriores conservan la rúbrica 1. |
+| `Verdict` | Decisión sobre una versión. | Append-only; nunca se edita. `origin`: consenso, desempate, corrección del Administrador o heredado. Sin autor humano salvo la corrección. |
+| `VerdictCorrection` | Corrección del Administrador de un veredicto. | Registra el motivo; la decisión anterior se conserva. |
 | `IncidentReport` | Reporte confidencial del Revisor (fuga de identidad u otro). | Invisible para el Autor. |
 | `CatalogEntry` | Publicación de un artículo aceptado. | Apunta a la copia pública del PDF. |
 | `AuditLog` | Auditoría global. | Cadena de huellas SHA-256 y rechazo de `UPDATE`/`DELETE` en la base de datos. |
@@ -55,27 +58,46 @@ erDiagram
 stateDiagram-v2
     [*] --> DRAFT
     DRAFT --> SUBMITTED: Autor · submit
-    SUBMITTED --> UNDER_REVIEW: Editor · start-review
-    UNDER_REVIEW --> UNDER_REVIEW: Editor · revocar y reasignar
-    UNDER_REVIEW --> REQUIRES_CORRECTIONS: Editor · veredicto (observaciones obligatorias)
-    UNDER_REVIEW --> ACCEPTED: Editor · veredicto
-    UNDER_REVIEW --> REJECTED: Editor · veredicto (justificación obligatoria)
-    REQUIRES_CORRECTIONS --> SUBMITTED: Autor · nueva versión
+    SUBMITTED --> UNDER_REVIEW: Sistema · asignación automática
+    UNDER_REVIEW --> UNDER_REVIEW: Sistema · liberar y reasignar
+    UNDER_REVIEW --> ACCEPTED: Consenso (dos aceptaciones)
+    UNDER_REVIEW --> REJECTED: Consenso (dos rechazos)
+    UNDER_REVIEW --> CHANGES_REQUESTED: Consenso (cambios solicitados)
+    UNDER_REVIEW --> TIE_BREAKER: Aceptar o cambios contra rechazar
+    TIE_BREAKER --> ACCEPTED: Mayoría con el tercero
+    TIE_BREAKER --> REJECTED: Mayoría con el tercero
+    TIE_BREAKER --> CHANGES_REQUESTED: Mayoría con el tercero
+    CHANGES_REQUESTED --> SUBMITTED: Autor · nueva versión
     ACCEPTED --> [*]
     REJECTED --> [*]
 ```
 
 | Desde | Hacia | Actor | Condición |
 |---|---|---|---|
-| `DRAFT` | `SUBMITTED` | Autor | Metadatos completos y PDF válido. |
-| `SUBMITTED` | `UNDER_REVIEW` | Editor | Revisión inicial; puede asignar al Revisor en la misma acción. |
-| `UNDER_REVIEW` | `UNDER_REVIEW` | Editor | Revocación y reasignación (plazo vencido, conflicto o error). |
-| `UNDER_REVIEW` | `REQUIRES_CORRECTIONS` | Editor | Evaluación final registrada y observaciones obligatorias. |
-| `UNDER_REVIEW` | `ACCEPTED` | Editor | Evaluación final registrada. |
-| `UNDER_REVIEW` | `REJECTED` | Editor | Evaluación final registrada y justificación obligatoria. |
-| `REQUIRES_CORRECTIONS` | `SUBMITTED` | Autor | Nueva versión válida con los metadatos actualizados. |
+| `DRAFT` | `SUBMITTED` | Autor | Metadatos completos (de 1 a 3 carreras) y PDF válido. |
+| `SUBMITTED` | `UNDER_REVIEW` | Sistema | Dos Revisores elegibles asignados; si faltan, se completan al haber candidatos. |
+| `UNDER_REVIEW` | `UNDER_REVIEW` | Sistema | Liberación y reasignación (plazo vencido, conflicto o incidente). |
+| `UNDER_REVIEW` | `ACCEPTED` / `REJECTED` | Sistema | Las dos evaluaciones finales coinciden en aceptar o en rechazar. |
+| `UNDER_REVIEW` | `CHANGES_REQUESTED` | Sistema | Las dos evaluaciones finales no se contradicen y piden ajustes. |
+| `UNDER_REVIEW` | `TIE_BREAKER` | Sistema | Un dictamen rechaza y el otro no: se asigna el tercer Revisor. |
+| `TIE_BREAKER` | `ACCEPTED` / `REJECTED` / `CHANGES_REQUESTED` | Sistema | Decide la mayoría con la tercera evaluación. |
+| `CHANGES_REQUESTED` | `SUBMITTED` | Autor | Nueva versión válida con los metadatos actualizados. |
 
-**Transiciones prohibidas** (se bloquean y se registran): `DRAFT → UNDER_REVIEW`, `SUBMITTED → ACCEPTED/REJECTED`, `REQUIRES_CORRECTIONS → ACCEPTED/REJECTED` sin nuevo envío y evaluación, y cualquier edición desde `ACCEPTED` o `REJECTED`.
+`REQUIRES_CORRECTIONS` y las decisiones del Editor solo existen en datos anteriores a la asignación automática; la migración de la fase 004 los conserva y los marca como heredados.
+
+**Transiciones prohibidas** (se bloquean y se registran): `DRAFT → UNDER_REVIEW`, `SUBMITTED → ACCEPTED/REJECTED`, `CHANGES_REQUESTED → ACCEPTED/REJECTED` sin nuevo envío y evaluación, y cualquier edición desde `ACCEPTED` o `REJECTED`. El Administrador puede **corregir** un veredicto registrando otro; el anterior se conserva.
+
+### Consenso
+
+| Dictámenes | Resultado |
+|---|---|
+| Aceptar + Aceptar | `ACCEPTED` |
+| Rechazar + Rechazar | `REJECTED` |
+| Rechazar + cualquier otro | `TIE_BREAKER` |
+| Cualquier otra combinación (revisión menor o mayor) | `CHANGES_REQUESTED` |
+| Con tres dictámenes | Dos o más rechazos: `REJECTED`; si no, `ACCEPTED` solo si los dos no rechazantes aceptan; si no, `CHANGES_REQUESTED` |
+
+La decisión corre en la misma transacción que confirma la última evaluación, bajo un cerrojo asesor de PostgreSQL, de modo que dos evaluaciones simultáneas producen un único veredicto.
 
 El **retiro lógico** no es un estado: es la marca `is_active = false`, aplicable desde cualquier estado.
 
@@ -83,15 +105,15 @@ El **retiro lógico** no es un estado: es la marca `is_active = false`, aplicabl
 
 ```{mermaid}
 flowchart LR
-    v1["v1 · ronda 0<br/>envío inicial"] -->|"veredicto: requiere correcciones"| r1["ronda 1 abierta"]
+    v1["v1 · ronda 0<br/>envío inicial"] -->|"consenso: cambios solicitados"| r1["ronda 1 abierta"]
     r1 -->|"el Autor responde"| v2["v2 · ronda 1"]
-    v2 -->|"veredicto: requiere correcciones"| r2["ronda 2 abierta"]
+    v2 -->|"consenso: cambios solicitados"| r2["ronda 2 abierta"]
     r2 -->|"el Autor responde"| v3["v3 · ronda 2"]
     v3 -->|"veredicto: aceptado"| fin(["Aceptado"])
 ```
 
 1. El primer envío crea la **v1** y la **ronda 0**.
-2. Cada veredicto «Requiere correcciones» abre la siguiente ronda.
+2. Cada veredicto «Cambios solicitados» abre la siguiente ronda.
 3. La respuesta del Autor se registra como la versión consecutiva.
 4. Editar metadatos **no** crea versión ni ronda; solo el envío formal de un PDF crea una iteración.
 5. Reasignar un Revisor no altera ronda ni versión; el nuevo Revisor recibe su propio plazo.
@@ -104,7 +126,7 @@ No todo se confía a la aplicación. PostgreSQL rechaza, con disparadores y rest
 - `UPDATE` o `DELETE` sobre la auditoría, las versiones, los veredictos y el historial de estados.
 - `DELETE` físico de manuscritos.
 - La reescritura de una evaluación final.
-- Puntuaciones fuera del rango de 1 a 5.
+- Puntuaciones fuera del rango de 1 a 5, una evaluación final sin sus cinco criterios y más de cinco asignaciones activas de un mismo Revisor.
 
 Además, el rol con el que corre la aplicación **no** es superusuario y no tiene permisos de `UPDATE`/`DELETE` sobre la auditoría (`apply_db_privileges`). Las migraciones usan un rol administrador aparte.
 
@@ -112,11 +134,12 @@ Además, el rol con el que corre la aplicación **no** es superusuario y no tien
 
 ```{mermaid}
 stateDiagram-v2
-    [*] --> ACTIVE: Editor asigna (20 días)
-    ACTIVE --> COMPLETED: Revisor envía la evaluación final
-    ACTIVE --> EXPIRED: Pasan 20 días (cron)
-    ACTIVE --> REVOKED: Editor revoca
-    EXPIRED --> REVOKED: Editor revoca y reasigna
+    [*] --> ACTIVE: Sistema asigna (20 días)
+    ACTIVE --> COMPLETED: Revisor envía la evaluación final (+10 a tiempo)
+    ACTIVE --> EXPIRED: Vence el plazo (−20, revoca y reasigna)
+    ACTIVE --> REVOKED: Conflicto, incidente, anonimización o baja
 ```
+
+La causa de la liberación (`release_cause`) queda guardada: plazo vencido, conflicto de interés, reasignación por incidente, versión anonimizada solicitada o baja del manuscrito. Declarar un conflicto libera sin penalización.
 
 Una asignación solo admite escrituras mientras está `ACTIVE` **y** antes de `due_at`; el corte usa siempre el reloj de la base de datos, no el del servidor de aplicación.

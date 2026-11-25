@@ -87,7 +87,7 @@ describe('Módulo Administrador: integración con las rutas reales', () => {
     );
   });
 
-  it.each([['AUTHOR'], ['REVIEWER'], ['EDITOR']] as const)(
+  it.each([['AUTHOR'], ['REVIEWER']] as const)(
     'un %s va a /forbidden sin pedir nada a la auditoría',
     async (role) => {
       signIn(role);

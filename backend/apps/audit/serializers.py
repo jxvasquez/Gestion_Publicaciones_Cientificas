@@ -128,7 +128,7 @@ class AdminAuditDetailSerializer(AdminAuditSerializer):
             return data
         # Import tardío: `audit` no depende de `publications` al cargar.
         from apps.publications.models import Verdict
-        from apps.publications.services.corrections import can_authorize_correction
+        from apps.publications.services.corrections import can_correct
 
         verdict = None
         raw = entry.details.get("verdict_id") if isinstance(entry.details, dict) else None
@@ -139,7 +139,7 @@ class AdminAuditDetailSerializer(AdminAuditSerializer):
                 )
             except (ValueError, ValidationError):
                 verdict = None
-        data["can_authorize_correction"] = bool(verdict) and can_authorize_correction(verdict)
+        data["can_authorize_correction"] = bool(verdict) and can_correct(verdict)
         if verdict is not None:
             data["verdict"] = {
                 "id": str(verdict.pk),

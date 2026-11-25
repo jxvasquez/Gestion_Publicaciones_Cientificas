@@ -71,7 +71,7 @@ describe('AuditLogDetailComponent', () => {
 
   const correctionButton = (element: HTMLElement) =>
     Array.from(element.querySelectorAll<HTMLButtonElement>('button')).find((b) =>
-      b.textContent!.includes('Habilitar corrección'),
+      b.textContent!.includes('Corregir veredicto'),
     );
 
   it('muestra un estado de carga mientras espera', async () => {
@@ -87,7 +87,7 @@ describe('AuditLogDetailComponent', () => {
     expect(text(fact(element, 'Fecha')!.querySelector('dd'))).toBe('22/10/2026 10:30:45');
     expect(text(fact(element, 'Acción')!.querySelector('dd'))).toContain('Veredicto registrado');
     expect(text(fact(element, 'Resultado')!.querySelector('dd'))).toBe('Éxito');
-    expect(text(fact(element, 'Rol')!.querySelector('dd'))).toBe('Editor');
+    expect(text(fact(element, 'Rol')!.querySelector('dd'))).toBe('Editor (rol retirado)');
     expect(text(fact(element, 'Actor')!.querySelector('dd'))).toContain('3f2b1c9e');
     expect(text(fact(element, 'Entidad')!.querySelector('dd'))).toContain('VERDICT');
     expect(text(fact(element, 'Hash del evento')!.querySelector('dd'))).toBe(HASH);
@@ -104,7 +104,7 @@ describe('AuditLogDetailComponent', () => {
     const { element } = await render(buildEventDetail({ actor_id: null, actor_role: null }));
 
     expect(text(fact(element, 'Actor')!.querySelector('dd'))).toBe('Sistema');
-    expect(text(fact(element, 'Rol')!.querySelector('dd'))).toBe('—');
+    expect(text(fact(element, 'Rol')!.querySelector('dd'))).toBe('Sistema');
   });
 
   it('el manuscrito enlaza a la lista filtrada por él', async () => {
@@ -146,7 +146,7 @@ describe('AuditLogDetailComponent', () => {
     expect(content).not.toContain('reason');
   });
 
-  describe('«Habilitar corrección»', () => {
+  describe('«Corregir veredicto»', () => {
     it('aparece cuando el backend la autoriza', async () => {
       const { element } = await render(
         buildEventDetail({
@@ -200,7 +200,24 @@ describe('AuditLogDetailComponent', () => {
       expect(text(section)).toContain('22/10/2026 10:00');
     });
 
-    describe('al habilitarla', () => {
+    describe('al corregir', () => {
+      const correctionResult = (decision: string) => ({
+        manuscript_code: 'GPC-2026-000001',
+        verdict: {
+          id: 'vd-2',
+          decision,
+          origin: 'ADMIN_CORRECTION',
+          created_at: '2026-10-23T15:00:00Z',
+          previous_verdict: 'vd-1',
+        },
+        correction: {
+          id: 'co-1',
+          reason: 'El veredicto contiene un error de captura.',
+          authorized_at: '2026-10-23T15:00:00Z',
+          consumed_at: '2026-10-23T15:00:00Z',
+        },
+      });
+
       const VERDICT_EVENT = buildEventDetail({
         can_authorize_correction: true,
         verdict: {
@@ -210,19 +227,24 @@ describe('AuditLogDetailComponent', () => {
           decided_at: '2026-10-22T15:00:00Z',
         },
       });
-      const POST = '/api/v1/admin/verdicts/vd-1/authorize-correction/';
+      const POST = '/api/v1/admin/verdicts/vd-1/correct/';
 
       const dialog = (element: HTMLElement) =>
         element.querySelector('app-verdict-correction-dialog dialog') as HTMLDialogElement;
       const confirm = (element: HTMLElement) =>
         Array.from(dialog(element).querySelectorAll('button')).find((b) =>
-          text(b).startsWith('Habilitar'),
+          text(b).startsWith('Corregir'),
         ) as HTMLButtonElement;
       const write = async (
         element: HTMLElement,
         value: string,
         settle: () => Promise<void>,
       ) => {
+        // La nueva decisión es obligatoria: se elige «Aceptado» antes de escribir el motivo.
+        const radio = dialog(element).querySelector<HTMLInputElement>('input[value="ACCEPTED"]')!;
+        radio.click();
+        radio.dispatchEvent(new Event('change'));
+        await settle();
         const area = dialog(element).querySelector('textarea') as HTMLTextAreaElement;
         area.value = value;
         area.dispatchEvent(new Event('input'));
@@ -282,26 +304,20 @@ describe('AuditLogDetailComponent', () => {
         confirm(element).click();
         await settle();
         const request = http.expectOne(POST);
-        expect(request.request.body).toEqual({ reason: 'El veredicto contiene un error de captura.' });
+        expect(request.request.body).toEqual({
+          decision: 'ACCEPTED',
+          reason: 'El veredicto contiene un error de captura.',
+        });
         expect(request.request.headers.get('Idempotency-Key')).toMatch(/^[A-Za-z0-9._:-]{1,100}$/);
         request.flush(
-          {
-            id: 'co-1',
-            verdict_id: 'vd-1',
-            manuscript_code: 'GPC-2026-000001',
-            decision: 'ACCEPTED',
-            decided_at: '2026-10-22T15:00:00Z',
-            reason: 'El veredicto contiene un error de captura.',
-            authorized_at: '2026-10-23T15:00:00Z',
-            is_active: true,
-          },
+          correctionResult('ACCEPTED'),
           { status: 201, statusText: 'Created' },
         );
         await settle();
 
         expect(element.querySelector('app-verdict-correction-dialog')).toBeNull();
         expect(correctionButton(element)).toBeUndefined();
-        expect(text(element.querySelector('[role="status"]'))).toContain('Corrección habilitada');
+        expect(text(element.querySelector('[role="status"]'))).toContain('Veredicto corregido');
         // El motivo escrito por el Administrador no se repite en pantalla.
         expect(text(element)).not.toContain('error de captura');
       });
@@ -315,18 +331,9 @@ describe('AuditLogDetailComponent', () => {
         await settle();
         const request = http.expectOne(POST);
         expect(request.request.method).toBe('POST');
-        expect(Object.keys(request.request.body as object)).toEqual(['reason']);
+        expect(Object.keys(request.request.body as object)).toEqual(['decision', 'reason']);
         request.flush(
-          {
-            id: 'co-1',
-            verdict_id: 'vd-1',
-            manuscript_code: 'GPC-2026-000001',
-            decision: 'REJECTED',
-            decided_at: '2026-10-22T15:00:00Z',
-            reason: 'El veredicto contiene un error de captura.',
-            authorized_at: '2026-10-23T15:00:00Z',
-            is_active: true,
-          },
+          correctionResult('REJECTED'),
           { status: 201, statusText: 'Created' },
         );
         await settle();
@@ -370,7 +377,7 @@ describe('AuditLogDetailComponent', () => {
         confirm(element).click();
         await settle();
         const button = Array.from(dialog(element).querySelectorAll('button')).find((b) =>
-          text(b).startsWith('Habilitando'),
+          text(b).startsWith('Corrigiendo'),
         ) as HTMLButtonElement;
         button.click();
         await settle();

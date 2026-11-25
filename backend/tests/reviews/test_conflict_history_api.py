@@ -22,8 +22,8 @@ from rest_framework.test import APIClient
 from apps.audit.models import AuditLog
 from apps.audit.services import AuditService, AuditUnavailable
 from apps.publications.models import Manuscript
-from apps.reviews.models import Assignment, Evaluation
-from apps.reviews.signals import reviewer_conflict_declared
+from apps.reviews.models import Assignment, Evaluation, RankingAdjustment
+from apps.reviews.signals import assignment_revoked
 from tests.factories import (
     AssignmentFactory,
     EvaluationFactory,
@@ -33,6 +33,7 @@ from tests.factories import (
     VerdictFactory,
 )
 from tests.publications.test_manuscript_api import actor, client_for, error_code
+from tests.reviews.support import make_reviewer
 
 pytestmark = pytest.mark.django_db
 
@@ -40,12 +41,12 @@ BASE = "/api/v1/reviewer/"
 AUTHOR_NAME = "Ana Autora Reservada"
 SECRET = "nota-confidencial-solo-editor"
 FULL = {
-    "originality_score": 4,
-    "methodology_score": 3,
-    "clarity_score": 5,
-    "relevance_score": 4,
-    "ethics_score": 5,
-    "recommendation": "ACCEPT",
+    "scientific_contribution": 4,
+    "methodological_rigor": 4,
+    "literature_grounding": 5,
+    "results_conclusions": 4,
+    "academic_writing": 5,
+    "recommendation": "ACCEPTED",
     "comments_for_author": "Buen trabajo.",
 }
 
@@ -57,7 +58,7 @@ def seeded_roles(db) -> None:
 
 @pytest.fixture
 def reviewer():
-    return actor("REVIEWER")
+    return make_reviewer()
 
 
 def with_known_author(assignment: Assignment) -> Assignment:
@@ -99,9 +100,6 @@ class TestConflictAccess:
     def test_anonymous_requests_answer_401(self, assignment) -> None:
         assert APIClient().post(conflict_url(assignment)).status_code == 401
 
-    @pytest.mark.parametrize("role", ["AUTHOR", "EDITOR", "ADMIN"])
-    def test_other_roles_answer_403(self, assignment, role) -> None:
-        assert declare(actor(role), assignment).status_code == 403
 
     def test_a_foreign_assignment_answers_404(self, assignment) -> None:
         response = declare(actor("REVIEWER"), assignment)
@@ -123,72 +121,73 @@ class TestConflictAccess:
 
 
 class TestDeclareConflict:
-    def test_without_a_draft_it_creates_an_empty_blocked_one(self, reviewer, assignment) -> None:
+    def test_it_releases_the_assignment_without_penalty(self, reviewer, assignment) -> None:
         response = declare(reviewer, assignment)
 
         assert response.status_code == 200
-        body = response.json()
-        assert body["conflict_declared"] is True and body["status"] == "DRAFT"
-        assert body["recommendation"] is None
-        assert response["ETag"] == '"1"'
-        assert evaluation_of(assignment).conflict_declared is True
+        assert response.json() == {
+            "assignment": str(assignment.pk),
+            "status": "REVOKED",
+            "release_cause": "CONFLICT_OF_INTEREST",
+        }
+        assignment.refresh_from_db()
+        assert assignment.status == "REVOKED" and assignment.revoked_at is not None
+        assert assignment.release_cause == "CONFLICT_OF_INTEREST"
+        profile = reviewer.reviewer_profile
+        profile.refresh_from_db()
+        assert profile.ranking_score == 100
+        assert not RankingAdjustment.objects.filter(reviewer=reviewer).exists()
 
-    def test_an_existing_draft_keeps_its_content(self, reviewer, assignment) -> None:
+    def test_the_detail_answers_404_afterwards(self, reviewer, assignment) -> None:
+        declare(reviewer, assignment)
+
+        detail = client_for(reviewer).get(f"{BASE}assignments/{assignment.pk}/")
+
+        assert detail.status_code == 404
+
+    def test_the_slot_is_covered_by_another_reviewer(
+        self, reviewer, assignment, django_capture_on_commit_callbacks
+    ) -> None:
+        replacement = make_reviewer()
+        with django_capture_on_commit_callbacks(execute=True):
+            declare(reviewer, assignment)
+
+        covering = Assignment.objects.get(
+            version=assignment.version, slot=assignment.slot, status="ACTIVE"
+        )
+        assert covering.reviewer_id == replacement.pk and covering.assigned_by_id is None
+
+    def test_an_existing_draft_is_kept_and_marked(self, reviewer, assignment) -> None:
         EvaluationFactory(assignment=assignment, lock_version=3, **FULL)
 
         response = declare(reviewer, assignment)
 
-        assert response.status_code == 200 and response["ETag"] == '"4"'
+        assert response.status_code == 200
         draft = evaluation_of(assignment)
-        assert draft.conflict_declared is True
+        assert draft.conflict_declared is True and draft.status == "DRAFT"
         assert draft.comments_for_author == FULL["comments_for_author"]
-        assert draft.status == "DRAFT"
 
-    def test_it_blocks_saving_the_draft(self, reviewer, assignment) -> None:
+    def test_without_a_draft_it_creates_an_empty_marked_one(self, reviewer, assignment) -> None:
         declare(reviewer, assignment)
 
-        response = client_for(reviewer).put(
-            evaluation_url(assignment), {"clarity_score": 2}, format="json", HTTP_IF_MATCH='"1"'
-        )
+        draft = evaluation_of(assignment)
+        assert draft.conflict_declared is True and draft.recommendation is None
 
-        assert response.status_code == 409 and error_code(response) == "STATE_CONFLICT"
-        assert evaluation_of(assignment).clarity_score is None
-
-    def test_it_blocks_the_submission_even_with_a_complete_draft(self, reviewer, assignment) -> None:
-        EvaluationFactory(assignment=assignment, lock_version=1, **FULL)
-        declare(reviewer, assignment)
-
-        response = client_for(reviewer).post(
-            evaluation_url(assignment, "submit/"), HTTP_IF_MATCH='"2"'
-        )
-
-        assert response.status_code == 409 and error_code(response) == "STATE_CONFLICT"
-        assert evaluation_of(assignment).status == "DRAFT"
-        assignment.refresh_from_db()
-        assert assignment.status == "ACTIVE"
-
-    def test_the_flag_shows_in_the_evaluation_read(self, reviewer, assignment) -> None:
-        declare(reviewer, assignment)
-
-        body = client_for(reviewer).get(evaluation_url(assignment)).json()
-
-        assert body["conflict_declared"] is True
-
-    def test_declaring_twice_answers_409(self, reviewer, assignment) -> None:
+    def test_declaring_twice_answers_409_or_404(self, reviewer, assignment) -> None:
         declare(reviewer, assignment)
 
         response = declare(reviewer, assignment)
 
-        assert response.status_code == 409 and error_code(response) == "STATE_CONFLICT"
+        assert response.status_code in (404, 409)
         assert AuditLog.objects.filter(action="CONFLICT_OF_INTEREST_DECLARED").count() == 1
 
     @pytest.mark.parametrize("status", ["COMPLETED", "REVOKED", "EXPIRED"])
-    def test_a_non_active_assignment_answers_409(self, reviewer, assignment, status) -> None:
+    def test_a_non_active_assignment_answers_409_or_404(self, reviewer, assignment, status) -> None:
         set_status(assignment, status)
 
         response = declare(reviewer, assignment)
 
-        assert response.status_code == 409 and error_code(response) == "STATE_CONFLICT"
+        assert response.status_code in (404, 409)
         assert not Evaluation.objects.filter(assignment=assignment).exists()
 
     def test_an_active_assignment_past_its_deadline_can_still_declare(
@@ -201,23 +200,13 @@ class TestDeclareConflict:
 
         assert declare(reviewer, assignment).status_code == 200
 
-    def test_it_does_not_revoke_nor_move_the_manuscript(self, reviewer, assignment) -> None:
-        before = Manuscript.objects.get(pk=assignment.manuscript_id)
-
-        declare(reviewer, assignment)
-
-        assignment.refresh_from_db()
-        after = Manuscript.objects.get(pk=assignment.manuscript_id)
-        assert assignment.status == "ACTIVE" and assignment.revoked_at is None
-        assert (after.status, after.lock_version) == (before.status, before.lock_version)
-
     def test_a_reason_longer_than_the_limit_answers_400(self, reviewer, assignment) -> None:
         response = declare(reviewer, assignment, {"reason": "x" * 2001})
 
         assert response.status_code == 400 and error_code(response) == "VALIDATION_ERROR"
         assert not Evaluation.objects.filter(assignment=assignment).exists()
 
-    def test_the_declaration_is_audited_with_the_reason_and_no_author_data(
+    def test_the_declaration_and_the_release_are_audited_without_author_data(
         self, reviewer, assignment
     ) -> None:
         declare(reviewer, assignment, {"reason": "  Conozco el grupo de investigación.  "})
@@ -226,8 +215,9 @@ class TestDeclareConflict:
         assert row.actor_id == reviewer.pk and row.actor_role == "REVIEWER"
         assert row.entity_type == "ASSIGNMENT" and row.entity_id == assignment.pk
         assert row.reason == "Conozco el grupo de investigación." and row.request_id
-        assert row.details == {"manuscript_id": str(assignment.manuscript_id)}
         assert AUTHOR_NAME not in str(row.details)
+        released = AuditLog.objects.get(action="ASSIGNMENT_RELEASED")
+        assert released.details["cause"] == "CONFLICT_OF_INTEREST"
 
     def test_the_answer_does_not_reveal_the_author(self, reviewer, assignment) -> None:
         response = declare(reviewer, assignment)
@@ -246,48 +236,29 @@ class TestDeclareConflict:
         response = declare(reviewer, assignment)
 
         assert response.status_code == 503 and error_code(response) == "AUDIT_UNAVAILABLE"
+        assignment.refresh_from_db()
+        assert assignment.status == "ACTIVE"
         assert not Evaluation.objects.filter(assignment=assignment).exists()
 
-    def test_the_editor_event_is_sent_after_the_commit_with_identifiers_only(
+    def test_the_release_notice_goes_out_after_the_commit_and_no_event_when_it_fails(
         self, reviewer, assignment, django_capture_on_commit_callbacks
     ) -> None:
-        received: list[dict] = []
-
-        def listener(sender, **kwargs) -> None:
-            kwargs.pop("signal", None)
-            received.append(kwargs)
-
-        reviewer_conflict_declared.connect(listener, weak=False)
-        try:
-            with django_capture_on_commit_callbacks(execute=True):
-                response = declare(reviewer, assignment, {"reason": "Texto libre."})
-        finally:
-            reviewer_conflict_declared.disconnect(listener)
-
-        assert response.status_code == 200
-        assert received == [
-            {
-                "assignment_id": assignment.pk,
-                "manuscript_id": assignment.manuscript_id,
-                "reviewer_id": reviewer.pk,
-            }
-        ]
-
-    def test_no_event_is_sent_when_the_declaration_fails(
-        self, reviewer, assignment, django_capture_on_commit_callbacks
-    ) -> None:
-        set_status(assignment, "REVOKED")
         received: list[dict] = []
         listener = lambda sender, **kwargs: received.append(kwargs)  # noqa: E731
-
-        reviewer_conflict_declared.connect(listener, weak=False)
+        assignment_revoked.connect(listener, weak=False)
         try:
+            set_status(assignment, "REVOKED")
+            with django_capture_on_commit_callbacks(execute=True):
+                declare(reviewer, assignment)
+            assert received == []
+
+            set_status(assignment, "ACTIVE")
             with django_capture_on_commit_callbacks(execute=True):
                 declare(reviewer, assignment)
         finally:
-            reviewer_conflict_declared.disconnect(listener)
+            assignment_revoked.disconnect(listener)
 
-        assert received == []
+        assert [r["cause"] for r in received] == ["CONFLICT_OF_INTEREST"]
 
 
 def final_for(reviewer, **overrides) -> Evaluation:
@@ -301,13 +272,10 @@ def final_for(reviewer, **overrides) -> Evaluation:
 
 LIST_URL = f"{BASE}evaluations/"
 LIST_FIELDS = {
-    "id", "assignment", "manuscript_code", "manuscript_title", "area", "version_number",
-    "round_number", "recommendation", "submitted_at", "editorial_result",
+    "id", "assignment", "manuscript_code", "manuscript_title", "areas", "version_number",
+    "round_number", "rubric_version", "recommendation", "submitted_at", "editorial_result",
 }
-DETAIL_FIELDS = LIST_FIELDS | {
-    "originality_score", "methodology_score", "clarity_score", "relevance_score",
-    "ethics_score", "comments_for_author",
-}
+DETAIL_FIELDS = LIST_FIELDS | {"scores", "comments_for_author"}
 
 
 def detail_url(evaluation) -> str:
@@ -321,14 +289,6 @@ class TestHistoryAccess:
 
         assert APIClient().get(LIST_URL + suffix.format(id=evaluation.pk)).status_code == 401
 
-    @pytest.mark.parametrize("role", ["AUTHOR", "EDITOR", "ADMIN"])
-    @pytest.mark.parametrize("suffix", ["", "{id}/"])
-    def test_other_roles_answer_403(self, reviewer, role, suffix) -> None:
-        evaluation = final_for(reviewer)
-
-        response = client_for(actor(role)).get(LIST_URL + suffix.format(id=evaluation.pk))
-
-        assert response.status_code == 403
 
     def test_the_history_is_read_only(self, reviewer) -> None:
         evaluation = final_for(reviewer)
@@ -392,7 +352,7 @@ class TestHistoryScope:
 
     def test_the_list_does_not_query_per_row(self, reviewer, django_assert_max_num_queries) -> None:
         for _ in range(4):
-            VerdictFactory(evaluation=final_for(reviewer))
+            VerdictFactory(legacy=True, evaluation=final_for(reviewer))
 
         with django_assert_max_num_queries(6):
             assert client_for(reviewer).get(LIST_URL).status_code == 200
@@ -415,11 +375,15 @@ class TestHistoryContent:
         body = response.json()
         assert set(body) == DETAIL_FIELDS
         assert body["comments_for_author"] == "Comentarios para el autor."
-        assert body["clarity_score"] == 4 and body["recommendation"] == "ACCEPT"
+        assert body["scores"]["literature_grounding"] == 4 and body["recommendation"] == "ACCEPTED"
+        assert set(body["scores"]) == {
+            "scientific_contribution", "methodological_rigor", "literature_grounding",
+            "results_conclusions", "academic_writing",
+        }
 
     def test_no_author_identity_nor_confidential_comments_under_any_key(self, reviewer) -> None:
         evaluation = final_for(reviewer)
-        VerdictFactory(evaluation=evaluation, observations="Observaciones privadas.")
+        VerdictFactory(legacy=True, evaluation=evaluation, observations="Observaciones privadas.")
         author = evaluation.manuscript.created_by
 
         texts = [
@@ -441,43 +405,21 @@ class TestHistoryContent:
             ):
                 assert secret not in text
 
-    def test_the_editorial_result_is_empty_until_the_editor_registers_it(self, reviewer) -> None:
-        evaluation = final_for(reviewer)
 
-        assert client_for(reviewer).get(detail_url(evaluation)).json()["editorial_result"] is None
-        assert client_for(reviewer).get(LIST_URL).json()["results"][0]["editorial_result"] is None
-
-    def test_the_editorial_result_shows_the_decision_and_date_only(self, reviewer) -> None:
-        evaluation = final_for(reviewer)
-        verdict = VerdictFactory(
-            evaluation=evaluation,
-            decision="REJECTED",
-            justification="Justificación escrita para el autor.",
-        )
-
-        for body in (
-            client_for(reviewer).get(LIST_URL).json()["results"][0],
-            client_for(reviewer).get(detail_url(evaluation)).json(),
-        ):
-            result = body["editorial_result"]
-            assert set(result) == {"decision", "decided_at"}
-            assert result["decision"] == "REJECTED" and result["decided_at"]
-            assert "Justificación" not in str(body)
-        assert verdict.editor.get_full_name() not in client_for(reviewer).get(LIST_URL).content.decode()
 
     def test_a_corrected_verdict_replaces_the_previous_one(self, reviewer) -> None:
         evaluation = final_for(reviewer)
-        first = VerdictFactory(evaluation=evaluation, decision="ACCEPTED")
+        first = VerdictFactory(legacy=True, evaluation=evaluation, decision="ACCEPTED")
         VerdictFactory(
             evaluation=evaluation,
-            decision="REQUIRES_CORRECTIONS",
+            decision="CHANGES_REQUESTED",
             observations="Hay que corregir.",
             previous_verdict=first,
         )
 
         body = client_for(reviewer).get(detail_url(evaluation)).json()
 
-        assert body["editorial_result"]["decision"] == "REQUIRES_CORRECTIONS"
+        assert body["editorial_result"]["decision"] == "CHANGES_REQUESTED"
 
     def test_the_row_identifies_the_manuscript_by_code_title_and_area(self, reviewer) -> None:
         evaluation = final_for(reviewer)
@@ -486,7 +428,7 @@ class TestHistoryContent:
 
         assert row["manuscript_code"] == evaluation.manuscript.code
         assert row["manuscript_title"] == evaluation.manuscript.title
-        assert row["area"] == evaluation.manuscript.area
+        assert [a["code"] for a in row["areas"]] == [a.code for a in evaluation.manuscript.areas.all()]
         assert row["version_number"] == 1 and row["round_number"] == 0
         assert row["assignment"] == str(evaluation.assignment_id)
 

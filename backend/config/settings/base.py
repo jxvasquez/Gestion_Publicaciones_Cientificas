@@ -263,6 +263,9 @@ SPECTACULAR_SETTINGS = {
         "EvaluationStatusEnum": "apps.reviews.models.Evaluation.Status",
         "IncidentStatusEnum": "apps.reviews.models.IncidentReport.Status",
         "RoleEnum": "apps.users.models.Role.Code",
+        "EvaluationRecommendationEnum": "apps.reviews.models.Evaluation.Recommendation",
+        "RubricRecommendationEnum": "apps.reviews.models.RUBRIC_RECOMMENDATION_CHOICES",
+        "VerdictDecisionEnum": "apps.publications.models.Verdict.Decision",
     },
     "POSTPROCESSING_HOOKS": [
         "drf_spectacular.hooks.postprocess_schema_enums",
@@ -280,9 +283,12 @@ SPECTACULAR_SETTINGS = {
         {"name": "Tablero", "description": "Resumen por rol del usuario autenticado."},
         {"name": "Autor", "description": "Manuscritos propios, versiones y correcciones."},
         {"name": "Catálogo", "description": "Artículos publicados (público, sin sesión)."},
-        {"name": "Editor", "description": "Bandeja, asignación de revisores, veredictos e incidentes."},
-        {"name": "Revisor", "description": "Asignaciones y evaluaciones (doble ciego)."},
-        {"name": "Administración", "description": "Auditoría y autorización de correcciones."},
+        {"name": "Carreras", "description": "Carreras o áreas activas (público, sin sesión)."},
+        {"name": "Revisor", "description": "Asignaciones, evaluaciones y desempeño (doble ciego)."},
+        {
+            "name": "Administración",
+            "description": "Auditoría, incidentes, corrección de veredictos, padrón y carreras.",
+        },
         {"name": "Notificaciones", "description": "Avisos del usuario autenticado."},
     ],
 }

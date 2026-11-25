@@ -11,7 +11,7 @@ class Command(BaseCommand):
     """Crea una cuenta o le añade roles; imprime la contraseña generada una sola vez."""
 
     help = (
-        "Crea una cuenta institucional con sus roles (AUTHOR, REVIEWER, EDITOR, ADMIN). "
+        "Crea una cuenta institucional con sus roles (AUTHOR, REVIEWER, ADMIN). "
         "Sin --password genera una aleatoria y la muestra una sola vez."
     )
 
@@ -26,7 +26,7 @@ class Command(BaseCommand):
         )
         parser.add_argument(
             "--areas", default="",
-            help="Áreas de experticia del Revisor, separadas por comas (solo con el rol REVIEWER).",
+            help="Carreras del catálogo del Revisor (nombre o código), separadas por comas (solo con el rol REVIEWER).",
         )
         parser.add_argument(
             "--password", default=None,
@@ -42,7 +42,7 @@ class Command(BaseCommand):
                 email=options["email"],
                 roles=options["roles"],
                 password=options["password"],
-                expertise_areas=[a.strip() for a in options["areas"].split(",") if a.strip()],
+                areas=[a.strip() for a in options["areas"].split(",") if a.strip()],
             )
         except ProvisioningError as error:
             raise CommandError(str(error)) from error

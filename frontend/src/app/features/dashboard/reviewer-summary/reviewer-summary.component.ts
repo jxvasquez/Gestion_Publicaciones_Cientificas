@@ -6,9 +6,9 @@ import { KpiCardComponent } from '../../../shared/components/kpi-card.component'
 /**
  * Resumen del rol Revisor dentro del panel unificado (plan sección 3.4).
  *
- * Muestra asignaciones pendientes, plazos y vencimientos; los datos
- * llegan del proveedor de la sección `reviewer` del backend, que se
- * llena a partir de la TSK-60. Nunca incluye identidad de Autores.
+ * Muestra el puntaje de ranking, el cupo «X/5 activas», las evaluaciones a tiempo
+ * y los vencimientos (FR-033, FR-038). Los datos llegan de la sección `reviewer`
+ * del backend y nunca incluyen identidad de Autores ni de otros revisores.
  */
 @Component({
   selector: 'app-reviewer-summary',

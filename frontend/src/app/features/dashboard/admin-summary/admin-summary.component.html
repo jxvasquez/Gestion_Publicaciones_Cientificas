@@ -1,7 +1,13 @@
 <app-kpi-card
   title="Administrador"
   icon="admin"
-  [metrics]="[{ label: 'Eventos de auditoría', value: data()?.['audit_events'] }]"
+  [metrics]="[
+    { label: 'Reportes abiertos', value: data()?.['open_incidents'] },
+    { label: 'Manuscritos esperando revisores', value: data()?.['awaiting_reviewers'] },
+  ]"
 >
+  <a class="btn btn--ghost" routerLink="/app/admin/incidents">Incidentes</a>
+  <a class="btn btn--ghost" routerLink="/app/admin/reviewers">Revisores</a>
+  <a class="btn btn--ghost" routerLink="/app/admin/areas">Carreras</a>
   <a class="btn btn--ghost" routerLink="/app/admin/audit">Auditoría</a>
 </app-kpi-card>

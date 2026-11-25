@@ -8,9 +8,6 @@
         @case ('reviewer') {
           <use href="icons/ui.svg#reviewer" />
         }
-        @case ('editor') {
-          <use href="icons/ui.svg#editor" />
-        }
         @case ('admin') {
           <use href="icons/ui.svg#admin" />
         }
@@ -24,7 +21,17 @@
       @for (metric of counts(); track $index) {
         <div class="kpi-card__metric">
           <dt>{{ metric.label }}</dt>
-          <dd><span class="badge badge--info">{{ metric.value }}</span></dd>
+          <dd>
+            @if (metric.max !== null) {
+              <!-- «3/5» a la vista; «3 de 5» para el lector de pantalla. -->
+              <span class="badge badge--info">
+                <span aria-hidden="true">{{ metric.value }}/{{ metric.max }}</span>
+                <span class="visually-hidden">{{ metric.value }} de {{ metric.max }}</span>
+              </span>
+            } @else {
+              <span class="badge badge--info">{{ metric.value }}</span>
+            }
+          </dd>
         </div>
       }
     </dl>

@@ -15,7 +15,6 @@ import { ErrorStateComponent } from '../../../shared/components/error-state.comp
 import { LoadingSpinnerComponent } from '../../../shared/components/loading-spinner.component';
 import { AuthorSummaryComponent } from '../author-summary/author-summary.component';
 import { ReviewerSummaryComponent } from '../reviewer-summary/reviewer-summary.component';
-import { EditorSummaryComponent } from '../editor-summary/editor-summary.component';
 import { AdminSummaryComponent } from '../admin-summary/admin-summary.component';
 
 /**
@@ -38,7 +37,6 @@ import { AdminSummaryComponent } from '../admin-summary/admin-summary.component'
     LoadingSpinnerComponent,
     AuthorSummaryComponent,
     ReviewerSummaryComponent,
-    EditorSummaryComponent,
     AdminSummaryComponent,
   ],
   templateUrl: './unified-dashboard.component.html',
@@ -50,7 +48,6 @@ export class UnifiedDashboardComponent implements OnInit {
   /** Señales por sección (plan sección 3.8). */
   readonly authorSection = signal<DashboardSection | null>(null);
   readonly reviewerSection = signal<DashboardSection | null>(null);
-  readonly editorSection = signal<DashboardSection | null>(null);
   readonly adminSection = signal<DashboardSection | null>(null);
 
   readonly roles = signal<Role[]>([]);
@@ -103,8 +100,6 @@ export class UnifiedDashboardComponent implements OnInit {
         return this.authorSection();
       case 'reviewer':
         return this.reviewerSection();
-      case 'editor':
-        return this.editorSection();
       case 'admin':
         return this.adminSection();
     }
@@ -114,7 +109,6 @@ export class UnifiedDashboardComponent implements OnInit {
     this.roles.set(response.roles);
     this.authorSection.set(response.sections.author ?? null);
     this.reviewerSection.set(response.sections.reviewer ?? null);
-    this.editorSection.set(response.sections.editor ?? null);
     this.adminSection.set(response.sections.admin ?? null);
   }
 }

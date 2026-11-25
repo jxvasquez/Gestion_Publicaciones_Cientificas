@@ -122,14 +122,13 @@ describe('ReviewerService', () => {
   describe('evaluación', () => {
     const URL = '/api/v1/reviewer/assignments/a-1/evaluation/';
     const draft = {
-      originality_score: 4,
-      methodology_score: null,
-      clarity_score: null,
-      relevance_score: null,
-      ethics_score: null,
+      scientific_contribution: 4,
+      methodological_rigor: null,
+      literature_grounding: null,
+      results_conclusions: null,
+      academic_writing: null,
       recommendation: null,
       comments_for_author: null,
-      confidential_comments: null,
     };
 
     it('lee el borrador propio con su ETag', () => {
@@ -162,7 +161,7 @@ describe('ReviewerService', () => {
       expect(request.request.method).toBe('PUT');
       expect(request.request.headers.get('If-Match')).toBe('"0"');
       expect(request.request.body).toEqual(draft);
-      request.flush(buildReviewerEvaluation({ id: 'ev-1', originality_score: 4 }), {
+      request.flush(buildReviewerEvaluation({ id: 'ev-1', scientific_contribution: 4 }), {
         headers: { ETag: '"1"' },
       });
 
@@ -215,32 +214,30 @@ describe('ReviewerService', () => {
 
       http.expectOne(`${URL}submit/`).flush(
         errorEnvelope('VALIDATION_ERROR', 'Complete la evaluación.', {
-          clarity_score: ['Este campo es obligatorio para enviar la evaluación.'],
+          literature_grounding: ['Este campo es obligatorio para enviar la evaluación.'],
         }),
         { status: 400, statusText: 'Bad Request' },
       );
 
       expect(error?.status).toBe(400);
       expect(error?.details).toEqual({
-        clarity_score: ['Este campo es obligatorio para enviar la evaluación.'],
+        literature_grounding: ['Este campo es obligatorio para enviar la evaluación.'],
       });
     });
   });
 
   describe('conflicto y reporte confidencial', () => {
-    it('declara el conflicto con POST y entrega la evaluación bloqueada con su ETag', () => {
-      let snapshot: { evaluation: { conflict_declared: boolean }; etag: string | null } | undefined;
-      service.declareConflict('a-1', 'Fui su director.').subscribe((value) => (snapshot = value));
+    it('declara el conflicto con POST y recibe la asignación liberada sin penalización', () => {
+      let result: unknown;
+      service.declareConflict('a-1', 'Fui su director.').subscribe((value) => (result = value));
 
       const request = http.expectOne('/api/v1/reviewer/assignments/a-1/conflict/');
       expect(request.request.method).toBe('POST');
       expect(request.request.body).toEqual({ reason: 'Fui su director.' });
-      request.flush(buildReviewerEvaluation({ id: 'ev-1', conflict_declared: true }), {
-        headers: { ETag: '"2"' },
-      });
+      const released = { assignment: 'a-1', status: 'REVOKED', release_cause: 'CONFLICT_OF_INTEREST' };
+      request.flush(released);
 
-      expect(snapshot?.evaluation.conflict_declared).toBe(true);
-      expect(snapshot?.etag).toBe('"2"');
+      expect(result).toEqual(released);
     });
 
     it('sin motivo el cuerpo va vacío', () => {
@@ -248,7 +245,7 @@ describe('ReviewerService', () => {
 
       const request = http.expectOne('/api/v1/reviewer/assignments/a-1/conflict/');
       expect(request.request.body).toEqual({});
-      request.flush(buildReviewerEvaluation({ conflict_declared: true }));
+      request.flush({ assignment: 'a-1', status: 'REVOKED', release_cause: 'CONFLICT_OF_INTEREST' });
     });
 
     it('reporta la fuga con tipo y descripción y devuelve solo el acuse', () => {
@@ -390,6 +387,34 @@ describe('ReviewerService', () => {
       expect(error?.code).toBe('STATE_CONFLICT');
     });
   });
+
+  describe('desempeño', () => {
+    it('lee el puntaje, el cupo y los contadores propios', () => {
+      let result: { ranking_score: number } | undefined;
+      service.standing().subscribe((value) => (result = value));
+
+      http.expectOne('/api/v1/reviewer/standing/').flush({
+        ranking_score: 110,
+        active_assignments: 3,
+        max_active_assignments: 5,
+        on_time_evaluations: 2,
+        missed_deadlines: 1,
+        is_available: true,
+        areas: [],
+      });
+
+      expect(result?.ranking_score).toBe(110);
+    });
+
+    it('pide los ajustes paginados', () => {
+      service.adjustments(2, 10).subscribe();
+
+      const request = http.expectOne((r) => r.url === '/api/v1/reviewer/standing/adjustments/');
+      expect(request.request.params.get('page')).toBe('2');
+      expect(request.request.params.get('page_size')).toBe('10');
+      request.flush({ count: 0, next: null, previous: null, results: [] });
+    });
+  });
 });
 
 describe('serverOffset', () => {
@@ -416,4 +441,5 @@ describe('reviewer.model', () => {
   it('el nombre del PDF se deriva solo del código y la versión', () => {
     expect(genericDocumentName('GPC-2026-000009', 2)).toBe('manuscript-GPC-2026-000009-v2.pdf');
   });
+
 });

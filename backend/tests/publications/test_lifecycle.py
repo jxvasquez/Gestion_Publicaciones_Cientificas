@@ -177,19 +177,6 @@ class TestFullLifecycle:
             assert_version_matches_its_files(media_root, version)
         assert_audit_chain_intact()
 
-    def test_the_editor_reads_the_same_history_after_the_withdrawal(self, owner, submit, send, withdraw) -> None:
-        manuscript = ready_draft(owner, pdf=V1)
-        submit(owner, manuscript)
-        request_corrections(manuscript)
-        send(owner, manuscript, pdf_file(V2), key="v2")
-        withdraw(owner, manuscript, {"reason": "Cierro el proceso."})
-
-        mine = client_for(owner).get(history_url(manuscript)).json()
-        theirs = client_for(actor("EDITOR")).get(history_url(manuscript)).json()
-
-        assert theirs == mine
-        assert [e["type"] for e in mine["results"]][-1] == "WITHDRAWN"
-        assert sum(1 for e in mine["results"] if e["type"] == "VERSION_SUBMITTED") == 2
 
     def test_every_version_can_still_be_downloaded_exactly_after_the_withdrawal(
         self, owner, submit, send, withdraw, media_root
@@ -307,7 +294,8 @@ def scene(owner, submit, send):
     send(owner, manuscript, pdf_file(V2), key="v2")
     manuscript.refresh_from_db()
 
-    conflicted = actor("EDITOR")
+    # Un Administrador que figura como coautor: tampoco llega al manuscrito por ninguna vía.
+    conflicted = actor("ADMIN")
     ManuscriptAuthorFactory(
         manuscript=manuscript, user=conflicted, email=conflicted.email,
         full_name=conflicted.get_full_name(), author_order=9,
@@ -320,8 +308,7 @@ def scene(owner, submit, send):
             "reviewer": actor("REVIEWER"),
             "no-roles": actor(),
             "foreign-author": actor("AUTHOR"),
-            "editor": actor("EDITOR"),
-            "conflicted-editor": conflicted,
+            "conflicted-admin": conflicted,
         },
     }
 
@@ -346,8 +333,7 @@ EXPECTED = {
     "reviewer": 403,
     "no-roles": 403,
     "foreign-author": 404,
-    "editor": (200, 403),
-    "conflicted-editor": (404, 403),
+    "conflicted-admin": 403,
 }
 
 
@@ -406,11 +392,3 @@ class TestPermissionMatrix:
         assert admin.get(URL).status_code == 403
         assert admin.post(URL, {}, format="json").status_code == 403
 
-    def test_the_list_never_leaks_a_manuscript_to_an_actor_outside_its_scope(self, scene) -> None:
-        ids = {str(scene["manuscript"].pk)}
-
-        for who in ("foreign-author", "conflicted-editor"):
-            body = client_for(scene["actors"][who]).get(URL).json()
-            assert not ids & {item["id"] for item in body["results"]}, who
-        editor_ids = {i["id"] for i in client_for(scene["actors"]["editor"]).get(URL).json()["results"]}
-        assert ids <= editor_ids

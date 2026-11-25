@@ -42,20 +42,15 @@ export class SideNavComponent {
         ],
       });
     }
-    if (roles.includes('EDITOR')) {
-      groups.push({
-        label: ROLE_LABELS.EDITOR,
-        items: [
-          { label: 'Nuevos envíos', path: '/app/editor/submissions' },
-          { label: 'Asignaciones vencidas', path: '/app/editor/assignments/expired' },
-          { label: 'Incidentes', path: '/app/editor/incidents' },
-        ],
-      });
-    }
     if (roles.includes('ADMIN')) {
       groups.push({
         label: ROLE_LABELS.ADMIN,
-        items: [{ label: 'Auditoría', path: '/app/admin/audit' }],
+        items: [
+          { label: 'Incidentes', path: '/app/admin/incidents' },
+          { label: 'Revisores', path: '/app/admin/reviewers' },
+          { label: 'Carreras', path: '/app/admin/areas' },
+          { label: 'Auditoría', path: '/app/admin/audit' },
+        ],
       });
     }
     return groups;

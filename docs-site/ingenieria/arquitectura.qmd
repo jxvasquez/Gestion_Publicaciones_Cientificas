@@ -13,8 +13,7 @@ Quién usa el sistema y con qué sistemas externos se relaciona.
 flowchart TB
     autor(["Autor<br/>registra y corrige manuscritos"])
     revisor(["Revisor<br/>evalúa a ciegas"])
-    editor(["Editor<br/>coordina y decide"])
-    admin(["Administrador<br/>audita"])
+    admin(["Administrador<br/>incidentes, padrón y auditoría"])
     publico(["Público<br/>lee el catálogo"])
 
     sistema["Sistema de Gestión<br/>de Publicaciones Científicas"]
@@ -22,7 +21,6 @@ flowchart TB
 
     autor --> sistema
     revisor --> sistema
-    editor --> sistema
     admin --> sistema
     publico --> sistema
     sistema -->|"notificaciones por correo"| smtp
@@ -47,7 +45,7 @@ flowchart LR
         vol[("Volumen media_data<br/>PDF originales, sanitizados<br/>y copias públicas")]
     end
 
-    cron["cron del host<br/>plazos, notificaciones,<br/>respaldos, integridad"]
+    cron["cron del host<br/>asignación, plazos, notificaciones,<br/>respaldos, integridad"]
     smtp[("SMTP institucional")]
 
     usuario -->|"HTTPS 443"| nginx
@@ -68,7 +66,7 @@ flowchart LR
 | **Django/DRF** (`backend`) | Autenticación, autorización por rol **y** objeto, reglas editoriales, serializadores, auditoría y orquestación del almacenamiento. |
 | **PostgreSQL** (`db`) | Estado editorial, metadatos, versiones, asignaciones, evaluaciones, veredictos, auditoría y avisos. |
 | **Volumen `media_data`** | PDF originales, copias sanitizadas, instantáneas de metadatos y copias públicas del catálogo. |
-| **cron del host** | Marca plazos vencidos, reintenta avisos, respalda y verifica la integridad. |
+| **cron del host** | Ejecuta el ciclo de revisión (revoca y reasigna por plazo vencido, completa cupos), reintenta avisos, respalda y verifica la integridad. |
 
 ## C3 · Componentes del backend
 

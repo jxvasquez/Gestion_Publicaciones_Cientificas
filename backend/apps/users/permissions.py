@@ -3,7 +3,7 @@
 Authorization is layered, and every layer re-reads PostgreSQL:
 
 * Module permissions — :class:`IsAuthor`, :class:`IsReviewer`,
-  :class:`IsEditor`, :class:`IsAdmin` — answer ``403`` when the actor
+  :class:`IsAdmin` — answer ``403`` when the actor
   lacks an active role for the module. They read the active roles from
   ``users_user_role`` on EVERY request through the single
   :func:`~apps.users.services.auth.active_role_codes` helper: the
@@ -76,19 +76,14 @@ class IsReviewer(BaseActiveRolePermission):
     role_code = Role.Code.REVIEWER
 
 
-class IsEditor(BaseActiveRolePermission):
-    """Active ``EDITOR`` role required for the editor module."""
-
-    role_code = Role.Code.EDITOR
-
-
 class IsAdmin(BaseActiveRolePermission):
     """Active ``ADMIN`` role required for the admin module.
 
-    Scope (plan section 6.2, CA-HU-13-12): the audit query and the
-    verdict-correction authorization only. This permission never
-    unlocks manuscripts, evaluations or PDFs; those views must not list
-    it in ``permission_classes``.
+    Scope (plan section 6.2, spec 004): the audit query, the incidents
+    (with the sanitized document of the reported version only), the
+    reviewer roster, the career catalog and the verdict correction. This
+    permission never unlocks manuscripts, evaluations or PDFs in general;
+    those views must not list it in ``permission_classes``.
     """
 
     role_code = Role.Code.ADMIN

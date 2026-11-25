@@ -1,0 +1,42 @@
+---
+title: "ADR-0008 · Flujo editorial automático: sin Editor, asignación por carrera, ranking, rúbrica y consenso"
+---
+
+**Estado:** Aceptada · **Fecha:** noviembre de 2026 · **Especificación:** `specs/004-auto-assign-ranking-rubric/spec.md`
+
+## Contexto
+
+El flujo original dependía de un **Editor** que recibía cada envío, elegía a un único Revisor, vigilaba el plazo y registraba el veredicto. Era el cuello de botella del proceso y concentraba decisiones sin criterios comparables: un solo dictamen, cinco puntajes sin descriptores, comentarios confidenciales que solo él leía y plazos que nadie revocaba si él no actuaba. Además, el área del manuscrito era un texto libre que casi nunca coincidía con la «pericia» del Revisor.
+
+## Decisión
+
+1. **Se retira el rol `EDITOR`** y la API `/api/v1/editor/*`. Los incidentes confidenciales y la corrección de veredictos pasan al Administrador (`/api/v1/admin/*`). Una cuenta con solo ese rol inicia sesión sin roles; los datos anteriores se conservan como heredados.
+2. **Catálogo cerrado de carreras.** El Autor elige de 1 a 3 carreras y el Revisor declara las suyas. Solo cuenta la **coincidencia exacta**; el Administrador gestiona el catálogo (sin borrar: desactivar conserva todo).
+3. **Asignación automática** (`AutoAssignmentService`): al enviar cada versión, el sistema asigna **dos Revisores** elegibles —carrera coincidente, disponibles, sin ser autor ni coautor, sin duplicar— ordenados por `ranking_score` descendente y menor carga. Tope de **5 asignaciones activas** por Revisor, garantizado por un disparador de PostgreSQL y un cerrojo asesor. Si faltan candidatos, el cupo queda pendiente y se completa después.
+4. **Ranking** (`ReviewerRankingService`): base 100; entregar a tiempo suma **10**; dejar vencer el plazo de 20 días resta **20**, revoca la asignación y reasigna. Cada ajuste es un registro append-only.
+5. **Rúbrica de cinco criterios** (`scientific_contribution`, `methodological_rigor`, `literature_grounding`, `results_conclusions`, `academic_writing`, de 1 a 5) y un dictamen de cuatro valores. Si cualquier criterio es 3 o menos, o el dictamen es revisión mayor o rechazo, los comentarios para el Autor exigen **100 caracteres o más**. Las evaluaciones finales anteriores conservan su rúbrica 1.
+6. **Veredicto por consenso:** dos aceptaciones dan *Aceptado*; dos rechazos, *Rechazado*; un rechazo contra otro dictamen abre el **desempate**: un tercer Revisor automático decide por mayoría. El resto de combinaciones da *Cambios solicitados*. El Autor lee las reseñas como «Revisor N».
+7. **Corrección humana** solo del Administrador, que registra un veredicto nuevo con motivo; el anterior se conserva.
+8. **Automatización:** `run_review_automation` (cron, cada minuto, con `flock`) revoca y reasigna por plazo vencido, completa cupos y reconcilia decisiones pendientes. `apply_auto_review_transition` (idempotente, al arrancar) cierra las asignaciones del flujo anterior.
+
+## Alternativas consideradas
+
+| Alternativa | Por qué no |
+|---|---|
+| Mantener al Editor y solo automatizar la asignación | Dejaba el veredicto y el plazo en una persona; la meta es un flujo sin cuello de botella. |
+| Coincidencia aproximada de áreas (texto libre o etiquetas) | Asignaciones impredecibles y difíciles de auditar; el catálogo cerrado las hace deterministas. |
+| Veredicto con un solo Revisor | Un único dictamen no se contrasta; el desempate añade robustez solo cuando hace falta. |
+| Penalizar sin revocar | El manuscrito quedaba bloqueado hasta que alguien actuara. |
+| Hacer cumplir el tope solo en la aplicación | Dos solicitudes simultáneas podían superarlo; el disparador lo impide. |
+
+## Consecuencias
+
+- Desaparece el cuello de botella; el sistema es el responsable de asignar, vigilar y decidir, y todo queda auditado con actor «sistema».
+- El Administrador asume incidentes, padrón, carreras y correcciones.
+- Los dictámenes de los Revisores determinan la decisión: la calidad de la rúbrica es ahora crítica.
+- Quedan referencias heredadas justificadas (migraciones, el comando de transición, etiquetas de auditoría y estados históricos y estos ADR).
+
+## Referencias
+
+- Implementación: `backend/apps/reviews/services/` (`eligibility`, `assignments`, `ranking`, `consensus`, `automation`, `incidents`), `backend/apps/publications/services/verdicts.py` y `corrections.py`.
+- Comprobación: `backend/tests/reviews/` (motor, concurrencia, consenso, ranking, rúbrica, automatización), `backend/tests/test_migrations_004.py` y los E2E `02` a `04`.

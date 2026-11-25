@@ -99,7 +99,7 @@ describe('AuditLogListComponent', () => {
     const cells = Array.from(rows(element)[0].querySelectorAll('td')).map(text);
     expect(cells[0]).toBe('22/10/2026 10:30:45');
     expect(cells[1]).toContain(ACTOR_ID.slice(0, 8));
-    expect(cells[2]).toBe('Editor');
+    expect(cells[2]).toBe('Editor (rol retirado)');
     expect(cells[3]).toContain('Veredicto registrado');
     expect(cells[3]).toContain('VERDICT_REGISTERED');
     expect(cells[4]).toBe('VERDICT');
@@ -116,7 +116,7 @@ describe('AuditLogListComponent', () => {
 
     const cells = Array.from(rows(element)[0].querySelectorAll('td')).map(text);
     expect(cells[1]).toBe('Sistema');
-    expect(cells[2]).toBe('—');
+    expect(cells[2]).toBe('Sistema');
     expect(cells[5]).toBe('—');
   });
 
@@ -130,10 +130,10 @@ describe('AuditLogListComponent', () => {
     expect(element.querySelector('app-audit-filters')).not.toBeNull();
   });
 
-  it('la lista no ofrece «Habilitar corrección»', async () => {
+  it('la lista no ofrece «Corregir veredicto»', async () => {
     const { element } = await render([buildEvent()]);
 
-    expect(text(element)).not.toContain('Habilitar corrección');
+    expect(text(element)).not.toContain('Corregir veredicto');
   });
 
   it('cada fila enlaza al detalle por el id público del evento', async () => {

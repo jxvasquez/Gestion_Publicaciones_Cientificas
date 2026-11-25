@@ -18,7 +18,7 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from apps.users.views import DashboardView
+from apps.users.views import AreaListView, DashboardView
 # Import por efecto secundario: al cargarse, ``config.openapi`` registra la extensión que
 # documenta la autenticación Bearer JWT en el schema. Es redundante hoy (las vistas también
 # importan ``config.openapi``) pero se deja explícito: no quitarlo sin revisar test_openapi.
@@ -71,12 +71,14 @@ urlpatterns = [
     # Autor: manuscritos propios. Público: catálogo de artículos aceptados.
     path("manuscripts/", include("apps.publications.urls")),
     path("catalog/", include("apps.publications.catalog_urls")),
-    # Un prefijo por rol: Editor y Revisor.
-    path("editor/", include("apps.reviews.urls")),
+    # Carreras activas (público) y módulo del Revisor.
+    path("areas/", AreaListView.as_view(), name="areas"),
     path("reviewer/", include("apps.reviews.reviewer_urls")),
-    # Administrador: auditoría y habilitación de correcciones de veredicto.
+    # Administrador: auditoría, corrección de veredictos, incidentes, padrón y carreras.
     path("admin/audit/", include("apps.audit.urls")),
     path("admin/verdicts/", include("apps.publications.admin_urls")),
+    path("admin/areas/", include("apps.users.admin_urls")),
+    path("admin/", include("apps.reviews.admin_urls")),
     # Avisos del usuario autenticado.
     path("notifications/", include("apps.notifications.urls")),
 ]

@@ -18,6 +18,7 @@ import { CatalogArticle } from '../../../core/models/catalog.model';
 import { buildArticle, buildArticlePage } from '../testing/catalog.fixtures';
 import { CatalogListComponent, PAGE_SIZE } from './catalog-list.component';
 import { errorEnvelope } from '../../../core/testing/api-envelope.fixtures';
+import { AREA_SERVICE_STUB } from '../../../core/testing/stubs';
 
 @Component({ template: '' })
 class BlankComponent {}
@@ -31,6 +32,7 @@ describe('CatalogListComponent', () => {
   beforeEach(() => {
     TestBed.configureTestingModule({
       providers: [
+        AREA_SERVICE_STUB,
         provideRouter([
           { path: 'catalog', component: CatalogListComponent },
           { path: 'catalog/:code', component: BlankComponent },
@@ -110,6 +112,23 @@ describe('CatalogListComponent', () => {
       expect(request.request.params.has('page')).toBe(false);
       request.flush(buildArticlePage([]));
       await settle();
+    });
+
+    it('muestra cada carrera del artículo como badge', async () => {
+      const { element } = await render(
+        [
+          buildArticle({
+            areas: [
+              { code: 'agronomia', name: 'Agronomía' },
+              { code: 'derecho', name: 'Derecho' },
+            ],
+          }),
+        ],
+        1,
+      );
+
+      const badges = Array.from(cards(element)[0].querySelectorAll('.article__meta .badge'));
+      expect(badges.map((b) => text(b)).slice(0, 2)).toEqual(['Agronomía', 'Derecho']);
     });
 
     it('muestra título, autores, metadatos, resumen y palabras clave de cada artículo', async () => {

@@ -5,7 +5,7 @@
   [attr.aria-describedby]="descriptionId"
   (cancel)="onCancelRequested($event)"
 >
-  <h2 [id]="titleId">Habilitar corrección</h2>
+  <h2 [id]="titleId">Corregir veredicto</h2>
 
   <div [id]="descriptionId" class="correction-dialog__body">
     @if (verdict(); as current) {
@@ -16,10 +16,50 @@
       </p>
     }
     <p>
-      La decisión anterior se conserva y no se modifica. El Editor podrá registrar una nueva
-      decisión una sola vez; usted no la toma.
+      El Administrador registra la nueva decisión. La decisión anterior se conserva y no se
+      modifica; la nueva pasa a ser la vigente y el catálogo la sigue.
     </p>
   </div>
+
+  <fieldset class="correction-dialog__field" [disabled]="busy()">
+    <legend>Nueva decisión <span class="correction-dialog__hint">(obligatoria)</span></legend>
+    @for (option of decisions; track option.value) {
+      <label class="correction-dialog__option">
+        <input
+          type="radio"
+          name="correction-decision"
+          [value]="option.value"
+          [checked]="decision() === option.value"
+          (change)="decision.set(option.value)"
+        />
+        {{ option.label }}
+      </label>
+    }
+    @if (decisionError(); as message) {
+      <p class="correction-dialog__error" role="alert">{{ message }}</p>
+    }
+  </fieldset>
+
+  @if (decision() === 'CHANGES_REQUESTED') {
+    <div class="correction-dialog__field">
+      <label [for]="observationsId">
+        Observaciones para el Autor
+        <span class="correction-dialog__hint">(obligatorias)</span>
+      </label>
+      <textarea
+        [id]="observationsId"
+        rows="3"
+        aria-required="true"
+        [attr.aria-invalid]="observationsError() ? 'true' : null"
+        [disabled]="busy()"
+        [ngModel]="observations()"
+        (ngModelChange)="observations.set($event)"
+      ></textarea>
+      @if (observationsError(); as message) {
+        <p class="correction-dialog__error" role="alert">{{ message }}</p>
+      }
+    </div>
+  }
 
   <div class="correction-dialog__field">
     <label [for]="reasonId">
@@ -51,7 +91,7 @@
       Cancelar
     </button>
     <button type="button" class="btn btn--primary" [disabled]="busy()" (click)="confirm()">
-      {{ busy() ? 'Habilitando…' : 'Habilitar corrección' }}
+      {{ busy() ? 'Corrigiendo…' : 'Corregir veredicto' }}
     </button>
   </div>
 </dialog>

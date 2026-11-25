@@ -12,7 +12,7 @@ export function buildArticle(overrides: Partial<CatalogArticle> = {}): CatalogAr
     ],
     abstract: 'Estudio del retroceso glaciar entre 2000 y 2025.',
     keywords: ['glaciares', 'clima'],
-    area: 'Agronomía',
+    areas: [{ code: 'agronomia', name: 'Agronomía' }],
     language: 'es',
     published_at: '2026-10-22T15:00:00Z',
     version_number: 1,

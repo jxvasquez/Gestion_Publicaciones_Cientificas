@@ -3,7 +3,7 @@ import { expect, Page, test } from '@playwright/test';
 import { describeFindings, scan, visit } from './support/a11y';
 import { RUN } from './support/env';
 import { loginUi } from './support/ui';
-import { buildWorld, World } from './support/world';
+import { accountFor, buildWorld, World } from './support/world';
 
 /**
  * Accesibilidad (TSK-92): axe-core con WCAG 2.x A/AA —contraste incluido— sobre las
@@ -59,56 +59,39 @@ test('Autor', async ({ page }) => {
   for (const [name, path] of [
     ['mis manuscritos', '/app/author/manuscripts'],
     ['nuevo manuscrito', '/app/author/manuscripts/new'],
-    ['detalle enviado', `/app/author/manuscripts/${world.submitted.id}`],
+    ['detalle enviado', `/app/author/manuscripts/${world.review.id}`],
     ['detalle borrador', `/app/author/manuscripts/${world.draftId}`],
     ['editar borrador', `/app/author/manuscripts/${world.draftId}/edit`],
-    ['historial', `/app/author/manuscripts/${world.submitted.id}/history`],
+    ['historial', `/app/author/manuscripts/${world.review.id}/history`],
     ['avisos', '/app/notifications'],
   ]) {
     await visit(page, path);
     await c.check(page, `autor: ${name}`);
   }
-  await visit(page, `/app/author/manuscripts/${world.submitted.id}`);
+  await visit(page, `/app/author/manuscripts/${world.review.id}`);
   await page.getByRole('button', { name: 'Dar de baja' }).click();
   await expect(page.getByRole('dialog')).toBeVisible();
   await c.check(page, 'autor: diálogo de baja');
   c.done();
 });
 
-test('Editor', async ({ page }) => {
-  const c = collector();
-  await loginUi(page, 'editor');
-  await c.check(page, 'panel del editor');
-  for (const [name, path] of [
-    ['bandeja', '/app/editor/submissions'],
-    ['detalle enviado', `/app/editor/submissions/${world.submitted.id}`],
-    ['detalle en revisión', `/app/editor/submissions/${world.pending.id}`],
-    ['detalle aceptado', `/app/editor/submissions/${world.accepted.id}`],
-    ['vencidas', '/app/editor/assignments/expired'],
-    ['incidentes', '/app/editor/incidents'],
-  ]) {
-    await visit(page, path);
-    await c.check(page, `editor: ${name}`);
-  }
-  await visit(page, `/app/editor/submissions/${world.submitted.id}`);
-  await page.getByRole('button', { name: 'Pasar a revisión' }).click();
-  await expect(page.getByRole('dialog')).toBeVisible();
-  await c.check(page, 'editor: diálogo de pasar a revisión');
-  c.done();
-});
-
 test('Revisor', async ({ page }) => {
   const c = collector();
-  await loginUi(page, 'reviewer');
+  await loginUi(page, accountFor('reviewer', world));
   await c.check(page, 'panel del revisor');
   await visit(page, '/app/reviewer/assignments');
-  await c.check(page, 'revisor: asignaciones');
-  await page.getByRole('link', { name: world.pending.code, exact: true }).click();
+  await expect(page.getByRole('heading', { name: /Mi desempeño/i }).first()).toBeVisible();
+  await c.check(page, 'revisor: asignaciones y desempeño');
+  await page.getByRole('link', { name: world.review.code, exact: true }).click();
   await expect(page.locator('h1').first()).toBeVisible();
   await c.check(page, 'revisor: detalle');
   await page.getByRole('link', { name: 'Evaluar manuscrito' }).click();
   await expect(page.locator('h1').first()).toBeVisible();
-  await c.check(page, 'revisor: formulario de evaluación');
+  await c.check(page, 'revisor: formulario de evaluación (rúbrica)');
+  // Con puntajes bajos aparece el contador de la justificación (estado nuevo a medir).
+  await page.getByRole('group', { name: /^Pertinencia/ }).locator('label').filter({ hasText: /^\s*2 · / }).click();
+  await expect(page.locator('.counter')).toBeVisible();
+  await c.check(page, 'revisor: rúbrica con contador de justificación');
   await page.getByRole('button', { name: 'Reportar posible fuga de identidad' }).click();
   await expect(page.getByRole('dialog')).toBeVisible();
   await c.check(page, 'revisor: diálogo de fuga');
@@ -121,8 +104,16 @@ test('Administrador', async ({ page }) => {
   const c = collector();
   await loginUi(page, 'admin');
   await c.check(page, 'panel del administrador');
+  for (const [name, path] of [
+    ['incidentes', '/app/admin/incidents'],
+    ['revisores', '/app/admin/reviewers'],
+    ['carreras', '/app/admin/areas'],
+    ['auditoría', '/app/admin/audit'],
+  ]) {
+    await visit(page, path);
+    await c.check(page, `admin: ${name}`);
+  }
   await visit(page, '/app/admin/audit');
-  await c.check(page, 'admin: auditoría');
   await page
     .getByRole('link', { name: /Ver detalle/ })
     .first()

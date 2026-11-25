@@ -1,12 +1,10 @@
-"""Manuscript endpoints of the author and editor modules (plan section 2.3).
+"""Manuscript endpoints of the author module (plan section 2.3).
 
-* ``GET /api/v1/manuscripts/`` — the author's own manuscripts and, for an
-  editor, the editor scope. Roles are additive: a person with both roles
-  gets the union.
+* ``GET /api/v1/manuscripts/`` — the author's own manuscripts.
 * ``POST /api/v1/manuscripts/`` — author only; creates a ``DRAFT``.
-* ``GET /api/v1/manuscripts/{id}/`` — the author's own or the editor's.
+* ``GET /api/v1/manuscripts/{id}/`` — the author's own.
 * ``PATCH /api/v1/manuscripts/{id}/`` — the owner, while ``DRAFT`` or
-  ``REQUIRES_CORRECTIONS``; requires ``If-Match`` with the ``ETag``.
+  ``CHANGES_REQUESTED``; requires ``If-Match`` with the ``ETag``.
 
 A manuscript outside the actor's scope answers ``404``, never ``403``.
 ``403`` is reserved for a role without access to the module.
@@ -37,12 +35,11 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 
 from apps.publications.filters import ManuscriptFilterSerializer, apply_filters
-from apps.publications.models import Manuscript, ManuscriptVersion, Verdict
+from apps.publications.models import Manuscript, ManuscriptVersion, Verdict, VerdictEvaluation
 from apps.publications.permissions import IsManuscriptOwner
 from apps.publications.serializers import (
     AuthorManuscriptSerializer,
     DraftFileSummarySerializer,
-    EditorManuscriptSerializer,
     HistoryEntryDocSerializer,
     HistoryEntrySerializer,
     ManuscriptVersionSummarySerializer,
@@ -50,7 +47,6 @@ from apps.publications.serializers import (
     SubmissionSerializer,
     WithdrawalSerializer,
     draft_file_summary,
-    manuscript_serializer_class,
 )
 from apps.publications.services.downloads import authorize_original_download, xaccel_response
 from apps.publications.services.drafts import attach_draft_file, ensure_draft
@@ -68,10 +64,10 @@ from apps.publications.services.manuscripts import (
 )
 from apps.publications.services.pdf import sha256_of_chunks
 from apps.publications.services.submission import ALREADY_SUBMITTED_MESSAGE, submit_manuscript
-from apps.publications.services.versions import ensure_requires_corrections, submit_new_version
+from apps.publications.services.versions import ensure_changes_requested, submit_new_version
 from apps.publications.services.withdraw import ensure_active, withdraw_manuscript
 from apps.users.models import Role
-from apps.users.permissions import IsAuthor, IsEditor, request_active_roles
+from apps.users.permissions import IsAuthor, request_active_roles
 from config.exceptions import DomainError, ErrorCode
 from config.openapi import IDEMPOTENCY_KEY, IF_MATCH, PAGINATION, error_response
 from config.request_context import audit_request_context
@@ -131,19 +127,9 @@ def uploaded_pdf(request: Request):
     return uploaded
 
 
-# Un manuscrito se representa distinto según quién lo lee: el Autor ve el suyo con las
-# evaluaciones que le corresponden; el Editor, la vista de gestión.
-ManuscriptRepresentation = PolymorphicProxySerializer(
-    component_name="Manuscript",
-    serializers=[AuthorManuscriptSerializer, EditorManuscriptSerializer],
-    resource_type_field_name=None,
-)
-ManuscriptRepresentationList = PolymorphicProxySerializer(
-    component_name="Manuscript",
-    serializers=[AuthorManuscriptSerializer, EditorManuscriptSerializer],
-    resource_type_field_name=None,
-    many=True,
-)
+# El Autor ve su manuscrito con las evaluaciones que le corresponden.
+ManuscriptRepresentation = AuthorManuscriptSerializer
+ManuscriptRepresentationList = AuthorManuscriptSerializer(many=True)
 ETAG_HEADER = {
     "ETag": OpenApiParameter(
         "ETag",
@@ -162,16 +148,23 @@ class ManuscriptBaseView(GenericAPIView):
         roles = request_active_roles(self.request)
         return (
             Manuscript.objects.visible_to(
-                self.request.user,
-                as_author=Role.Code.AUTHOR in roles,
-                as_editor=Role.Code.EDITOR in roles,
+                self.request.user, as_author=Role.Code.AUTHOR in roles
             )
             .select_related("created_by")
             .prefetch_related(
                 "authors",
                 "versions",
-                # El Autor lee el último veredicto y los comentarios que le escribió el Revisor.
-                Prefetch("verdicts", queryset=Verdict.objects.select_related("evaluation")),
+                "areas",
+                # El Autor lee el último veredicto y los comentarios de cada revisor («Revisor N»).
+                Prefetch(
+                    "verdicts",
+                    queryset=Verdict.objects.select_related("evaluation").prefetch_related(
+                        Prefetch(
+                            "evaluations",
+                            queryset=VerdictEvaluation.objects.select_related("evaluation"),
+                        )
+                    ),
+                ),
             )
         )
 
@@ -198,8 +191,7 @@ class ManuscriptBaseView(GenericAPIView):
         return manuscript
 
     def represent(self, manuscript: Manuscript) -> dict:
-        serializer_class = manuscript_serializer_class(manuscript, self.request.user)
-        return serializer_class(manuscript, context={"request": self.request}).data
+        return AuthorManuscriptSerializer(manuscript, context={"request": self.request}).data
 
     def respond(self, manuscript: Manuscript, http_status: int = status.HTTP_200_OK) -> Response:
         response = Response(self.represent(manuscript), status=http_status)
@@ -213,7 +205,7 @@ class ManuscriptBaseView(GenericAPIView):
         operation_id="manuscripts_list",
         summary="Listar manuscritos",
         description=(
-            "El Autor ve sus manuscritos; el Editor, los que están en su alcance. Los retirados "
+            "El Autor ve sus manuscritos. Los retirados "
             "(`archived=true`) se listan aparte. Un parámetro mal formado responde 400."
         ),
         parameters=[ManuscriptFilterSerializer, *PAGINATION],
@@ -234,7 +226,7 @@ class ManuscriptListCreateView(ManuscriptBaseView):
     def get_permissions(self):
         if self.request.method == "POST":
             return [IsAuthenticated(), IsAuthor()]
-        return [IsAuthenticated(), (IsAuthor | IsEditor)()]
+        return [IsAuthenticated(), IsAuthor()]
 
     def get(self, request: Request) -> Response:
         queryset = apply_filters(self.get_queryset(), request.query_params)
@@ -267,7 +259,7 @@ class ManuscriptListCreateView(ManuscriptBaseView):
         operation_id="manuscripts_partial_update",
         summary="Editar los metadatos",
         description=(
-            "Solo el Autor propietario, en `DRAFT` o `REQUIRES_CORRECTIONS`. No crea versión. "
+            "Solo el Autor propietario, en `DRAFT` o `CHANGES_REQUESTED`. No crea versión. "
             "Exige `If-Match`; si el manuscrito cambió, responde 409."
         ),
         parameters=[IF_MATCH],
@@ -281,7 +273,7 @@ class ManuscriptDetailView(ManuscriptBaseView):
     def get_permissions(self):
         if self.request.method == "PATCH":
             return [IsAuthenticated(), IsAuthor(), IsManuscriptOwner()]
-        return [IsAuthenticated(), (IsAuthor | IsEditor)()]
+        return [IsAuthenticated(), IsAuthor()]
 
     def get(self, request: Request, pk) -> Response:
         return self.respond(self.get_manuscript(pk))
@@ -433,7 +425,7 @@ class ManuscriptSubmitView(ManuscriptBaseView):
         summary="Enviar una nueva versión",
         description=(
             "Respuesta a una solicitud de correcciones: solo el Autor propietario y solo desde "
-            "`REQUIRES_CORRECTIONS`. Crea la versión consecutiva, la ata a la ronda vigente y "
+            "`CHANGES_REQUESTED`. Crea la versión consecutiva, la ata a la ronda vigente y "
             "conserva intactas las anteriores. El PDF viaja en `file`. Idempotente por "
             "`Idempotency-Key`: la misma clave con otro PDF responde 409."
         ),
@@ -451,10 +443,10 @@ class ManuscriptSubmitView(ManuscriptBaseView):
 class ManuscriptVersionsView(ManuscriptBaseView):
     """``/api/v1/manuscripts/{id}/versions/``: list the iterations or answer a correction request.
 
-    ``GET`` lists the versions for the author (own) and the editor
+    ``GET`` lists the versions for the author (own)
     (scope). ``POST`` is the answer to a correction request:
 
-    Only the owner, only from ``REQUIRES_CORRECTIONS``. The PDF travels
+    Only the owner, only from ``CHANGES_REQUESTED``. The PDF travels
     in the multipart ``file`` field and the metadata is the manuscript's
     current one (edited with ``PATCH``). It creates the next consecutive
     version, ties it to the current round and keeps every previous
@@ -467,7 +459,7 @@ class ManuscriptVersionsView(ManuscriptBaseView):
 
     def get_permissions(self):
         if self.request.method == "GET":
-            return [IsAuthenticated(), (IsAuthor | IsEditor)()]
+            return [IsAuthenticated(), IsAuthor()]
         return [IsAuthenticated(), IsAuthor(), IsManuscriptOwner()]
 
     def get(self, request: Request, pk) -> Response:
@@ -492,7 +484,7 @@ class ManuscriptVersionsView(ManuscriptBaseView):
             return replayed(stored)
 
         # Estado y cabecera antes de leer el cuerpo (409/400 antes que 415).
-        ensure_requires_corrections(manuscript)
+        ensure_changes_requested(manuscript)
         idempotency_key = parse_idempotency_key(request)
         uploaded = uploaded_pdf(request)
 
@@ -560,7 +552,7 @@ class ManuscriptWithdrawView(ManuscriptBaseView):
         operation_id="manuscripts_version_file",
         summary="Descargar el PDF original de una versión",
         description=(
-            "Para el Autor propietario y el Editor del alcance. La descarga se audita antes de "
+            "Para el Autor propietario. La descarga se audita antes de "
             "entregarse; si la auditoría falla, responde 503 sin redirigir. El Revisor nunca llega "
             "aquí: tiene su propio endpoint con la copia sanitizada."
         ),
@@ -576,7 +568,7 @@ class ManuscriptWithdrawView(ManuscriptBaseView):
 class ManuscriptVersionFileView(ManuscriptBaseView):
     """``GET /api/v1/manuscripts/{id}/versions/{version_id}/file/``: the exact original PDF.
 
-    For the owning author and the editor in scope. A manuscript or
+    For the owning author. A manuscript or
     version outside the scope answers ``404``. The download is audited
     first; if the audit fails the answer is ``503`` without redirect.
     The reviewer never reaches this endpoint: they have their own, which
@@ -584,7 +576,7 @@ class ManuscriptVersionFileView(ManuscriptBaseView):
     """
 
     def get_permissions(self):
-        return [IsAuthenticated(), (IsAuthor | IsEditor)()]
+        return [IsAuthenticated(), IsAuthor()]
 
     def get(self, request: Request, pk, version_id) -> HttpResponse:
         manuscript = self.get_manuscript(pk)
@@ -615,13 +607,13 @@ class ManuscriptVersionFileView(ManuscriptBaseView):
 class ManuscriptHistoryView(ManuscriptBaseView):
     """``GET /api/v1/manuscripts/{id}/history/``: the immutable chronological history.
 
-    Available to the owning author and the editor in scope, also after a
+    Available to the owning author, also after a
     logical withdrawal (HU-23). It carries no actor, path or file hash
     of the sanitized copy.
     """
 
     def get_permissions(self):
-        return [IsAuthenticated(), (IsAuthor | IsEditor)()]
+        return [IsAuthenticated(), IsAuthor()]
 
     def get(self, request: Request, pk) -> Response:
         manuscript = self.get_manuscript(pk)

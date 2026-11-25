@@ -1,0 +1,63 @@
+<section aria-labelledby="standing-title">
+  <h2 id="standing-title">Mi desempeño</h2>
+
+  @if (loading()) {
+    <app-loading-spinner label="Cargando su desempeño…" />
+  } @else if (standingError()) {
+    <app-error-state [message]="standingError()?.userMessage ?? ''" (retry)="load()" />
+  } @else if (standing(); as s) {
+    <app-kpi-card
+      title="Ranking y cupo"
+      icon="reviewer"
+      [metrics]="[
+        { label: 'Puntaje de ranking', value: s.ranking_score },
+        { label: 'Asignaciones activas', value: s.active_assignments, max: s.max_active_assignments },
+        { label: 'Evaluadas a tiempo', value: s.on_time_evaluations },
+        { label: 'Plazos vencidos', value: s.missed_deadlines },
+      ]"
+    />
+
+    <h3 id="adjustments-title">Historial de ajustes</h3>
+    @if (adjustmentsError()) {
+      <app-error-state
+        [message]="adjustmentsError()?.userMessage ?? ''"
+        (retry)="loadAdjustments(page())"
+      />
+    } @else if (rows().length === 0) {
+      <app-empty-state message="Todavía no tiene ajustes en su ranking." />
+    } @else {
+      <div class="table-wrap">
+        <table class="table" aria-labelledby="adjustments-title">
+          <thead>
+            <tr>
+              <th scope="col">Fecha</th>
+              <th scope="col">Manuscrito</th>
+              <th scope="col">Ajuste</th>
+              <th scope="col">Puntaje resultante</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of rows(); track row.id) {
+              <tr>
+                <td>{{ row.created_at | date: 'dd/MM/yyyy HH:mm' : offset }}</td>
+                <td>{{ row.manuscript_code }} · v{{ row.version_number }}</td>
+                <td>
+                  <span class="badge" [class.badge--success]="tone(row) === 'success'" [class.badge--danger]="tone(row) === 'danger'">
+                    {{ adjustmentText(row) }}
+                  </span>
+                </td>
+                <td>{{ row.score_after }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      <app-pagination
+        [page]="page()"
+        [pageSize]="pageSize"
+        [totalItems]="adjustments()?.count ?? 0"
+        (pageChange)="loadAdjustments($event)"
+      />
+    }
+  }
+</section>

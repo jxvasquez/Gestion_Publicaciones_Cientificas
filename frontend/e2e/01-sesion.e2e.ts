@@ -11,14 +11,16 @@ test.describe('Flujo 1 — sesión y panel multirrol', () => {
     const nav = page.getByRole('navigation', { name: 'Navegación principal' });
     await expect(nav.getByRole('link', { name: 'Mis manuscritos' })).toBeVisible();
     await expect(nav.getByRole('link', { name: 'Mis asignaciones' })).toBeVisible();
-    // Sin roles de Editor ni de Administrador, esos módulos no aparecen.
-    await expect(nav.getByRole('link', { name: 'Nuevos envíos' })).toHaveCount(0);
-    await expect(nav.getByRole('link', { name: 'Auditoría' })).toHaveCount(0);
+    // Sin rol de Administrador esos módulos no aparecen, y el rol Editor ya no existe.
+    for (const hidden of ['Incidentes', 'Revisores', 'Carreras', 'Auditoría', 'Nuevos envíos']) {
+      await expect(nav.getByRole('link', { name: hidden })).toHaveCount(0);
+    }
 
     const dashboard = page.getByRole('region', { name: 'Panel unificado' });
     await expect(dashboard.getByRole('heading', { name: 'Autor' })).toBeVisible();
     await expect(dashboard.getByRole('heading', { name: 'Revisor' })).toBeVisible();
     await expect(dashboard.getByRole('heading', { name: 'Editor' })).toHaveCount(0);
+    await expect(dashboard.getByRole('heading', { name: 'Administrador' })).toHaveCount(0);
 
     // No existe selector ni conmutador de rol.
     await expect(page.getByRole('button', { name: /cambiar de rol|seleccionar rol/i })).toHaveCount(
@@ -26,6 +28,21 @@ test.describe('Flujo 1 — sesión y panel multirrol', () => {
     );
 
     await logoutUi(page);
+  });
+
+  test('el Administrador ve incidentes, revisores, carreras y auditoría, y ningún módulo del Editor', async ({
+    page,
+  }) => {
+    await loginUi(page, 'admin');
+    const nav = page.getByRole('navigation', { name: 'Navegación principal' });
+    for (const link of ['Incidentes', 'Revisores', 'Carreras', 'Auditoría']) {
+      await expect(nav.getByRole('link', { name: link })).toBeVisible();
+    }
+    await expect(nav.getByText('Editor')).toHaveCount(0);
+    for (const gone of ['/app/editor/submissions', '/app/editor/incidents']) {
+      await page.goto(gone);
+      await expect(page.getByRole('heading', { name: /Acceso denegado|no encontrada|No encontrado/i }).first()).toBeVisible();
+    }
   });
 
   test('una contraseña errónea da un mensaje genérico que no revela si la cuenta existe', async ({

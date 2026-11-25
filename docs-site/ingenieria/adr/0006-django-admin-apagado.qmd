@@ -13,7 +13,7 @@ Django incluye un panel de administración que permite editar cualquier fila de 
 - En **producción el Django Admin no se monta**: `/admin/` responde `404`, tanto en Nginx (que ni siquiera lo reenvía) como en Django, y **ninguna variable de entorno lo enciende**.
 - Las cuentas y los roles se gestionan por consola con comandos de gestión (`create_user`, `seed_roles`), que generan contraseñas aleatorias mostradas una sola vez.
 - El **entorno de desarrollo** puede montarlo para inspeccionar datos (`ADMIN_ENABLED`, activo por defecto solo en `config.settings.development`; se apaga con `ADMIN_ENABLED=0`).
-- Toda la funcionalidad editorial se expone únicamente por la API, que aplica las reglas de negocio y la auditoría.
+- Toda la funcionalidad editorial (incluida la del Administrador) se expone únicamente por la API, que aplica las reglas de negocio y la auditoría.
 
 ## Alternativas consideradas
 

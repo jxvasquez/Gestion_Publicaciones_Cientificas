@@ -39,6 +39,7 @@ from apps.publications.services.storage import private_path, remove_quietly
 from apps.publications.services.versions import (
     Rollback,
     Submission,
+    assign_after_commit,
     create_formal_version,
     record_audit,
     run_formal_write,
@@ -76,6 +77,8 @@ def _after_commit(manuscript_id: UUID, version_id: UUID, user_id: UUID, draft: P
     ):
         if isinstance(error, Exception):
             logger.error("Un receptor del envío falló (%s): %s", receiver, error)
+    # La asignación automática ocurre después del commit: el comprobante no cambia.
+    assign_after_commit(manuscript_id)
 
 
 def submit_manuscript(

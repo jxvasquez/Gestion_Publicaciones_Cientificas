@@ -35,7 +35,7 @@ Tres contenedores en un único servidor Linux (Docker Compose):
 
 Datos persistentes (volúmenes de Docker): `postgres_data` (base) y `media_data` (todos los PDF). **Perder cualquiera de los dos sin respaldo es perder el expediente.** `static_data` es regenerable.
 
-Roles de la aplicación: `AUTHOR`, `REVIEWER`, `EDITOR`, `ADMIN`. El flujo editorial es **doble ciego**: el Revisor nunca ve la identidad del Autor y viceversa; no hay instrucciones de operación que requieran saltarse eso.
+Roles de la aplicación: `AUTHOR`, `REVIEWER`, `ADMIN` (el rol `EDITOR` se retiró en la spec 004: la asignación, el plazo y el veredicto son automáticos). El flujo editorial es **doble ciego**: el Revisor nunca ve la identidad del Autor y viceversa; no hay instrucciones de operación que requieran saltarse eso.
 
 Archivos que importan:
 
@@ -401,7 +401,7 @@ Si el repositorio no está en `/opt/gpc`, cambia la ruta en `/etc/cron.d/gpc`. C
 | Tarea | Cuándo | Qué hace | Log |
 |---|---|---|---|
 | `backup.sh` | Diaria, 02:15 | Respaldo (§8) | `/var/log/gpc-backup.log` |
-| `mark_expired_assignments` | Cada minuto | Marca como vencidas las asignaciones que superan sus 20 días; no revoca ni reasigna | `/var/log/gpc-expire.log` |
+| `run_review_automation` | Cada minuto | Ciclo de revisión: revoca y reasigna las asignaciones que superan sus 20 días (−20 puntos al Revisor), completa cupos pendientes y reconcilia decisiones; escribe solo si hubo trabajo | `/var/log/gpc-review.log` |
 | `send_pending_notifications` | Cada minuto | Envía y reintenta los avisos por correo (1 min, 5 min, 15 min, 1 h, 4 h) | `/var/log/gpc-notify.log` |
 | `cleanup_idempotency_keys` | Diaria, 03:00 | Borra claves de idempotencia vencidas | `/var/log/gpc-cleanup.log` |
 | `verify_integrity` | Día 1, 03:30 | Recalcula los hashes de PDF y la cadena de auditoría; solo lee | `/var/log/gpc-integrity.log` |
@@ -422,7 +422,7 @@ sudo logrotate -d /etc/logrotate.d/gpc          # simula la rotación y muestra 
 Cada comando se puede lanzar a mano (los cuatro se probaron y terminan con código 0):
 
 ```bash
-docker compose exec backend python manage.py mark_expired_assignments
+docker compose exec backend python manage.py run_review_automation
 docker compose exec backend python manage.py send_pending_notifications
 docker compose exec backend python manage.py cleanup_idempotency_keys
 docker compose exec backend python manage.py verify_integrity
@@ -444,7 +444,7 @@ Los logs guardan conteos y códigos de error, **nunca** el contenido de los avis
 | `EMAIL_HOST_USER` / `EMAIL_HOST_PASSWORD` | `.env` | Envío de correo institucional |
 | Certificado TLS (`privkey.pem`) | `nginx/certs/` | Nginx |
 | Clave de cifrado de respaldos | **Fuera del servidor** | Quien restaura |
-| Cuentas de las personas | Base de datos | Autores, Revisores, Editores y Administradores |
+| Cuentas de las personas | Base de datos | Autores, Revisores y Administradores |
 
 Ninguna se versiona ni se escribe en esta guía. `.env` es `0600`; el certificado privado, `0600`.
 
@@ -457,12 +457,12 @@ No existe Django Admin en producción (D-31): `/admin/` responde `404`. Las cuen
 ```bash
 docker compose exec backend python manage.py create_user <identificador> \
   --first-name <Nombre> --last-name <Apellidos> --email <correo> \
-  --role AUTHOR [--role REVIEWER] [--areas "Agronomía,Medicina"]
+  --role AUTHOR [--role REVIEWER] [--areas "Ingeniería en Computación,Derecho"]
 ```
 
-- `<identificador>` es con lo que la persona inicia sesión (y su usuario). Los roles son `AUTHOR`, `REVIEWER`, `EDITOR` y `ADMIN`; una persona puede tener varios y verá todos sus apartados.
+- `<identificador>` es con lo que la persona inicia sesión (y su usuario). Los roles son `AUTHOR`, `REVIEWER` y `ADMIN`; una persona puede tener varios y verá todos sus apartados.
 - Imprime una **contraseña inicial aleatoria una sola vez**: entrégala por un canal seguro e indica que la cambie. Si repites el comando sobre una cuenta existente, conserva su contraseña.
-- Un **Revisor** necesita `--areas` (las áreas de pericia, escritas como las usan los manuscritos) y queda disponible; sin áreas coincidentes el Editor no puede asignarle.
+- Un **Revisor** necesita `--areas`: nombres o códigos de **carreras activas del catálogo** (por ejemplo, `"Ingeniería en Computación,Derecho"`). Queda disponible y el sistema solo le asigna manuscritos de **esas mismas carreras** (coincidencia exacta); sin carreras no recibe ninguno. El catálogo y el padrón también se gestionan desde la aplicación (Administrador → Carreras y Revisores).
 - El correo de un **Autor** debe coincidir con el del autor registrado en sus manuscritos, y no puede repetirse entre cuentas.
 
 **Cambiar una contraseña:** `docker compose exec backend python manage.py changepassword <identificador>`.
@@ -476,7 +476,7 @@ docker compose exec backend python manage.py shell -c "from apps.users.models im
 **Retirar un rol** (el historial de roles se conserva; la persona lo pierde en su siguiente petición):
 
 ```bash
-docker compose exec backend python manage.py shell -c "from django.utils import timezone; from apps.users.models import UserRole; UserRole.objects.filter(user__institutional_id='<identificador>', role__code='EDITOR', is_active=True).update(is_active=False, revoked_at=timezone.now())"
+docker compose exec backend python manage.py shell -c "from django.utils import timezone; from apps.users.models import UserRole; UserRole.objects.filter(user__institutional_id='<identificador>', role__code='REVIEWER', is_active=True).update(is_active=False, revoked_at=timezone.now())"
 ```
 
 En un entorno de **desarrollo** hay además `seed_dev_users` (README §3.8.1), que se niega a correr sin `ALLOW_DEV_USERS=1`; **no lo uses en el piloto**.
@@ -582,7 +582,7 @@ La auditoría es obligatoria: si no se puede registrar, la acción se revierte. 
 
 ### 12.11 Sospecha de fuga de identidad (doble ciego) o de credenciales
 
-- **Fuga de identidad:** el flujo editorial tiene un reporte propio de incidente; el Editor lo gestiona en la aplicación. A nivel de sistema, preserva logs y auditoría (§12.6) y avisa al responsable.
+- **Fuga de identidad:** el flujo editorial tiene un reporte propio de incidente; el Administrador lo gestiona en la aplicación (Incidentes). A nivel de sistema, preserva logs y auditoría (§12.6) y avisa al responsable.
 - **Credencial expuesta:** rótala de inmediato (§11.3), revisa la auditoría de ese periodo y deja constancia.
 
 ### 12.12 El certificado venció

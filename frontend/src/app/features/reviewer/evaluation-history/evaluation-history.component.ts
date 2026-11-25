@@ -6,14 +6,18 @@ import { BehaviorSubject, catchError, combineLatest, map, of, switchMap, tap } f
 
 import { toPage } from '../../../core/http/query-params';
 import { ApiError, toApiError } from '../../../core/models/api-error.model';
-import { RECOMMENDATION_LABELS } from '../../../core/models/editor.model';
 import { Paginated } from '../../../core/models/paginated.model';
+import { areaNames } from '../../../core/models/area.model';
 import {
   MAX_SCORE,
   ReviewerHistoryDetail,
   ReviewerHistoryRow,
-  SCORE_CRITERIA,
 } from '../../../core/models/reviewer.model';
+import {
+  LEGACY_SCORE_CRITERIA,
+  RECOMMENDATION_LABELS,
+  RUBRIC_CRITERIA,
+} from '../../../core/models/rubric.model';
 import { ReviewerService } from '../../../core/services/reviewer.service';
 import { EmptyStateComponent } from '../../../shared/components/empty-state.component';
 import { ErrorStateComponent } from '../../../shared/components/error-state.component';
@@ -38,9 +42,9 @@ type DetailState =
  *
  * * **Solo lectura:** lista únicamente las evaluaciones ya enviadas, de la
  *   más reciente a la más antigua, y no ofrece editar, reenviar ni borrar.
- * * **Anónimo:** identifica el manuscrito por código, título y área, y el
- *   resultado editorial es solo la decisión y su fecha. Nunca muestra
- *   autores, ni el texto que el Editor escribió para el Autor.
+ * * **Anónimo:** identifica el manuscrito por código, título y carreras, y el
+ *   resultado es solo la decisión y su fecha. Nunca muestra autores, ni los
+ *   textos de la decisión que recibe el Autor.
  * * **Sin comentarios confidenciales:** el detalle muestra los puntajes y
  *   los comentarios para el Autor; el tipo `ReviewerHistoryDetail` ni siquiera
  *   declara los confidenciales, así que no hay forma de pintarlos.
@@ -69,7 +73,7 @@ export class EvaluationHistoryComponent {
 
   protected readonly pageSize = PAGE_SIZE;
   protected readonly offset = INSTITUTIONAL_OFFSET;
-  protected readonly criteria = SCORE_CRITERIA;
+  protected readonly areaNames = areaNames;
   protected readonly maxScore = MAX_SCORE;
 
   protected readonly viewState = signal<'loading' | 'ready' | 'error'>('loading');
@@ -112,6 +116,15 @@ export class EvaluationHistoryComponent {
 
   protected total(): number {
     return this.result()?.count ?? 0;
+  }
+
+  /** Criterios de la rúbrica de la evaluación: la profesional o la anterior (solo lectura). */
+  protected criteriaOf(detail: ReviewerHistoryDetail): { label: string; score: number | null }[] {
+    const names =
+      detail.rubric_version === 1
+        ? LEGACY_SCORE_CRITERIA.map((c) => ({ key: c.key, label: c.name }))
+        : RUBRIC_CRITERIA.map((c) => ({ key: c.key as string, label: c.name }));
+    return names.map(({ key, label }) => ({ label, score: detail.scores[key] ?? null }));
   }
 
   protected recommendationLabel(row: ReviewerHistoryRow): string {

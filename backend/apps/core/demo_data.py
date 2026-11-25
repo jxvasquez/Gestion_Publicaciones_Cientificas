@@ -136,7 +136,7 @@ FEATURES = [
     {
         "title": "Acceso institucional",
         "description": (
-            "Roles de autor, revisor, editor y administrador con permisos claros "
+            "Roles de autor, revisor y administrador con permisos claros "
             "y un único flujo de trabajo compartido."
         ),
         "icon": "users",
@@ -156,7 +156,7 @@ WORKFLOW_STEPS = [
         "number": "02",
         "title": "Revisión doble ciego",
         "description": (
-            "El editor asigna especialistas que evalúan sin conocer la identidad "
+            "El sistema asigna especialistas de la carrera que evalúan sin conocer la identidad "
             "del autor."
         ),
         "icon": "shield",
@@ -201,7 +201,7 @@ FAQ = [
     {
         "question": "¿Puedo corregir mi manuscrito después de enviarlo?",
         "answer": (
-            "Sí. Cuando el editor solicita correcciones, el autor puede cargar una "
+            "Sí. Cuando los revisores solicitan cambios, el autor puede cargar una "
             "nueva versión en PDF. Todas las versiones anteriores se conservan de "
             "forma permanente."
         ),
@@ -210,7 +210,7 @@ FAQ = [
         "question": "¿Qué ocurre después de la decisión editorial?",
         "answer": (
             "Si el manuscrito es aceptado, pasa al catálogo institucional. Si "
-            "requiere correcciones, vuelve al autor con las observaciones. Si es "
+            "solicita cambios, vuelve al autor con las observaciones. Si es "
             "rechazado, se conserva el historial del proceso."
         ),
     },
@@ -550,7 +550,7 @@ MANUSCRIPTS: list[dict[str, Any]] = [
             "del sur del país."
         ),
         "observations": (
-            "La editora solicitó ampliar la descripción del corpus y justificar la "
+            "Los revisores solicitaron ampliar la descripción del corpus y justificar la "
             "selección de las ventanas temporales."
         ),
         "versions": [
@@ -609,7 +609,7 @@ MANUSCRIPTS: list[dict[str, Any]] = [
         "area": "Ingeniería y Tecnología",
         "category": "Investigación de operaciones",
         "status": "requires_changes",
-        "status_label": "Requiere correcciones",
+        "status_label": "Cambios solicitados",
         "status_class": "status--changes",
         "submitted_at": "05 sep 2026",
         "updated_at": "Hace 5 días",
@@ -642,7 +642,7 @@ MANUSCRIPTS: list[dict[str, Any]] = [
             {"name": "Raúl Revisor", "initials": "RR", "status": "Completada"},
         ],
         "verdict": {
-            "decision": "Requiere correcciones",
+            "decision": "Cambios solicitados",
             "date": "16 oct 2026",
             "observations": (
                 "Se solicita ampliar el análisis de sensibilidad y documentar los "
@@ -652,8 +652,8 @@ MANUSCRIPTS: list[dict[str, Any]] = [
         "timeline": [
             {
                 "date": "16 oct 2026",
-                "title": "Veredicto: requiere correcciones",
-                "description": "La editora emitió observaciones para el autor.",
+                "title": "Veredicto: cambios solicitados",
+                "description": "Los revisores emitieron observaciones para el autor.",
                 "tone": "warning",
             },
             {
@@ -1021,13 +1021,13 @@ REVIEWERS = [
 AUDIT_EVENTS = [
     {
         "timestamp": "21 oct 2026 · 09:42",
-        "actor": "Elena Editora",
-        "role": "Editor",
+        "actor": "Sistema automático",
+        "role": "Sistema",
         "action": "verdict.issued",
         "action_label": "Veredicto emitido",
         "entity": "Manuscrito",
         "entity_id": "MAN-2026-0179",
-        "description": "Se emitió el veredicto «Requiere correcciones».",
+        "description": "Se emitió el veredicto «Cambios solicitados».",
         "ip": "192.168.10.24",
         "tone": "warning",
     },
@@ -1057,8 +1057,8 @@ AUDIT_EVENTS = [
     },
     {
         "timestamp": "20 oct 2026 · 15:31",
-        "actor": "Elena Editora",
-        "role": "Editor",
+        "actor": "Sistema automático",
+        "role": "Sistema",
         "action": "reviewer.assigned",
         "action_label": "Revisor asignado",
         "entity": "Manuscrito",
@@ -1093,8 +1093,8 @@ AUDIT_EVENTS = [
     },
     {
         "timestamp": "19 oct 2026 · 14:20",
-        "actor": "Elena Editora",
-        "role": "Editor",
+        "actor": "Sistema automático",
+        "role": "Sistema",
         "action": "manuscript.status_changed",
         "action_label": "Estado actualizado",
         "entity": "Manuscrito",

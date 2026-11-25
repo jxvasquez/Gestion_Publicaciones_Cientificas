@@ -13,8 +13,8 @@
       impida evaluarlo con imparcialidad.
     </p>
     <ul>
-      <li>La evaluación quedará <strong>bloqueada</strong>: no podrá guardar ni enviar.</li>
-      <li>El Editor será avisado y decidirá cómo continuar.</li>
+      <li>La asignación se <strong>libera sin penalización</strong> y el sistema la cubre con otro revisor.</li>
+      <li>Dejará de ver el manuscrito y no podrá guardar ni enviar la evaluación.</li>
       <li><strong>No se puede deshacer.</strong></li>
     </ul>
     @if (unsavedChanges()) {
@@ -27,7 +27,7 @@
 
   <div class="conflict-dialog__field">
     <label [for]="reasonId">
-      Motivo <span class="conflict-dialog__hint">(opcional; solo lo ve el Editor)</span>
+      Motivo <span class="conflict-dialog__hint">(opcional; solo queda en la auditoría)</span>
     </label>
     <textarea
       [id]="reasonId"

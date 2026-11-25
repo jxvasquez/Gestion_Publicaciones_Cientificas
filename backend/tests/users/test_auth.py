@@ -290,21 +290,6 @@ class TestLogout:
 
 
 class TestMe:
-    def test_me_returns_identity_roles_and_navigation(self) -> None:
-        assign_roles(make_user(), "AUTHOR", "EDITOR")
-        client, login_response = login_client()
-        access = login_response.json()["access"]
-
-        response = client.get(ME_URL, HTTP_AUTHORIZATION=f"Bearer {access}")
-        assert response.status_code == 200
-        body = response.json()
-
-        assert body["user"]["institutional_id"] == "INST-1001"
-        assert body["roles"] == ["AUTHOR", "EDITOR"]
-        routes = {item["route"] for item in body["navigation"]}
-        assert "/app/author/manuscripts" in routes
-        assert "/app/editor/submissions" in routes
-        assert all(item["role"] in body["roles"] for item in body["navigation"])
 
     def test_me_rereads_roles_from_the_database_not_from_the_claim(self) -> None:
         user = assign_roles(make_user(), "AUTHOR", "REVIEWER")

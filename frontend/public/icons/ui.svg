@@ -23,8 +23,8 @@
     <path d="M9 5H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-3M8.5 13l2.5 2.5 4.5-5"/>
     <rect x="9" y="3" width="6" height="4" rx="1"/>
   </symbol>
-  <symbol id="editor" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M11 5H6a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2v-5M8 16l1-4 8-8a2.1 2.1 0 0 1 3 3l-8 8-4 1Zm7.5-10.5 3 3"/>
+  <symbol id="areas" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M4 5h7v7H4zM13 5h7v7h-7zM4 14h7v5H4zM13 14h7v5h-7z"/>
   </symbol>
   <symbol id="admin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
     <path d="m12 3 7 3v5c0 4.5-2.5 7.8-7 10-4.5-2.2-7-5.5-7-10V6l7-3Z"/>

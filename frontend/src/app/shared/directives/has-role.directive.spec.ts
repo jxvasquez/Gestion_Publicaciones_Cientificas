@@ -6,7 +6,7 @@ import { HasRoleDirective } from './has-role.directive';
 
 @Component({
   imports: [HasRoleDirective],
-  template: `<p *appHasRole="['EDITOR']">Acceso editorial</p>`,
+  template: `<p *appHasRole="['ADMIN']">Acceso editorial</p>`,
 })
 class DirectiveHostComponent {}
 
@@ -26,7 +26,7 @@ describe('HasRoleDirective', () => {
     await fixture.whenStable();
     expect(element().querySelector('p')).toBeNull();
 
-    store.setRoles(['AUTHOR', 'EDITOR']);
+    store.setRoles(['AUTHOR', 'ADMIN']);
     await fixture.whenStable();
     expect(element().querySelector('p')?.textContent).toContain('Acceso editorial');
   });
@@ -36,7 +36,7 @@ describe('HasRoleDirective', () => {
     const store = TestBed.inject(AuthStore);
     const element = () => fixture.nativeElement as HTMLElement;
 
-    store.setRoles(['EDITOR']);
+    store.setRoles(['ADMIN']);
     await fixture.whenStable();
     expect(element().querySelector('p')).not.toBeNull();
 

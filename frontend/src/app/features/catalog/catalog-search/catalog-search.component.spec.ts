@@ -1,3 +1,4 @@
+import { AREA_SERVICE_STUB } from '../../../core/testing/stubs';
 import { Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 
@@ -22,6 +23,7 @@ class HostComponent {
 
 describe('CatalogSearchComponent', () => {
   const setup = async (filters: CatalogFilters = {}) => {
+    TestBed.configureTestingModule({ providers: [AREA_SERVICE_STUB] });
     const fixture = TestBed.createComponent(HostComponent);
     fixture.componentInstance.filters.set(filters);
     fixture.detectChanges();
@@ -68,14 +70,14 @@ describe('CatalogSearchComponent', () => {
   it('refleja los filtros vigentes de la URL', async () => {
     const { input, select } = await setup({
       search: 'glaciares',
-      area: 'Agronomía',
+      area: 'agronomia',
       language: 'es',
       date_from: '2026-01-01',
       ordering: 'title',
     });
 
     expect(input('catalog-search').value).toBe('glaciares');
-    expect(input('catalog-area').value).toBe('Agronomía');
+    expect(select('catalog-area').value).toBe('agronomia');
     expect(select('catalog-language').value).toBe('es');
     expect(input('catalog-from').value).toBe('2026-01-01');
     expect(select('catalog-ordering').value).toBe('title');

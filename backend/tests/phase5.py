@@ -1,28 +1,28 @@
-"""Shared scenario of the Phase 5 end-to-end tests (TSK-79).
+"""Shared scenario of the Phase 5 end-to-end tests (TSK-79, spec 004).
 
 ``Lifecycle`` drives a manuscript through the real endpoints, from the
-author's submission to the verdict, with named people so the tests can look
-for them in every artifact (notifications, audit, public pages, mail):
-the author submits, the editor starts the review and assigns, the reviewer
-writes and submits the evaluation, and the editor decides. Everything that
-commits runs its ``on_commit`` callbacks, as in production.
+author's submission to the automatic verdict, with named people so the
+tests can look for them in every artifact (notifications, audit, public
+pages, mail): the author submits, the system assigns two reviewers of the
+career, they write and submit their evaluations and the system decides.
+Everything that commits runs its ``on_commit`` callbacks, as in production.
 """
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from rest_framework.test import APIClient
 
 from apps.publications.models import Manuscript
 from tests.publications import pdf_factory as factory
+from tests.publications.test_draft_file import pdf_file
 from tests.publications.test_manuscript_api import actor, client_for
 from tests.publications.test_new_version import versions_url
-from tests.publications.test_draft_file import pdf_file
 from tests.publications.test_submission import ready_draft
-from tests.reviews.test_editor_api import make_reviewer
+from tests.reviews.support import make_reviewer
 
-AREA = "Agronomía"
+AREA = "agronomia"
 TITLE = "Glaciares tropicales del Chimborazo"
 
 AUTHOR_PERSON = {
@@ -37,37 +37,61 @@ REVIEWER_PERSON = {
     "email": "rodrigo.revisor@unl.edu.ec",
 }
 REVIEWER_TOKENS = ("Rodrigo", "Valarezo", "Cueva", "rodrigo.revisor")
-EVALUATION = {
-    "originality_score": 4,
-    "methodology_score": 3,
-    "clarity_score": 5,
-    "relevance_score": 4,
-    "ethics_score": 5,
-    "recommendation": "ACCEPT",
-    "comments_for_author": "Buen trabajo, con matices menores.",
-    "confidential_comments": "COMENTARIO_CONFIDENCIAL_DEL_REVISOR",
+SECOND_REVIEWER_PERSON = {
+    "first_name": "Rosa",
+    "last_name": "Cumbicus Torres",
+    "email": "rosa.revisora@unl.edu.ec",
 }
+THIRD_REVIEWER_PERSON = {
+    "first_name": "Rebeca",
+    "last_name": "Armijos Soto",
+    "email": "rebeca.revisora@unl.edu.ec",
+}
+EVALUATION = {
+    "scientific_contribution": 4,
+    "methodological_rigor": 4,
+    "literature_grounding": 5,
+    "results_conclusions": 4,
+    "academic_writing": 5,
+    "recommendation": "ACCEPTED",
+    "comments_for_author": "Buen trabajo, con matices menores.",
+}
+
+
+#: Comentarios de al menos 100 caracteres, que exigen el dictamen «Rechazar» o un criterio bajo.
+LONG_COMMENTS = (
+    "El manuscrito no alcanza el nivel esperado: la metodología es insuficiente, los resultados no "
+    "se sustentan en los datos y la redacción impide verificar las conclusiones del estudio."
+)
+REJECTION = {"recommendation": "REJECTED", "comments_for_author": LONG_COMMENTS}
 
 
 @dataclass
 class Lifecycle:
-    """The people and the helpers of one editorial cycle."""
+    """The people and the helpers of one review cycle (no Editor: the system decides)."""
 
     author: object
-    editor: object
-    reviewer: object
+    reviewers: list
     admin: object
     commits: object
     submit: object
     manuscript: Manuscript | None = None
-    assignment: object = None
+    assignments: list = field(default_factory=list)
+
+    @property
+    def reviewer(self):
+        """The first reviewer: the best ranked, so the engine assigns them to slot 1."""
+        return self.reviewers[0]
 
     @classmethod
     def create(cls, commits, submit) -> "Lifecycle":
         return cls(
             author=actor("AUTHOR", **AUTHOR_PERSON),
-            editor=actor("EDITOR"),
-            reviewer=make_reviewer(**REVIEWER_PERSON),
+            reviewers=[
+                make_reviewer(ranking_score=130, **REVIEWER_PERSON),
+                make_reviewer(ranking_score=120, **SECOND_REVIEWER_PERSON),
+                make_reviewer(ranking_score=110, **THIRD_REVIEWER_PERSON),
+            ],
             admin=actor("ADMIN"),
             commits=commits,
             submit=submit,
@@ -78,51 +102,48 @@ class Lifecycle:
             return client_for(user).post(url, body or {}, format="json", **extra)
 
     def submit_manuscript(self) -> Manuscript:
+        """Submit: the engine assigns the two best reviewers after the commit."""
         self.manuscript = ready_draft(
-            self.author, pdf=factory.clean_pdf(pages=1), area=AREA, title=TITLE
+            self.author, pdf=factory.clean_pdf(pages=1), areas=[AREA], title=TITLE
         )
         assert self.submit(self.author, self.manuscript).status_code == 201
         self.manuscript.refresh_from_db()
+        self.refresh_assignments()
         return self.manuscript
 
-    def start_review(self):
-        response = self.post(
-            self.editor,
-            f"/api/v1/editor/submissions/{self.manuscript.pk}/start-review/",
-            {"reviewer_id": str(self.reviewer.pk)},
-        )
-        assert response.status_code == 200, response.content
+    def refresh_assignments(self) -> list:
         from apps.reviews.models import Assignment
 
-        self.assignment = Assignment.objects.get(manuscript=self.manuscript, status="ACTIVE")
-        return self.assignment
+        self.assignments = list(
+            Assignment.objects.filter(
+                manuscript=self.manuscript, status__in=("ACTIVE", "COMPLETED")
+            ).order_by("slot")
+        )
+        return self.assignments
 
-    def evaluate(self):
-        base = f"/api/v1/reviewer/assignments/{self.assignment.pk}/evaluation/"
-        client = client_for(self.reviewer)
-        saved = client.put(base, EVALUATION, format="json", HTTP_IF_MATCH='"0"')
+    def assignment_of(self, reviewer):
+        self.refresh_assignments()
+        return next(a for a in self.assignments if a.reviewer_id == reviewer.pk)
+
+    def evaluate(self, reviewer=None, **overrides):
+        """Write and submit the evaluation of ``reviewer`` (the first one by default)."""
+        reviewer = reviewer or self.reviewer
+        assignment = self.assignment_of(reviewer)
+        base = f"/api/v1/reviewer/assignments/{assignment.pk}/evaluation/"
+        client = client_for(reviewer)
+        saved = client.put(base, {**EVALUATION, **overrides}, format="json", HTTP_IF_MATCH='"0"')
         assert saved.status_code == 200, saved.content
         with self.commits(execute=True):
             sent = client.post(f"{base}submit/", HTTP_IF_MATCH=saved["ETag"])
         assert sent.status_code == 200, sent.content
-
-    def judge(self, body, key):
         self.manuscript.refresh_from_db()
-        return self.post(
-            self.editor,
-            f"/api/v1/editor/manuscripts/{self.manuscript.pk}/verdicts/",
-            body,
-            HTTP_IDEMPOTENCY_KEY=key,
-            HTTP_IF_MATCH=f'"{self.manuscript.lock_version}"',
-        )
 
     def accepted(self) -> Manuscript:
-        """Submit, review, evaluate and accept."""
+        """Submit and let two reviewers accept: the system publishes the article."""
         self.submit_manuscript()
-        self.start_review()
-        self.evaluate()
-        assert self.judge({"decision": "ACCEPTED"}, "acepta-1").status_code == 201
-        self.manuscript.refresh_from_db()
+        self.evaluate(self.reviewers[0])
+        self.evaluate(self.reviewers[1])
+        assert self.manuscript.status == Manuscript.Status.ACCEPTED
         return self.manuscript
 
     def withdraw(self, user=None):
@@ -132,11 +153,16 @@ class Lifecycle:
             {"reason": "Retiro por decisión de los autores."},
         )
 
-    def authorize_correction(self, verdict_id, key="autoriza-1"):
+    def correct(self, verdict_id, decision="REJECTED", key="corrige-1", **extra):
+        """The administrator replaces the verdict with a new decision."""
         return self.post(
             self.admin,
-            f"/api/v1/admin/verdicts/{verdict_id}/authorize-correction/",
-            {"reason": "El veredicto se registró sobre la evaluación equivocada."},
+            f"/api/v1/admin/verdicts/{verdict_id}/correct/",
+            {
+                "decision": decision,
+                "reason": "El veredicto se registró sobre la evaluación equivocada.",
+                **extra,
+            },
             HTTP_IDEMPOTENCY_KEY=key,
         )
 

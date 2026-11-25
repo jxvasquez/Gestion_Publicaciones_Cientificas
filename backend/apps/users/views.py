@@ -12,6 +12,7 @@ from django.conf import settings
 from django.db import transaction
 from drf_spectacular.utils import extend_schema, extend_schema_view
 from rest_framework import status
+from rest_framework.generics import GenericAPIView
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
@@ -19,8 +20,9 @@ from rest_framework.views import APIView
 
 from apps.audit.models import AuditLog
 from apps.audit.services import AuditService, AuditUnavailable
-from apps.users.models import RevocationReason
+from apps.users.models import AcademicArea, RevocationReason
 from apps.users.serializers import (
+    AcademicAreaSerializer,
     DashboardSerializer,
     LoginSerializer,
     MeSerializer,
@@ -275,3 +277,29 @@ class DashboardView(APIView):
             "sections": dashboard["sections"],
         }
         return Response(DashboardSerializer(payload).data)
+
+
+@extend_schema_view(
+    get=extend_schema(
+        tags=["Carreras"],
+        operation_id="areas_list",
+        summary="Carreras o áreas activas",
+        description=(
+            "Público y de solo lectura. Solo las carreras activas, ordenadas por nombre y sin "
+            "paginar. Las usan el formulario del Autor y el filtro del catálogo."
+        ),
+        responses={200: AcademicAreaSerializer(many=True)},
+        auth=[],
+    ),
+)
+class AreaListView(GenericAPIView):
+    """``GET /api/v1/areas/``: the active careers of the institutional catalog."""
+
+    authentication_classes: list = []
+    permission_classes = [AllowAny]
+    pagination_class = None
+    serializer_class = AcademicAreaSerializer
+
+    def get(self, request: Request) -> Response:
+        areas = AcademicArea.objects.filter(is_active=True).order_by("name", "id")
+        return Response(AcademicAreaSerializer(areas, many=True).data)

@@ -19,8 +19,14 @@ from rest_framework.test import APIClient
 
 from apps.audit.services import AuditService
 from apps.notifications.models import Notification
-from apps.publications.models import CorrectionRound, Manuscript, StatusEvent, Verdict
-from apps.reviews.models import Assignment
+from apps.publications.models import (
+    CorrectionRound,
+    Manuscript,
+    StatusEvent,
+    Verdict,
+    VerdictEvaluation,
+)
+from apps.reviews.models import Assignment, RankingAdjustment
 from tests.factories import (
     AssignmentFactory,
     CatalogEntryFactory,
@@ -33,7 +39,7 @@ from tests.factories import (
     VerdictFactory,
 )
 from tests.publications.test_manuscript_api import actor, client_for
-from tests.reviews.test_editor_api import make_assignment, make_reviewer, submitted
+from tests.reviews.support import make_assignment, make_reviewer, submitted
 
 pytestmark = pytest.mark.django_db
 
@@ -44,7 +50,6 @@ LARGE = 7  # SMALL + LARGE filas por tipo siguen dentro de la primera página (2
 @dataclass
 class World:
     author: object
-    editor: object
     reviewer: object
     admin: object
     focus: Manuscript
@@ -69,7 +74,6 @@ def world() -> World:
     focus = submitted(author, status="UNDER_REVIEW")
     return World(
         author=author,
-        editor=actor("EDITOR"),
         reviewer=make_reviewer(),
         admin=actor("ADMIN"),
         focus=focus,
@@ -86,30 +90,36 @@ def grow(w: World, rows: int) -> None:
     """Añade ``rows`` filas de cada cosa que algún listado devuelve."""
     now = timezone.now()
     for _ in range(rows):
-        # Bandeja del Editor y lista del Autor.
+        # Lista del Autor.
         co_authored(submitted(w.author, status="SUBMITTED"))
         co_authored(submitted(status="SUBMITTED"))
 
         # Bandeja del Revisor, borradores, vencidas e incidentes.
         reviewed = submitted(status="UNDER_REVIEW")
         co_authored(reviewed)
-        assignment = make_assignment(reviewed, w.reviewer, w.editor, days_ago=25)
+        assignment = make_assignment(reviewed, w.reviewer, days_ago=25, status="COMPLETED")
         FinalEvaluationFactory(
             assignment=assignment, manuscript=reviewed, version=assignment.version, reviewer=w.reviewer
         )
+        RankingAdjustment.objects.create(
+            reviewer=w.reviewer, assignment=assignment, cause="ON_TIME_EVALUATION",
+            delta=10, score_before=100, score_after=110,
+        )
         leaked = submitted(status="UNDER_REVIEW")
-        leaked_assignment = make_assignment(leaked, w.reviewer, w.editor)
-        IncidentReportFactory(assignment=leaked_assignment, manuscript=leaked, reporter=w.reviewer)
+        # Un revisor distinto por reporte: el tope de cinco activas es estricto.
+        reporter = make_reviewer()
+        leaked_assignment = make_assignment(leaked, reporter)
+        IncidentReportFactory(assignment=leaked_assignment, manuscript=leaked, reporter=reporter)
 
         # Catálogo público.
         entry = CatalogEntryFactory()
         co_authored(entry.manuscript)
 
-        # Revisores del Editor.
+        # Padrón de revisores.
         make_reviewer()
 
         # Notificaciones y auditoría.
-        for user in (w.author, w.editor, w.reviewer):
+        for user in (w.author, w.reviewer):
             Notification.objects.create(
                 recipient=user, event_key=f"k-{user.pk}-{Notification.objects.count()}",
                 event_type="ASSIGNMENT_CREATED", manuscript=reviewed, channel="PANEL",
@@ -128,29 +138,28 @@ def grow(w: World, rows: int) -> None:
         CorrectionRound.objects.create(manuscript=w.focus, round_number=w.versions - 1)
         StatusEvent.objects.create(manuscript=w.focus, from_status="UNDER_REVIEW", to_status="UNDER_REVIEW")
         past = AssignmentFactory(
-            manuscript=w.focus, version=version, reviewer=UserFactory(), assigned_by=w.editor,
+            manuscript=w.focus, version=version, reviewer=UserFactory(), slot=1,
             status=Assignment.Status.COMPLETED, assigned_at=now - timedelta(days=30),
             due_at=now - timedelta(days=10),
         )
         final = FinalEvaluationFactory(
             assignment=past, manuscript=w.focus, version=version, reviewer=past.reviewer
         )
-        VerdictFactory(
-            evaluation=final, manuscript=w.focus, version=version, editor=w.editor,
-            decision=Verdict.Decision.REQUIRES_CORRECTIONS, observations="Ajustar la metodología.",
+        verdict = VerdictFactory(
+            manuscript=w.focus, version=version,
+            decision=Verdict.Decision.CHANGES_REQUESTED, observations="Ajustar la metodología.",
         )
+        VerdictEvaluation.objects.create(verdict=verdict, evaluation=final, slot=1)
 
 
 #: nombre -> (actor, ruta). La ruta recibe el mundo; ``focus`` es el manuscrito de enfoque.
 ENDPOINTS = {
-    "editor: bandeja": ("editor", lambda w: "/api/v1/editor/submissions/"),
-    "editor: detalle": ("editor", lambda w: f"/api/v1/editor/submissions/{w.focus.pk}/"),
-    "editor: revisores": ("editor", lambda w: "/api/v1/editor/reviewers/"),
-    "editor: vencidas": ("editor", lambda w: "/api/v1/editor/assignments/expired/"),
-    "editor: incidentes": ("editor", lambda w: "/api/v1/editor/incidents/"),
-    "editor: asignaciones": ("editor", lambda w: f"/api/v1/editor/manuscripts/{w.focus.pk}/assignments/"),
-    "editor: evaluaciones": ("editor", lambda w: f"/api/v1/editor/manuscripts/{w.focus.pk}/evaluations/"),
-    "editor: veredictos": ("editor", lambda w: f"/api/v1/editor/manuscripts/{w.focus.pk}/verdicts/"),
+    "admin: incidentes": ("admin", lambda w: "/api/v1/admin/incidents/"),
+    "admin: padrón de revisores": ("admin", lambda w: "/api/v1/admin/reviewers/"),
+    "admin: carreras": ("admin", lambda w: "/api/v1/admin/areas/"),
+    "público: carreras": (None, lambda w: "/api/v1/areas/"),
+    "revisor: desempeño": ("reviewer", lambda w: "/api/v1/reviewer/standing/"),
+    "revisor: ajustes": ("reviewer", lambda w: "/api/v1/reviewer/standing/adjustments/"),
     "autor: lista": ("author", lambda w: "/api/v1/manuscripts/"),
     "autor: detalle": ("author", lambda w: f"/api/v1/manuscripts/{w.focus.pk}/"),
     "autor: historial": ("author", lambda w: f"/api/v1/manuscripts/{w.focus.pk}/history/"),
@@ -161,7 +170,7 @@ ENDPOINTS = {
     "auditoría": ("admin", lambda w: "/api/v1/admin/audit/"),
     "notificaciones": ("author", lambda w: "/api/v1/notifications/"),
     "tablero del autor": ("author", lambda w: "/api/v1/dashboard/"),
-    "tablero del editor": ("editor", lambda w: "/api/v1/dashboard/"),
+    "tablero del administrador": ("admin", lambda w: "/api/v1/dashboard/"),
     "tablero del revisor": ("reviewer", lambda w: "/api/v1/dashboard/"),
 }
 

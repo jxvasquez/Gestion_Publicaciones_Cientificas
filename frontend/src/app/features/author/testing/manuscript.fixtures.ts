@@ -25,7 +25,7 @@ export function buildManuscript(overrides: Partial<Manuscript> = {}): Manuscript
     title: 'Efecto del clima en cultivos andinos',
     abstract: 'Resumen del estudio de campo.',
     keywords: ['clima', 'cultivos'],
-    area: 'Agronomía',
+    areas: [{ code: 'agronomia', name: 'Agronomía' }],
     language: 'es',
     status: 'DRAFT',
     current_round: 0,

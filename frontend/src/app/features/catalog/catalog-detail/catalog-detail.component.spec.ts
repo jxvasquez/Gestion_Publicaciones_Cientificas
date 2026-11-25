@@ -95,6 +95,21 @@ describe('CatalogDetailComponent', () => {
   });
 
   describe('ficha', () => {
+    it('muestra todas las carreras del artículo como badges', async () => {
+      const { element } = await render(
+        buildArticle({
+          areas: [
+            { code: 'agronomia', name: 'Agronomía' },
+            { code: 'derecho', name: 'Derecho' },
+          ],
+        }),
+      );
+
+      expect(
+        Array.from(element.querySelectorAll('.detail__meta .badge')).map((b) => text(b)).slice(0, 2),
+      ).toEqual(['Agronomía', 'Derecho']);
+    });
+
     it('muestra título, código, área, idioma, versión y fecha', async () => {
       const { element } = await render();
 

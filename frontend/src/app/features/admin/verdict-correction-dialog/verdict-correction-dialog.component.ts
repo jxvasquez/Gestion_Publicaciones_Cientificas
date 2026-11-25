@@ -15,6 +15,7 @@ import { FormsModule } from '@angular/forms';
 import {
   AuditVerdict,
   CORRECTION_REASON_MAX_LENGTH,
+  CorrectionDecision,
   CORRECTION_REASON_MIN_LENGTH,
   DECISION_LABELS,
 } from '../../../core/models/audit.model';
@@ -24,11 +25,32 @@ const INSTITUTIONAL_OFFSET = '-0500';
 
 let nextId = 0;
 
+/** Decisiones que el Administrador puede registrar al corregir. */
+export const CORRECTION_DECISIONS: readonly { value: CorrectionDecision; label: string }[] = [
+  { value: 'ACCEPTED', label: 'Aceptado' },
+  { value: 'REJECTED', label: 'Rechazado' },
+  { value: 'CHANGES_REQUESTED', label: 'Cambios solicitados' },
+];
+
+/** Lo que el diálogo entrega al confirmar: la nueva decisión, el motivo y, si aplica, las observaciones. */
+export interface CorrectionChoice {
+  decision: CorrectionDecision;
+  reason: string;
+  observations?: string;
+}
+
+/** Con «Cambios solicitados» las observaciones para el Autor son obligatorias. */
+export function observationsError(decision: CorrectionDecision | null, text: string): string | null {
+  return decision === 'CHANGES_REQUESTED' && text.trim() === ''
+    ? 'Indique las observaciones para el Autor.'
+    : null;
+}
+
 /** Error del motivo según las reglas del servidor (10 a 1000 caracteres, sin espacios sobrantes). */
 export function correctionReasonError(reason: string): string | null {
   const length = reason.trim().length;
   if (length === 0) {
-    return 'Indique el motivo de la habilitación.';
+    return 'Indique el motivo de la corrección.';
   }
   if (length < CORRECTION_REASON_MIN_LENGTH) {
     return `El motivo debe tener al menos ${CORRECTION_REASON_MIN_LENGTH} caracteres.`;
@@ -40,14 +62,14 @@ export function correctionReasonError(reason: string): string | null {
 }
 
 /**
- * Habilitación administrativa de la corrección de un veredicto (HU-13,
- * CA-HU-13-12, plan sección 3.5).
+ * Corrección administrativa de un veredicto (CA-HU-13-12, spec 004 R-14).
  *
- * * Pide un motivo obligatorio de 10 a 1000 caracteres.
- * * Aclara el efecto: la decisión anterior se conserva intacta y el Editor
- *   registrará una nueva; el Administrador no decide ni edita nada.
+ * * El Administrador registra la nueva decisión y un motivo obligatorio de 10 a
+ *   1000 caracteres; con «Cambios solicitados» también las observaciones.
+ * * Aclara el efecto: la decisión anterior se conserva intacta y la nueva la
+ *   sustituye como la vigente.
  * * Muestra solo lo mínimo del veredicto (código, decisión y fecha).
- * * Es presentacional: emite `confirmed` con el motivo y quien lo usa hace la
+ * * Es presentacional: emite `confirmed` con la elección y quien lo usa hace la
  *   llamada, indicando `busy` y mostrando `error`.
  */
 @Component({
@@ -69,8 +91,8 @@ export class VerdictCorrectionDialogComponent {
   /** Mensaje de error del servidor, si rechazó la habilitación. */
   readonly error = input('');
 
-  /** Se dispara al confirmar, con el motivo ya sin espacios sobrantes. */
-  readonly confirmed = output<string>();
+  /** Se dispara al confirmar, con los textos ya sin espacios sobrantes. */
+  readonly confirmed = output<CorrectionChoice>();
 
   /** Se dispara al cancelar, incluido el cierre con Esc. */
   readonly cancelled = output<void>();
@@ -78,6 +100,9 @@ export class VerdictCorrectionDialogComponent {
   protected readonly offset = INSTITUTIONAL_OFFSET;
   protected readonly min = CORRECTION_REASON_MIN_LENGTH;
   protected readonly max = CORRECTION_REASON_MAX_LENGTH;
+  protected readonly decisions = CORRECTION_DECISIONS;
+  protected readonly decision = signal<CorrectionDecision | null>(null);
+  protected readonly observations = signal('');
   protected readonly reason = signal('');
   private readonly attempted = signal(false);
 
@@ -90,6 +115,15 @@ export class VerdictCorrectionDialogComponent {
     this.attempted() ? correctionReasonError(this.reason()) : null,
   );
 
+  protected readonly decisionError = computed(() =>
+    this.attempted() && this.decision() === null ? 'Seleccione la nueva decisión.' : null,
+  );
+
+  protected readonly observationsError = computed(() =>
+    this.attempted() ? observationsError(this.decision(), this.observations()) : null,
+  );
+
+  protected readonly observationsId = `correction-dialog-observations-${nextId}`;
   protected readonly titleId = `correction-dialog-title-${nextId}`;
   protected readonly descriptionId = `correction-dialog-description-${nextId}`;
   protected readonly reasonId = `correction-dialog-reason-${nextId}`;
@@ -104,6 +138,8 @@ export class VerdictCorrectionDialogComponent {
         if (!dialog.open) {
           // Cada apertura empieza limpia.
           this.reason.set('');
+          this.decision.set(null);
+          this.observations.set('');
           this.attempted.set(false);
           dialog.showModal();
         }
@@ -118,10 +154,20 @@ export class VerdictCorrectionDialogComponent {
       return;
     }
     this.attempted.set(true);
-    if (correctionReasonError(this.reason()) !== null) {
+    const decision = this.decision();
+    if (
+      decision === null ||
+      correctionReasonError(this.reason()) !== null ||
+      observationsError(decision, this.observations()) !== null
+    ) {
       return;
     }
-    this.confirmed.emit(this.reason().trim());
+    const observations = this.observations().trim();
+    this.confirmed.emit({
+      decision,
+      reason: this.reason().trim(),
+      ...(decision === 'CHANGES_REQUESTED' && observations ? { observations } : {}),
+    });
   }
 
   protected dismiss(): void {

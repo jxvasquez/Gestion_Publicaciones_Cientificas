@@ -208,7 +208,7 @@ class TestNewVersion:
 
             assert failed.status_code == expected, (name, failed.content[:200])
             awaiting.refresh_from_db()
-            assert awaiting.status == "REQUIRES_CORRECTIONS"
+            assert awaiting.status == "CHANGES_REQUESTED"
             assert (awaiting.current_version, awaiting.current_round) == (1, 1)
             assert ManuscriptVersion.objects.filter(manuscript=awaiting).count() == 1
             assert ManuscriptVersion.objects.values().get(manuscript=awaiting, version_number=1) == v1_row
@@ -240,7 +240,7 @@ class TestNewVersion:
 
         assert response.status_code == 503 and error_code(response) == "STORAGE_UNAVAILABLE"
         awaiting.refresh_from_db()
-        assert awaiting.status == "REQUIRES_CORRECTIONS" and awaiting.current_version == 1
+        assert awaiting.status == "CHANGES_REQUESTED" and awaiting.current_version == 1
         assert not version_dir_of(media_root, awaiting, 2).exists()
 
     def test_a_pre_existing_version_directory_is_never_deleted_by_the_cleanup(
@@ -257,4 +257,4 @@ class TestNewVersion:
         assert response.status_code == 503
         assert (occupied / "original.pdf").read_bytes() == b"evidencia previa"
         awaiting.refresh_from_db()
-        assert awaiting.status == "REQUIRES_CORRECTIONS" and awaiting.current_version == 1
+        assert awaiting.status == "CHANGES_REQUESTED" and awaiting.current_version == 1

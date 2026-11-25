@@ -16,6 +16,7 @@ from apps.publications.services.storage import catalog_path
 from tests.phase5 import (
     AUTHOR_TOKENS,
     EVALUATION,
+    REJECTION,
     REVIEWER_TOKENS,
     TITLE,
     Lifecycle,
@@ -44,34 +45,28 @@ class TestOnlyAcceptedAndActive:
         manuscript = flow.submit_manuscript()
         assert listed_codes() == []
 
-        flow.start_review()
-        assert listed_codes() == []
+        flow.evaluate(flow.reviewers[0])
+        assert listed_codes() == []  # un solo dictamen no decide
 
-        flow.evaluate()
-        assert listed_codes() == []
-
-        assert flow.judge({"decision": "ACCEPTED"}, "acepta-1").status_code == 201
+        flow.evaluate(flow.reviewers[1])
         assert listed_codes() == [manuscript.code]
 
     def test_a_rejected_manuscript_never_appears(self, flow) -> None:
         manuscript = flow.submit_manuscript()
-        flow.start_review()
-        flow.evaluate()
+        flow.evaluate(flow.reviewers[0], **REJECTION)
+        flow.evaluate(flow.reviewers[1], **REJECTION)
 
-        assert flow.judge({"decision": "REJECTED", "justification": "No cumple el alcance."}, "r-1").status_code == 201
-
+        assert flow.manuscript.status == "REJECTED"
         assert listed_codes() == []
         assert anonymous().get(f"{CATALOG}{manuscript.code}/").status_code == 404
         assert anonymous().get(f"{CATALOG}{manuscript.code}/document/").status_code == 404
 
-    def test_a_manuscript_that_requires_corrections_does_not_appear(self, flow) -> None:
+    def test_a_manuscript_with_changes_requested_does_not_appear(self, flow) -> None:
         manuscript = flow.submit_manuscript()
-        flow.start_review()
-        flow.evaluate()
+        flow.evaluate(flow.reviewers[0], recommendation="MINOR_REVISION")
+        flow.evaluate(flow.reviewers[1], recommendation="MINOR_REVISION")
 
-        flow.judge({"decision": "REQUIRES_CORRECTIONS", "observations": "Ampliar la metodología.",
-                    "justification": "Se aparta de la recomendación."}, "c-1")
-
+        assert flow.manuscript.status == "CHANGES_REQUESTED"
         assert listed_codes() == [] and anonymous().get(f"{CATALOG}{manuscript.code}/").status_code == 404
 
     def test_the_search_finds_the_article_by_title_and_author(self, flow) -> None:
@@ -80,7 +75,7 @@ class TestOnlyAcceptedAndActive:
         assert listed_codes(search="glaciares") == [manuscript.code]
         assert listed_codes(search="Quizhpe") == [manuscript.code]
         assert listed_codes(search="area inexistente xyz") == []
-        assert listed_codes(area="Agronomía") == [manuscript.code]
+        assert listed_codes(area="agronomia") == [manuscript.code]
 
     def test_the_public_page_shows_authors_but_never_the_review(self, flow) -> None:
         manuscript = flow.accepted()
@@ -90,8 +85,8 @@ class TestOnlyAcceptedAndActive:
 
         assert response.status_code == 200 and response.json()["title"] == TITLE
         assert "Quizhpe" in text
-        for secret in (*REVIEWER_TOKENS, EVALUATION["confidential_comments"],
-                       EVALUATION["comments_for_author"], "recommendation", "assignment", "AUDIT"):
+        for secret in (*REVIEWER_TOKENS, EVALUATION["comments_for_author"],
+                       "recommendation", "assignment", "AUDIT"):
             assert secret not in text
         assert "marcela.autora" not in text
 
@@ -136,77 +131,25 @@ class TestWithdrawalRetiresImmediately:
 
 
 class TestCorrectionCycle:
-    def test_rejected_then_accepted_through_every_role(self, flow) -> None:
+    def test_the_correction_replaces_the_verdict_once(self, flow) -> None:
         manuscript = flow.submit_manuscript()
-        flow.start_review()
-        flow.evaluate()
-        assert flow.judge({"decision": "REJECTED", "justification": "Primera lectura: no cumple."}, "r-1").status_code == 201
+        flow.evaluate(flow.reviewers[0], **REJECTION)
+        flow.evaluate(flow.reviewers[1], **REJECTION)
         original = manuscript.verdicts.get()
-        assert listed_codes() == []
+        assert original.origin == "CONSENSUS" and original.decided_by_id is None
 
-        # El Administrador habilita la corrección; el Editor la ve y la consume.
-        assert flow.authorize_correction(original.pk).status_code == 201
-        detail = client_for(flow.editor).get(f"/api/v1/editor/submissions/{manuscript.pk}/").json()
-        assert detail["correction_authorization"]["verdict_id"] == str(original.pk)
-        corrected = flow.judge({"decision": "ACCEPTED"}, "r-2")
+        corrected = flow.correct(original.pk, decision="ACCEPTED", key="c-1")
 
         assert corrected.status_code == 201, corrected.content
-        assert corrected.json()["verdict"]["previous_verdict"] == str(original.pk)
         assert listed_codes() == [manuscript.code]
-        assert anonymous().get(f"{CATALOG}{manuscript.code}/document/").status_code == 200
-
-    def test_the_authorization_is_consumed_only_once(self, flow) -> None:
-        manuscript = flow.submit_manuscript()
-        flow.start_review()
-        flow.evaluate()
-        flow.judge({"decision": "REJECTED", "justification": "Primera lectura: no cumple."}, "r-1")
-        original = manuscript.verdicts.get()
-        flow.authorize_correction(original.pk)
-        assert flow.judge({"decision": "ACCEPTED"}, "r-2").status_code == 201
-
-        again = flow.judge({"decision": "REJECTED", "justification": "Otra vez."}, "r-3")
-
-        assert again.status_code == 409
-        authorization = VerdictCorrection.objects.get()
-        assert authorization.is_active is False and authorization.consumed_by_verdict_id is not None
         assert Verdict.objects.filter(manuscript=manuscript).count() == 2
-        assert flow.authorize_correction(original.pk, key="otra").status_code == 409
+        newest = Verdict.objects.filter(manuscript=manuscript).latest("created_at", "id")
+        assert newest.origin == "ADMIN_CORRECTION" and newest.previous_verdict_id == original.pk
+        assert newest.decided_by_id == flow.admin.pk
+        correction = VerdictCorrection.objects.get()
+        assert correction.is_active is False and correction.consumed_by_verdict_id == newest.pk
 
-    def test_both_decisions_stay_in_the_history_and_in_the_audit(self, flow) -> None:
-        manuscript = flow.submit_manuscript()
-        flow.start_review()
-        flow.evaluate()
-        flow.judge({"decision": "REJECTED", "justification": "Primera lectura: no cumple."}, "r-1")
-        original = manuscript.verdicts.get()
-        flow.authorize_correction(original.pk)
-        flow.judge({"decision": "ACCEPTED"}, "r-2")
-
-        history = client_for(flow.editor).get(f"/api/v1/editor/manuscripts/{manuscript.pk}/verdicts/").json()["results"]
-        newest = manuscript.verdicts.latest("created_at")
-        assert [row["decision"] for row in history] == ["REJECTED", "ACCEPTED"]
-        assert history[0]["justification"] == "Primera lectura: no cumple."  # el original, intacto
-        status_path = [e.to_status for e in StatusEvent.objects.filter(manuscript=manuscript).order_by("id")]
-        assert status_path[-2:] == ["REJECTED", "ACCEPTED"]
-        corrected = AuditLog.objects.get(action="VERDICT_CORRECTED")
-        assert corrected.details["previous_verdict_id"] == str(original.pk)
-        assert corrected.details["verdict_id"] == str(newest.pk)
-        assert [a.action for a in AuditLog.objects.filter(action__startswith="VERDICT_").order_by("id")] == [
-            "VERDICT_REGISTERED", "VERDICT_CORRECTION_AUTHORIZED", "VERDICT_CORRECTED",
-        ]
-        assert_audit_chain_intact()
-
-    def test_the_administrator_never_reaches_the_manuscript_in_the_cycle(self, flow) -> None:
-        manuscript = flow.accepted()
-        flow.authorize_correction(manuscript.verdicts.get().pk)
-        client = client_for(flow.admin)
-
-        assert client.get(f"/api/v1/manuscripts/{manuscript.pk}/").status_code in (403, 404)
-        assert client.get(f"/api/v1/editor/manuscripts/{manuscript.pk}/evaluations/").status_code == 403
-        assert client.get(f"/api/v1/manuscripts/{manuscript.pk}/versions/").status_code in (403, 404)
-        body = client.post(
-            f"/api/v1/admin/verdicts/{manuscript.verdicts.get().pk}/authorize-correction/",
-            {"reason": "Un motivo suficientemente largo."}, format="json", HTTP_IDEMPOTENCY_KEY="otra-clave",
-        )
-        assert body.status_code == 409
-        for token in (*AUTHOR_TOKENS, *REVIEWER_TOKENS):
-            assert token not in body.content.decode()
+        # El veredicto original ya no es el último: una segunda corrección sobre él responde 409.
+        again = flow.correct(original.pk, decision="REJECTED", key="c-2")
+        assert again.status_code == 409
+        assert Verdict.objects.filter(manuscript=manuscript).count() == 2

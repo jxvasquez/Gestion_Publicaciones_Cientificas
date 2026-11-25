@@ -8,11 +8,14 @@ subtitle: "Qué significa cada estado y cada término"
 | Estado | Significado | Qué puede hacer el Autor | Quién lo activa |
 |---|---|---|---|
 | **Borrador** | En preparación. | Editar metadatos, adjuntar PDF, enviar, retirar. | Autor |
-| **Enviado** | Pendiente de la revisión inicial del Editor. | Consultar y retirar. | Autor, al enviar |
-| **En revisión** | Con un Revisor activo o pendiente de asignación. | Solo consultar y retirar. | Editor |
-| **Requiere correcciones** | El Editor pidió ajustes. | Editar metadatos, enviar nueva versión, retirar. | Editor |
-| **Aceptado** | Veredicto favorable; visible en el catálogo. | Consultar y retirar (lo quita del catálogo). | Editor |
-| **Rechazado** | Veredicto desfavorable; no se publica. | Consultar y retirar (archivar). | Editor |
+| **Enviado** | A la espera de Revisores elegibles de su carrera (el sistema asigna en cuanto los hay). | Consultar y retirar. | Autor, al enviar |
+| **En revisión** | Con dos Revisores asignados. | Solo consultar y retirar. | Sistema |
+| **En desempate** | Un Revisor aceptó y el otro rechazó; un tercero decide. | Consultar y retirar (con motivo). | Sistema |
+| **Cambios solicitados** | El consenso pidió ajustes. | Editar metadatos, enviar nueva versión, retirar. | Sistema |
+| **Aceptado** | Consenso favorable; visible en el catálogo. | Consultar y retirar (lo quita del catálogo). | Sistema |
+| **Rechazado** | Consenso desfavorable; no se publica. | Consultar y retirar (archivar). | Sistema |
+
+El estado heredado *Requiere correcciones* solo aparece en manuscritos anteriores a la asignación automática y se muestra como «Requiere correcciones (heredado)».
 
 El **retiro** no es un estado: es una marca que puede ponerse en cualquier estado y saca el manuscrito de los listados activos y del catálogo, conservando todo su historial.
 
@@ -23,21 +26,24 @@ stateDiagram-v2
     direction LR
     [*] --> Borrador
     Borrador --> Enviado: Autor envía
-    Enviado --> EnRevision: Editor pasa a revisión
-    EnRevision --> EnRevision: Revocar y reasignar
-    EnRevision --> Aceptado: Editor decide
-    EnRevision --> Rechazado: Editor decide
-    EnRevision --> RequiereCorrecciones: Editor decide
-    RequiereCorrecciones --> Enviado: Autor envía versión nueva
+    Enviado --> EnRevision: El sistema asigna a dos Revisores
+    EnRevision --> EnRevision: Liberar y reasignar
+    EnRevision --> Aceptado: Consenso
+    EnRevision --> Rechazado: Consenso
+    EnRevision --> CambiosSolicitados: Consenso
+    EnRevision --> EnDesempate: Aceptar contra Rechazar
+    EnDesempate --> Aceptado: Decide el tercero
+    EnDesempate --> Rechazado: Decide el tercero
+    CambiosSolicitados --> Enviado: Autor envía versión nueva
 ```
 
 Cualquier otro cambio de estado se bloquea y queda registrado. En particular, no se puede pasar de *Borrador* a *En revisión*, ni de *Enviado* a *Aceptado* o *Rechazado*, ni editar un manuscrito *Aceptado* o *Rechazado*.
 
 ## Versiones y rondas
 
-El **envío inicial** crea la **versión 1** y la **ronda 0**. Cada veredicto *Requiere correcciones* abre la ronda siguiente (1, 2, 3…); la respuesta del Autor se guarda como la versión consecutiva (v2, v3…). Son contadores independientes: editar metadatos no crea versión ni ronda, y reasignar un Revisor tampoco.
+El **envío inicial** crea la **versión 1** y la **ronda 0**. Cada veredicto *Cambios solicitados* abre la ronda siguiente (1, 2, 3…); la respuesta del Autor se guarda como la versión consecutiva (v2, v3…). Son contadores independientes: editar metadatos no crea versión ni ronda, y reasignar un Revisor tampoco.
 
-Ejemplo: `v1 / ronda 0` → correcciones → `v2 / ronda 1` → correcciones → `v3 / ronda 2` → aceptado.
+Ejemplo: `v1 / ronda 0` → cambios → `v2 / ronda 1` → cambios → `v3 / ronda 2` → aceptado.
 
 ## Estados de una asignación
 
@@ -45,8 +51,8 @@ Ejemplo: `v1 / ronda 0` → correcciones → `v2 / ronda 1` → correcciones →
 |---|---|
 | Activa | El Revisor puede evaluar (dentro de los 20 días). |
 | Completada | El Revisor envió su evaluación final. |
-| Vencida | Pasaron los 20 días sin evaluación final; el Editor decide. |
-| Revocada | El Editor la dejó sin efecto. |
+| Vencida | Pasaron los 20 días sin evaluación final: el sistema la revoca, resta 20 puntos al Revisor y reasigna. |
+| Revocada | Quedó sin efecto (plazo vencido, conflicto de interés o decisión del Administrador). |
 
 ## Glosario
 
@@ -55,11 +61,15 @@ Ejemplo: `v1 / ronda 0` → correcciones → `v2 / ronda 1` → correcciones →
 | **Manuscrito** | Documento académico registrado por un Autor, con metadatos, estado y una o varias versiones. |
 | **Versión** | PDF concreto enviado (v1, v2…). Es inmutable. |
 | **Iteración** | Envío formal de una versión junto con los metadatos vigentes en ese momento. |
-| **Ronda de corrección** | Ciclo que abre un veredicto *Requiere correcciones*. El envío inicial es la ronda 0. |
-| **Revisor activo** | El único Revisor con asignación vigente para un manuscrito. |
+| **Ronda de corrección** | Ciclo que abre un veredicto *Cambios solicitados*. El envío inicial es la ronda 0. |
+| **Asignación automática** | Elección por el sistema de dos Revisores cuya carrera coincide exactamente con la del manuscrito, por ranking y menor carga. |
+| **Ranking** | Puntaje del Revisor (100 al inicio): +10 por evaluar a tiempo y −20 por dejar vencer el plazo. |
+| **Cupo** | Máximo de 5 asignaciones activas por Revisor, que se muestra como «X/5». |
+| **Rúbrica** | Cinco criterios técnicos puntuados de 1 a 5 más un dictamen; con puntajes bajos o dictámenes severos exige 100 caracteres de justificación. |
+| **Consenso** | Regla que decide el veredicto a partir de los dictámenes de los Revisores; ante un 1 contra 1 se asigna un tercer Revisor (desempate). |
 | **Plazo de evaluación** | 20 días calendario desde el instante de la asignación. |
 | **Doble ciego** | El Revisor no conoce al Autor y el Autor no conoce al Revisor. |
-| **Veredicto** | Decisión editorial: Aceptado, Rechazado o Requiere correcciones. |
+| **Veredicto** | Decisión por consenso: Aceptado, Rechazado o Cambios solicitados; el Administrador puede corregirla. |
 | **Retiro (baja lógica)** | Marca que oculta un manuscrito sin borrar su historial. |
 | **Historial** | Cronología inmutable de un manuscrito (estados, versiones, rondas). |
 | **Auditoría** | Registro global e inmutable de acciones críticas; solo lo consulta el Administrador. |

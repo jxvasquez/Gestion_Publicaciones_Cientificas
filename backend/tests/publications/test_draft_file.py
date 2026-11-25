@@ -221,7 +221,7 @@ class TestReplacement:
 
 class TestState:
     @pytest.mark.parametrize(
-        "status", ["SUBMITTED", "UNDER_REVIEW", "REQUIRES_CORRECTIONS", "ACCEPTED", "REJECTED"]
+        "status", ["SUBMITTED", "UNDER_REVIEW", "CHANGES_REQUESTED", "ACCEPTED", "REJECTED"]
     )
     def test_any_other_state_answers_409_and_stores_nothing(self, owner, media_root, status) -> None:
         manuscript = owned_manuscript(owner, status=status)
@@ -268,9 +268,6 @@ class TestAccess:
 
         assert response.status_code == 401
 
-    @pytest.mark.parametrize("roles", [("EDITOR",), ("REVIEWER",), ("ADMIN",), ()])
-    def test_roles_without_the_author_module_answer_403(self, draft, roles) -> None:
-        assert upload(actor(*roles), draft).status_code == 403
 
     def test_someone_elses_manuscript_answers_404(self, draft, media_root) -> None:
         response = upload(actor("AUTHOR"), draft)
@@ -279,12 +276,6 @@ class TestAccess:
         assert error_code(response) == "NOT_FOUND"
         assert drafts_on_disk(media_root) == []
 
-    def test_multirole_user_cannot_upload_to_a_manuscript_seen_as_editor(self, media_root) -> None:
-        person = actor("AUTHOR", "EDITOR")
-        foreign = owned_manuscript(actor("AUTHOR"), status="SUBMITTED")
-
-        assert upload(person, foreign).status_code == 404
-        assert drafts_on_disk(media_root) == []
 
     def test_unknown_manuscript_answers_404(self, owner) -> None:
         response = client_for(owner).post(

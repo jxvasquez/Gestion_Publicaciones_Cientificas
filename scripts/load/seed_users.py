@@ -14,7 +14,7 @@ import os
 from django.contrib.auth import get_user_model
 from django.core.management import call_command
 
-from apps.users.models import ReviewerProfile, Role, UserRole
+from apps.users.models import AcademicArea, ReviewerProfile, Role, UserRole
 
 PASSWORD = os.environ["LOAD_PASSWORD"]
 AUTHORS = int(os.environ.get("LOAD_USERS", "50"))
@@ -43,11 +43,16 @@ def ensure(identifier: str, first_name: str, role_code: str) -> None:
 
 for number in range(AUTHORS):
     ensure(f"load-author-{number:02d}", f"Autor{number:02d}", "AUTHOR")
-ensure("load-editor", "Editor", "EDITOR")
-ensure("load-reviewer", "Revisor", "REVIEWER")
-# Sin perfil disponible y con el área del manuscrito, el Editor no puede asignarlo.
-ReviewerProfile.objects.update_or_create(
-    user=User.objects.get(institutional_id="load-reviewer"),
-    defaults={"expertise_areas": ["Agronomía"], "is_available": True},
-)
-print(f"SEED_OK authors={AUTHORS}")
+# La asignación es automática por carrera: seis revisores comparten la carrera de la siembra,
+# así que cada manuscrito recibe a dos y hay cupo (5 activas por revisor) para toda la corrida.
+AREA = AcademicArea.objects.get_or_create(
+    code="ingenieria-en-computacion", defaults={"name": "Ingeniería en Computación"}
+)[0]
+for number in range(1, 7):
+    identifier = f"load-reviewer-{number}"
+    ensure(identifier, f"Revisor{number}", "REVIEWER")
+    profile, _ = ReviewerProfile.objects.update_or_create(
+        user=User.objects.get(institutional_id=identifier), defaults={"is_available": True}
+    )
+    profile.areas.set([AREA])
+print(f"SEED_OK authors={AUTHORS} reviewers=6")

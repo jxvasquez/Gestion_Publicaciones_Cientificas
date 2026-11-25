@@ -37,28 +37,34 @@ def authorize_original_download(
     *, manuscript: Manuscript, version: ManuscriptVersion, user: User, context: dict
 ) -> str:
     """Audit the download and return the internal URI Nginx must serve."""
-    role = Role.Code.AUTHOR if manuscript.created_by_id == user.pk else Role.Code.EDITOR
     return _authorize_download(
         kind="original",
         manuscript=manuscript,
         version=version,
         user=user,
-        role=role,
+        role=Role.Code.AUTHOR,
         context=context,
     )
 
 
 def authorize_sanitized_download(
-    *, manuscript: Manuscript, version: ManuscriptVersion, user: User, context: dict
+    *,
+    manuscript: Manuscript,
+    version: ManuscriptVersion,
+    user: User,
+    context: dict,
+    role: str = Role.Code.REVIEWER,
+    action: str = "MANUSCRIPT_FILE_DOWNLOADED",
 ) -> str:
-    """Same as the original one, for the reviewer's ``sanitized.pdf``."""
+    """Same as the original one, for the ``sanitized.pdf`` of a reviewer or an administrator."""
     return _authorize_download(
         kind="sanitized",
         manuscript=manuscript,
         version=version,
         user=user,
-        role=Role.Code.REVIEWER,
+        role=role,
         context=context,
+        action=action,
     )
 
 
@@ -70,6 +76,7 @@ def _authorize_download(
     user: User,
     role: str,
     context: dict,
+    action: str = "MANUSCRIPT_FILE_DOWNLOADED",
 ) -> str:
     relative = version_relative_dir(manuscript.pk, version.version_number) / f"{kind}.pdf"
     if not private_path(relative).is_file():
@@ -78,7 +85,7 @@ def _authorize_download(
     try:
         with transaction.atomic():
             AuditService.record(
-                action="MANUSCRIPT_FILE_DOWNLOADED",
+                action=action,
                 entity_type="MANUSCRIPT_VERSION",
                 entity_id=version.pk,
                 result=AuditLog.Result.SUCCESS,

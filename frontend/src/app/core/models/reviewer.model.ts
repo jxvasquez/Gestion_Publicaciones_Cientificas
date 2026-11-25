@@ -8,7 +8,9 @@
  * declara, la interfaz no lo puede renderizar.
  */
 
-import { Recommendation, VerdictDecision } from './editor.model';
+import { AcademicArea } from './area.model';
+import { LegacyRecommendation, Recommendation, RubricKey } from './rubric.model';
+import type { VerdictDecision } from './manuscript.model';
 
 /** Estado de la asignación en la bandeja (derivado en el servidor, HU-14). */
 export type InboxState = 'PENDING' | 'ON_TIME' | 'OVERDUE' | 'EVALUATED' | 'REVOKED';
@@ -29,7 +31,7 @@ export interface ReviewerAssignmentRow {
   id: string;
   manuscript_code: string;
   manuscript_title: string;
-  area: string;
+  areas: AcademicArea[];
   version_number: number;
   round_number: number;
   assigned_at: string;
@@ -49,7 +51,7 @@ export interface ReviewerManuscript {
   title: string;
   abstract: string;
   keywords: string[];
-  area: string;
+  areas: AcademicArea[];
   language: string;
   current_round: number;
   current_version: number;
@@ -97,71 +99,26 @@ export const MAX_SCORE = 5;
 /** Largo máximo de cada comentario (el servidor rechaza más). */
 export const COMMENT_MAX_LENGTH = 10000;
 
-export type ScoreField =
-  'originality_score' | 'methodology_score' | 'clarity_score' | 'relevance_score' | 'ethics_score';
-
-/** Criterios de la evaluación estructurada, en el orden del formulario. */
-export const SCORE_CRITERIA: readonly { field: ScoreField; label: string; hint: string }[] = [
-  {
-    field: 'originality_score',
-    label: 'Originalidad',
-    hint: 'Aporte nuevo frente a lo ya publicado.',
-  },
-  {
-    field: 'methodology_score',
-    label: 'Metodología',
-    hint: 'Rigor y adecuación del método.',
-  },
-  { field: 'clarity_score', label: 'Claridad', hint: 'Redacción y organización del texto.' },
-  {
-    field: 'relevance_score',
-    label: 'Relevancia',
-    hint: 'Importancia para el área de estudio.',
-  },
-  {
-    field: 'ethics_score',
-    label: 'Ética',
-    hint: 'Cumplimiento de normas éticas de investigación.',
-  },
-];
-
-/** Opciones de recomendación, en el orden del formulario. */
-export const RECOMMENDATION_OPTIONS: readonly { value: Recommendation; label: string }[] = [
-  { value: 'ACCEPT', label: 'Aceptar' },
-  { value: 'REQUIRES_CORRECTIONS', label: 'Requiere correcciones' },
-  { value: 'REJECT', label: 'Rechazar' },
-];
-
 /**
  * Evaluación propia del Revisor (`GET .../evaluation/`): el borrador privado
- * o la final. Antes del primer guardado llega vacía, con `id` nulo.
+ * o la final, con la rúbrica de cinco criterios. Antes del primer guardado llega
+ * vacía, con `id` nulo. Ya no existen los comentarios confidenciales.
  */
-export interface ReviewerEvaluation {
+export interface ReviewerEvaluation extends Record<RubricKey, number | null> {
   id: string | null;
   status: 'DRAFT' | 'FINAL';
-  originality_score: number | null;
-  methodology_score: number | null;
-  clarity_score: number | null;
-  relevance_score: number | null;
-  ethics_score: number | null;
+  rubric_version: number;
   recommendation: Recommendation | null;
   comments_for_author: string | null;
-  confidential_comments: string | null;
-  /** El Revisor declaró un conflicto de interés: la evaluación está bloqueada. */
+  /** El Revisor declaró un conflicto de interés: la asignación se liberó. */
   conflict_declared: boolean;
   submitted_at: string | null;
 }
 
 /** Cuerpo de `PUT .../evaluation/`: todos los campos son opcionales en un borrador. */
-export interface EvaluationDraft {
-  originality_score: number | null;
-  methodology_score: number | null;
-  clarity_score: number | null;
-  relevance_score: number | null;
-  ethics_score: number | null;
+export interface EvaluationDraft extends Record<RubricKey, number | null> {
   recommendation: Recommendation | null;
   comments_for_author: string | null;
-  confidential_comments: string | null;
 }
 
 /** Una evaluación junto con su `ETag` vigente (bloqueo optimista, `"0"` si aún no existe). */
@@ -191,7 +148,7 @@ export const INCIDENT_REPORT_TYPES: readonly {
   {
     value: 'OTHER',
     label: 'Otro',
-    hint: 'Otro problema que el Editor deba conocer.',
+    hint: 'Un asunto confidencial que el Administrador deba conocer.',
   },
 ];
 
@@ -207,7 +164,7 @@ export interface IncidentReceipt {
   created_at: string;
 }
 
-/** Resultado editorial de una evaluación: solo la decisión y su fecha, nunca el texto del Editor. */
+/** Resultado de una evaluación: solo la decisión y su fecha, nunca los textos de la decisión. */
 export interface EditorialResult {
   decision: VerdictDecision;
   decided_at: string;
@@ -219,25 +176,65 @@ export interface ReviewerHistoryRow {
   assignment: string;
   manuscript_code: string;
   manuscript_title: string;
-  area: string;
+  areas: AcademicArea[];
   version_number: number;
   round_number: number;
-  recommendation: Recommendation;
+  rubric_version: number;
+  recommendation: Recommendation | LegacyRecommendation;
   submitted_at: string;
-  /** `null` mientras el Editor no ha decidido. */
+  /** `null` mientras el sistema no ha decidido. */
   editorial_result: EditorialResult | null;
 }
 
 /**
  * Evaluación enviada, completa y de solo lectura
- * (`GET /api/v1/reviewer/evaluations/{id}/`). No declara los comentarios
- * confidenciales: el backend no los devuelve en ninguna lectura del historial.
+ * (`GET /api/v1/reviewer/evaluations/{id}/`). `scores` lleva las claves de la
+ * rúbrica de la evaluación (la anterior o la profesional). Los comentarios
+ * confidenciales nunca se devuelven.
  */
 export interface ReviewerHistoryDetail extends ReviewerHistoryRow {
-  originality_score: number;
-  methodology_score: number;
-  clarity_score: number;
-  relevance_score: number;
-  ethics_score: number;
+  scores: Record<string, number | null>;
   comments_for_author: string;
+}
+
+/** Desempeño propio (`GET /api/v1/reviewer/standing/`, FR-033). */
+export interface ReviewerStanding {
+  ranking_score: number;
+  active_assignments: number;
+  max_active_assignments: number;
+  on_time_evaluations: number;
+  missed_deadlines: number;
+  is_available: boolean;
+  areas: AcademicArea[];
+}
+
+export type RankingCause = 'ON_TIME_EVALUATION' | 'DEADLINE_MISSED';
+
+export const RANKING_CAUSE_LABELS: Readonly<Record<RankingCause, string>> = {
+  ON_TIME_EVALUATION: 'A tiempo',
+  DEADLINE_MISSED: 'Vencida',
+};
+
+/** Un ajuste del ranking (`GET /reviewer/standing/adjustments/`): sin autores ni otros revisores. */
+export interface RankingAdjustment {
+  id: number;
+  created_at: string;
+  cause: RankingCause;
+  delta: number;
+  score_after: number;
+  manuscript_code: string;
+  version_number: number;
+}
+
+/** Texto del ajuste con su signo: «+10 a tiempo» o «−20 vencida». */
+export function adjustmentText(adjustment: Pick<RankingAdjustment, 'cause' | 'delta'>): string {
+  const sign = adjustment.delta >= 0 ? '+' : '−';
+  return `${sign}${Math.abs(adjustment.delta)} ${RANKING_CAUSE_LABELS[adjustment.cause].toLowerCase()}`;
+}
+
+/** Respuesta de declarar un conflicto: la asignación liberada sin penalización. */
+export interface ConflictResult {
+  assignment: string;
+  status: 'REVOKED';
+  release_cause: 'CONFLICT_OF_INTEREST';
 }

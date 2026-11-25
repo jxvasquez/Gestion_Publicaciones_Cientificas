@@ -36,7 +36,6 @@ website:
           contents:
             - usuarios/autor.qmd
             - usuarios/revisor.qmd
-            - usuarios/editor.qmd
             - usuarios/administrador.qmd
             - usuarios/catalogo.qmd
         - usuarios/estados-y-glosario.qmd
@@ -62,6 +61,7 @@ website:
             - ingenieria/adr/0005-auditoria-encadenada.qmd
             - ingenieria/adr/0006-django-admin-apagado.qmd
             - ingenieria/adr/0007-contrato-json-universal.qmd
+            - ingenieria/adr/0008-flujo-editorial-automatico.qmd
   page-footer:
     left: "Sistema de Gestión de Publicaciones Científicas · UNL"
     right: "Documentación generada con Quarto"

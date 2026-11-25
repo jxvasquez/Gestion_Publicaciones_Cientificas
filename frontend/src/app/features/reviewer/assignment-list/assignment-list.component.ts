@@ -1,3 +1,4 @@
+import { areaNames } from '../../../core/models/area.model';
 import { DatePipe } from '@angular/common';
 import { Component, DestroyRef, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -14,6 +15,7 @@ import { ErrorStateComponent } from '../../../shared/components/error-state.comp
 import { LoadingSpinnerComponent } from '../../../shared/components/loading-spinner.component';
 import { PaginationComponent } from '../../../shared/components/pagination.component';
 import { StatusBadgeComponent } from '../../../shared/components/status-badge.component';
+import { ReviewerStandingComponent } from '../reviewer-standing/reviewer-standing.component';
 
 /** Tamaño de página de la vista (la API admite hasta 100). */
 export const PAGE_SIZE = 20;
@@ -43,14 +45,22 @@ const INSTITUTIONAL_OFFSET = '-0500';
     LoadingSpinnerComponent,
     ErrorStateComponent,
     EmptyStateComponent,
+    ReviewerStandingComponent,
   ],
   templateUrl: './assignment-list.component.html',
   styleUrl: './assignment-list.component.scss',
 })
 export class AssignmentListComponent {
+  protected readonly areaNames = areaNames;
   private readonly service = inject(ReviewerService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
+
+  /** Aviso con el que otra vista devuelve al Revisor a la bandeja (por ejemplo, una liberación). */
+  protected readonly flash: string =
+    (this.router.getCurrentNavigation()?.extras.state?.['notice'] as string | undefined) ??
+    (history.state?.['notice'] as string | undefined) ??
+    '';
   private readonly destroyRef = inject(DestroyRef);
 
   protected readonly pageSize = PAGE_SIZE;

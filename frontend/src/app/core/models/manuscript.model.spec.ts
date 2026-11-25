@@ -18,7 +18,7 @@ describe('manuscript.model', () => {
     );
 
     it('solo Borrador y Requiere correcciones son editables', () => {
-      expect([...EDITABLE_STATUSES].sort()).toEqual(['DRAFT', 'REQUIRES_CORRECTIONS']);
+      expect([...EDITABLE_STATUSES].sort()).toEqual(['CHANGES_REQUESTED', 'DRAFT']);
     });
 
     it.each(MANUSCRIPT_STATUSES)('un manuscrito dado de baja nunca es editable (%s)', (status) => {
@@ -34,7 +34,7 @@ describe('manuscript.model', () => {
     });
 
     it('pide enviar nueva versión cuando requiere correcciones', () => {
-      expect(nextAction({ status: 'REQUIRES_CORRECTIONS', is_active: true }).short).toBe(
+      expect(nextAction({ status: 'CHANGES_REQUESTED', is_active: true }).short).toBe(
         'Enviar nueva versión',
       );
     });

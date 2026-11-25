@@ -1,3 +1,4 @@
+import { areaNames } from '../../../core/models/area.model';
 import { DatePipe } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
@@ -34,7 +35,7 @@ const INSTITUTIONAL_OFFSET = '-0500';
  *   (`AuthorEvaluationFeedbackSerializer`). Nunca muestra la identidad
  *   del Revisor, comentarios confidenciales ni puntuaciones, aunque
  *   la respuesta los trajera por error.
- * * La acción de editar solo aparece en `DRAFT` o `REQUIRES_CORRECTIONS`
+ * * La acción de editar solo aparece en `DRAFT` o `CHANGES_REQUESTED`
  *   y si el manuscrito no está dado de baja.
  * * Un manuscrito dado de baja se muestra archivado y en solo lectura.
  *
@@ -61,6 +62,7 @@ const INSTITUTIONAL_OFFSET = '-0500';
   styleUrl: './manuscript-detail.component.scss',
 })
 export class ManuscriptDetailComponent {
+  protected readonly areaNames = areaNames;
   private readonly service = inject(ManuscriptService);
   private readonly route = inject(ActivatedRoute);
 
@@ -106,7 +108,7 @@ export class ManuscriptDetailComponent {
   protected readonly canSendVersion = computed(() => {
     const manuscript = this.manuscript();
     return (
-      manuscript !== null && manuscript.is_active && manuscript.status === 'REQUIRES_CORRECTIONS'
+      manuscript !== null && manuscript.is_active && manuscript.status === 'CHANGES_REQUESTED'
     );
   });
 
@@ -116,12 +118,15 @@ export class ManuscriptDetailComponent {
     if (manuscript === null) {
       return [];
     }
-    const missing = (['title', 'abstract', 'keywords', 'area', 'language'] as const)
+    const missing = (['title', 'abstract', 'keywords', 'language'] as const)
       .filter((field) => {
         const value = manuscript[field];
         return Array.isArray(value) ? value.length === 0 : value.trim() === '';
       })
       .map((field) => SUBMISSION_FIELD_LABELS[field]);
+    if (manuscript.areas.length === 0) {
+      missing.push('Carreras o áreas');
+    }
     if (manuscript.draft_file === null) {
       missing.push(SUBMISSION_FIELD_LABELS['draft_file']);
     }
@@ -130,7 +135,7 @@ export class ManuscriptDetailComponent {
 
   protected readonly submitMessage = computed(() => {
     const draft = this.manuscript()?.draft_file;
-    return `Se creará la versión v1 con ${draft ? `el PDF «${draft.filename}»` : 'el PDF adjunto'} y los metadatos actuales. Una vez enviado no podrá editarlos hasta que el Editor solicite correcciones.`;
+    return `Se creará la versión v1 con ${draft ? `el PDF «${draft.filename}»` : 'el PDF adjunto'} y los metadatos actuales. Una vez enviado no podrá editarlos hasta que se soliciten cambios.`;
   });
 
   protected readonly action = computed(() => {

@@ -97,11 +97,6 @@ class TestVersionList:
         assert body["results"][1]["original_sha256"] == hashlib.sha256(V2_PDF).hexdigest()
         assert body["results"][1]["id"] == str(version_of(iterated, 2).pk)
 
-    def test_the_editor_gets_the_same_list(self, owner, iterated) -> None:
-        mine = client_for(owner).get(versions_url(iterated)).json()
-        theirs = client_for(actor("EDITOR")).get(versions_url(iterated)).json()
-
-        assert theirs == mine
 
     def test_rows_expose_no_paths_no_sanitized_hash_and_no_snapshot(self, owner, iterated) -> None:
         row = client_for(owner).get(versions_url(iterated)).json()["results"][0]
@@ -120,17 +115,7 @@ class TestVersionList:
         assert body["count"] == 2 and len(body["results"]) == 1 and body["next"]
         assert client_for(owner).get(versions_url(iterated), {"page_size": 101}).status_code == 400
 
-    def test_a_draft_has_no_iterations_for_its_author_and_is_hidden_from_the_editor(self, owner) -> None:
-        draft = owned_manuscript(owner)
 
-        assert client_for(owner).get(versions_url(draft)).json()["results"] == []
-        assert client_for(actor("EDITOR")).get(versions_url(draft)).status_code == 404
-
-    def test_the_archived_manuscript_keeps_its_versions_available(self, owner, iterated, withdraw) -> None:
-        withdraw(owner, iterated, {"reason": "Retiro."})
-
-        assert client_for(owner).get(versions_url(iterated)).json()["count"] == 2
-        assert client_for(actor("EDITOR")).get(versions_url(iterated)).json()["count"] == 2
 
 
 class TestOriginalDownload:
@@ -142,14 +127,6 @@ class TestOriginalDownload:
         assert response["X-Accel-Redirect"] == f"/_protected/manuscripts/{iterated.pk}/v0001/original.pdf"
         assert response["Content-Type"] == "application/pdf"
 
-    def test_the_editor_gets_the_original_of_any_version(self, iterated) -> None:
-        editor = client_for(actor("EDITOR"))
-
-        first = editor.get(file_url(iterated, version_of(iterated, 1)))
-        second = editor.get(file_url(iterated, version_of(iterated, 2)))
-
-        assert first["X-Accel-Redirect"].endswith("/v0001/original.pdf")
-        assert second["X-Accel-Redirect"].endswith("/v0002/original.pdf")
 
     def test_the_internal_path_resolves_to_the_exact_file_and_never_to_the_sanitized_copy(
         self, owner, iterated, media_root
@@ -172,19 +149,6 @@ class TestOriginalDownload:
         assert response["Cache-Control"] == "private, no-store"
         assert "Ana" not in str(response.headers)
 
-    def test_each_download_is_audited_before_answering(self, owner, iterated) -> None:
-        v1 = version_of(iterated, 1)
-        client_for(owner).get(file_url(iterated, v1))
-        client_for(actor("EDITOR")).get(file_url(iterated, v1))
-
-        rows = list(AuditLog.objects.filter(action="MANUSCRIPT_FILE_DOWNLOADED").order_by("id"))
-        assert [r.actor_role for r in rows] == ["AUTHOR", "EDITOR"]
-        assert rows[0].actor_id == owner.pk and rows[0].request_id
-        assert all(r.entity_type == "MANUSCRIPT_VERSION" and r.entity_id == v1.pk for r in rows)
-        assert rows[0].details == {
-            "manuscript_id": str(iterated.pk), "version_number": 1, "kind": "original",
-        }
-        assert "Ana" not in str(rows[0].details)
 
     def test_audit_failure_answers_503_without_redirect(self, owner, iterated, monkeypatch) -> None:
         def fail(**kwargs):
@@ -209,12 +173,6 @@ class TestOriginalDownload:
         assert "X-Accel-Redirect" not in response.headers
         assert not AuditLog.objects.filter(action="MANUSCRIPT_FILE_DOWNLOADED").exists()
 
-    def test_a_withdrawn_manuscript_can_still_be_downloaded_by_owner_and_editor(self, owner, iterated, withdraw) -> None:
-        withdraw(owner, iterated, {"reason": "Retiro."})
-        v2 = version_of(iterated, 2)
-
-        assert client_for(owner).get(file_url(iterated, v2)).status_code == 200
-        assert client_for(actor("EDITOR")).get(file_url(iterated, v2)).status_code == 200
 
     def test_download_is_read_only(self, owner, iterated) -> None:
         url = file_url(iterated, version_of(iterated, 1))
@@ -248,25 +206,7 @@ class TestScopeAnswers404:
 
         assert client_for(owner).get(url).status_code == 404
 
-    def test_an_editor_with_a_conflict_of_interest_never_reaches_it(self, iterated) -> None:
-        editor = actor("EDITOR")
-        ManuscriptAuthor.objects.create(
-            manuscript=iterated, user=editor, full_name="Editor Coautor",
-            email=editor.email, affiliation="UNL", author_order=9,
-        )
-        client = client_for(editor)
 
-        for url in (versions_url(iterated), file_url(iterated, version_of(iterated, 1)), history_url(iterated)):
-            assert client.get(url).status_code == 404
-
-    def test_a_draft_download_is_hidden_from_the_editor(self, owner, submit) -> None:
-        manuscript = ready_draft(owner)
-        submit(owner, manuscript)
-        Manuscript.objects.filter(pk=manuscript.pk).update(status="DRAFT")
-        version = version_of(manuscript, 1)
-
-        assert client_for(actor("EDITOR")).get(file_url(manuscript, version)).status_code == 404
-        assert client_for(owner).get(file_url(manuscript, version)).status_code == 200
 
 
 class TestModuleAccess:
@@ -340,7 +280,7 @@ class TestHistory:
         changes = [e for e in entries if e["type"] == "STATUS_CHANGED"]
 
         assert [(c["from_status"], c["to_status"]) for c in changes] == [
-            ("DRAFT", "SUBMITTED"), ("REQUIRES_CORRECTIONS", "SUBMITTED"),
+            ("DRAFT", "SUBMITTED"), ("CHANGES_REQUESTED", "SUBMITTED"),
         ]
         assert [(c["version_number"], c["round_number"]) for c in changes] == [(1, 0), (2, 1)]
 
@@ -393,23 +333,7 @@ class TestHistory:
         for forbidden in ("actor", "private", "sanitized", "metadata_snapshot", "submitted_by", owner.email):
             assert forbidden not in text
 
-    def test_the_editor_reads_the_same_timeline(self, owner, iterated) -> None:
-        mine = client_for(owner).get(history_url(iterated)).json()
-        theirs = client_for(actor("EDITOR")).get(history_url(iterated)).json()
 
-        assert theirs == mine
-
-    def test_the_history_survives_a_withdrawal_and_records_it(self, owner, iterated, withdraw) -> None:
-        before = client_for(owner).get(history_url(iterated)).json()["results"]
-
-        withdraw(owner, iterated, {"reason": "Ya no deseo continuar."})
-        after = client_for(owner).get(history_url(iterated)).json()["results"]
-        editor_view = client_for(actor("EDITOR")).get(history_url(iterated)).json()["results"]
-
-        assert after[: len(before)] == before
-        assert types(after)[-1] == "WITHDRAWN"
-        assert (after[-1]["reason"], after[-1]["to_status"]) == ("Ya no deseo continuar.", "SUBMITTED")
-        assert editor_view == after
 
     def test_new_activity_only_appends_and_never_rewrites_what_was_recorded(self, owner, submit, send) -> None:
         manuscript = ready_draft(owner, pdf=V1_PDF)

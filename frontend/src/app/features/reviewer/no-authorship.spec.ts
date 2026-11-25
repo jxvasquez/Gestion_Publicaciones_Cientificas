@@ -31,7 +31,7 @@ const FORBIDDEN = [
 ];
 
 /** Campos que solo el módulo Editor puede declarar. */
-const EDITOR_ONLY = ['justification', 'observations', 'reviewer_id', 'reviewer_name'];
+const ADMIN_ONLY = ['justification', 'observations', 'reviewer_id', 'reviewer_name'];
 
 async function sourceFiles(): Promise<{ name: string; code: string }[]> {
   const moduleName: string = 'node:fs';
@@ -84,7 +84,7 @@ describe('Módulo Revisor: sin campos de autoría en el código', () => {
     expect(offenders.map((f) => f.name)).toEqual([]);
   });
 
-  it.each(EDITOR_ONLY)(
+  it.each(ADMIN_ONLY)(
     'ningún archivo del Revisor referencia «%s» (campo del Editor)',
     async (field) => {
       const offenders = (await sourceFiles()).filter((f) => word(field).test(f.code));

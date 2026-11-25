@@ -104,7 +104,7 @@ class Verifier:
             documents[code] = hashlib.sha256(body).hexdigest() if status == 200 else f"HTTP {status}"
         status, _, body = self.api.call(
             "GET", f"/api/v1/reviewer/assignments/{scenario.review_assignment}/document/",
-            phase="snapshot", token=scenario.login("load-reviewer"))
+            phase="snapshot", token=scenario.login(f"load-{scenario.review_login}"))
         return {"codes": codes, "catalog": documents,
                 "sanitized": hashlib.sha256(body).hexdigest() if status == 200 else f"HTTP {status}"}
 
@@ -200,7 +200,7 @@ class Verifier:
                    text(result).strip().splitlines()[-1] if text(result).strip() else "")
         self.scenario.tokens.clear()
         self.check("las cuentas restauradas inician sesión con su contraseña",
-                   bool(self.scenario.login("load-editor")))
+                   bool(self.scenario.login("load-author-00")))
         self.check("el catálogo y los PDF entregados por Nginx son los mismos",
                    self.api_snapshot() == self.before_api)
 
@@ -372,7 +372,7 @@ class Verifier:
             print("      aviso: el certificado es AUTOFIRMADO (piloto); producción necesita el institucional", flush=True)
 
         # Cabeceras en respuestas de todo tipo (éxito, error, estático, SPA, PDF).
-        token = self.scenario.login("load-reviewer")
+        token = self.scenario.login(f"load-{self.scenario.review_login}")
         urls = {
             "SPA /": ("/", None), "SPA /catalog": ("/catalog", None),
             "API salud": ("/api/health/", None), "API catálogo": ("/api/v1/catalog/", None),
@@ -406,7 +406,7 @@ class Verifier:
         self.check("la API envía HSTS por HTTPS", "max-age=" in hsts, hsts)
 
         connection = self.api.connect()
-        body = json.dumps({"identifier": "load-editor", "password": self.args.password})
+        body = json.dumps({"identifier": "load-author-00", "password": self.args.password})
         connection.request("POST", "/api/v1/auth/login/", body=body, headers={"Content-Type": "application/json"})
         response = connection.getresponse()
         response.read()
@@ -433,7 +433,7 @@ class Verifier:
         password = self.args.password
         base = ["exec", "-T", "backend", "python", "manage.py", "create_user", "alta-prueba",
                 "--first-name", "Alta", "--last-name", "Prueba", "--email", "alta.prueba@example.invalid",
-                "--role", "AUTHOR", "--role", "REVIEWER", "--areas", "Agronomía", "--password", password]
+                "--role", "AUTHOR", "--role", "REVIEWER", "--areas", "Ingeniería en Computación", "--password", password]
         created = compose(*base)
         self.check("create_user da de alta una cuenta con dos roles", created.returncode == 0, text(created).strip()[-80:])
         connection = self.api.connect()

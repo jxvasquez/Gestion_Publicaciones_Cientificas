@@ -22,11 +22,11 @@ Código: `apps/users/authentication.py` (`InstitutionalJWTAuthentication`) y `ap
 
 El control es **por rol y por objeto**; un rol nunca concede acceso a todos los documentos.
 
-1. **Rol del módulo.** Cada vista declara su permiso (`IsAuthor`, `IsReviewer`, `IsEditor`, `IsAdmin`). Los roles se releen de PostgreSQL en **cada solicitud**; la reclamación del JWT es solo una pista y no autoriza.
-2. **Alcance del objeto.** Los *querysets* parten del alcance del usuario (`Manuscript.objects.visible_to`, `for_editor`, `Assignment.objects.for_reviewer`), nunca del repositorio global. Un objeto ajeno responde `404`, idéntico al de uno inexistente, para no revelar su existencia.
+1. **Rol del módulo.** Cada vista declara su permiso (`IsAuthor`, `IsReviewer`, `IsAdmin`; el rol Editor se retiró en la spec 004). Los roles se releen de PostgreSQL en **cada solicitud**; la reclamación del JWT es solo una pista y no autoriza.
+2. **Alcance del objeto.** Los *querysets* parten del alcance del usuario (`Manuscript.objects.visible_to`, `Assignment.objects.for_reviewer`, `IncidentReport.objects.for_admin`), nunca del repositorio global. Un objeto ajeno responde `404`, idéntico al de uno inexistente, para no revelar su existencia.
 3. **Separación de funciones.** Nadie evalúa ni decide sobre un manuscrito propio o coescrito; el intento se bloquea y se audita.
 
-La prueba `tests/security/test_access_matrix.py` clasifica **cada ruta** de la API por rol y alcance y la ejecuta contra ocho tipos de actor (sin credenciales, autor propietario, otro autor, revisor asignado, otro revisor, editor, administrador y usuario sin rol). **Falla si se añade una ruta sin clasificarla.**
+La prueba `tests/security/test_access_matrix.py` clasifica **cada ruta** de la API por rol y alcance y la ejecuta contra siete tipos de actor (sin credenciales, autor propietario, otro autor, revisor asignado, otro revisor, administrador y usuario sin rol). **Falla si se añade una ruta sin clasificarla.**
 
 ## Doble ciego
 

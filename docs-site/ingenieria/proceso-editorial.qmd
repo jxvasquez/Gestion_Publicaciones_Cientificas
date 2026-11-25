@@ -7,30 +7,31 @@ Esta página describe el proceso de negocio que el sistema soporta, de forma ind
 
 ## Análisis textual
 
-El proceso comienza cuando un **Autor** decide someter un manuscrito a la institución y termina cuando el **Editor** emite un veredicto definitivo: el artículo se publica en el catálogo, se rechaza, o regresa al Autor para correcciones y el ciclo se repite. En paralelo, el **Administrador** supervisa la integridad del proceso mediante la auditoría, y el **Público** puede consultar lo que fue aceptado. Una persona puede asumir varios participantes, pero nunca evaluar ni decidir sobre un manuscrito propio.
+El proceso comienza cuando un **Autor** decide someter un manuscrito a la institución y termina cuando el **sistema** decide el veredicto por consenso de dos Revisores (con un tercero si hay un 1 contra 1): el artículo se publica en el catálogo, se rechaza, o regresa al Autor con cambios solicitados y el ciclo se repite. No hay Editor: la asignación, el control del plazo y la decisión son automáticos. En paralelo, el **Administrador** resuelve los incidentes, gestiona revisores y carreras, puede corregir un veredicto y supervisa la integridad mediante la auditoría, y el **Público** puede consultar lo que fue aceptado. Una persona puede asumir varios participantes, pero nunca evaluar ni decidir sobre un manuscrito propio.
 
 ## Participantes
 
 | Participante | Tipo | Responsabilidad en el proceso |
 |---|---|---|
 | **Autor** | Persona | Registrar, enviar, corregir y retirar manuscritos. |
-| **Editor** | Persona | Coordinar: recibir, asignar, controlar el plazo y decidir. |
-| **Revisor** | Persona | Evaluar a ciegas el manuscrito asignado. |
-| **Administrador** | Persona | Consultar la auditoría y habilitar correcciones de veredicto. |
+| **Revisor** | Persona | Evaluar a ciegas el manuscrito asignado con la rúbrica de cinco criterios. |
+| **Administrador** | Persona | Resolver incidentes, gestionar el padrón de revisores y las carreras, corregir veredictos y consultar la auditoría. |
 | **Público** | Persona | Consultar el catálogo de artículos aceptados. |
-| **Sistema** | Automático | Validar PDF, sellar versiones, auditar, notificar y marcar plazos vencidos. |
+| **Sistema** | Automático | Validar PDF, sellar versiones, asignar revisores por carrera, calcular el consenso, ajustar el ranking, revocar y reasignar al vencer el plazo, auditar y notificar. |
 
 ## Eventos
 
 | Tipo | Evento | Efecto |
 |---|---|---|
 | Inicio | El Autor decide someter un manuscrito. | Se crea el borrador. |
-| Mensaje | Se recibe un envío. | El Editor lo ve en su bandeja y se le avisa. |
+| Mensaje | Se recibe un envío. | El sistema asigna a dos Revisores de la carrera; si faltan candidatos, deja el cupo pendiente y avisa al Administrador. |
 | Mensaje | Se recibe una asignación. | Se avisa al Revisor. |
-| Mensaje | Se recibe una evaluación final. | Se avisa al Editor. |
-| Mensaje | Se registra un veredicto. | Se avisa al Autor. |
-| Temporizador | Se cumplen 20 días de la asignación. | El sistema marca la asignación como vencida. |
-| Intermedio | Se reporta un conflicto de interés o una filtración de identidad. | El Editor debe resolverlo. |
+| Mensaje | Se recibe una evaluación final. | El Revisor suma 10 puntos si fue a tiempo y el sistema calcula el consenso. |
+| Mensaje | Hay un 1 contra 1 entre aceptar y rechazar. | Se asigna un tercer Revisor y se avisa al Autor sin dictámenes. |
+| Mensaje | Se decide el veredicto. | Se avisa al Autor. |
+| Temporizador | Se cumplen 20 días de la asignación. | El sistema revoca la asignación, resta 20 puntos al Revisor y reasigna. |
+| Intermedio | Se declara un conflicto de interés. | La asignación se libera sin penalización y se reasigna. |
+| Intermedio | Se reporta una filtración de identidad. | El Administrador debe resolverlo. |
 | Fin | Aceptado. | Se publica en el catálogo. |
 | Fin | Rechazado. | El manuscrito se archiva. |
 | Fin | Manuscrito retirado. | Sale de los listados; el historial se conserva. |
@@ -42,10 +43,9 @@ Las tareas se nombran con el **verbo en infinitivo**, como pide el modelado de p
 | Participante | Tarea |
 |---|---|
 | Autor | Registrar manuscrito · Completar metadatos · Adjuntar PDF · Enviar manuscrito · Editar metadatos · Enviar nueva versión · Consultar estado · Retirar manuscrito |
-| Sistema | Validar PDF · Sellar versión · Registrar auditoría · Notificar evento · Marcar asignación vencida |
-| Editor | Revisar envío · Pasar a revisión · Seleccionar revisor · Asignar revisor · Controlar plazo · Revocar asignación · Revisar evaluación · Registrar veredicto · Resolver incidente |
-| Revisor | Consultar asignación · Descargar PDF sanitizado · Completar evaluación · Enviar evaluación · Declarar conflicto de interés · Reportar filtración de identidad |
-| Administrador | Consultar auditoría · Verificar integridad · Autorizar corrección de veredicto |
+| Sistema | Validar PDF · Sellar versión · Registrar auditoría · Notificar evento · Buscar revisores elegibles · Asignar a dos revisores · Calcular consenso · Registrar veredicto · Revocar y reasignar |
+| Revisor | Consultar asignación · Descargar PDF sanitizado · Completar evaluación con rúbrica · Enviar evaluación · Declarar conflicto de interés · Reportar filtración de identidad |
+| Administrador | Resolver incidente · Gestionar revisores y carreras · Corregir veredicto · Consultar auditoría · Verificar integridad |
 | Público | Buscar artículos · Consultar artículo · Descargar PDF |
 
 ## Flujo de extremo a extremo
@@ -63,34 +63,30 @@ flowchart TB
 
     subgraph sistema["Sistema"]
         s1["Validar PDF y sellar versión"]
-        s2["Registrar auditoría y notificar"]
-        s3["Marcar asignación vencida"]
-    end
-
-    subgraph editor["Editor"]
-        e1["Revisar envío"] --> e2["Pasar a revisión"]
-        e2 --> e3["Seleccionar y asignar revisor"]
-        e3 --> e4{"¿Plazo, conflicto<br/>o incidente?"}
-        e4 -->|"Sí"| e5["Revocar asignación"]
-        e5 --> e3
-        e4 -->|"No, llegó la evaluación"| e6["Revisar evaluación"]
-        e6 --> e7["Registrar veredicto"]
-        e7 --> e8{"Decisión"}
+        s2["Buscar revisores elegibles por carrera"]
+        s3["Asignar a dos revisores"]
+        s4{"¿Plazo vencido?"}
+        s5["Revocar, restar 20 puntos y reasignar"]
+        s6["Calcular consenso"]
+        s7{"Decisión"}
+        s8["Asignar tercer revisor"]
     end
 
     subgraph revisor["Revisor"]
         r1["Consultar asignación"] --> r2["Descargar PDF sanitizado"]
-        r2 --> r3["Completar evaluación"]
-        r3 --> r4["Enviar evaluación"]
+        r2 --> r3["Completar rúbrica de cinco criterios"]
+        r3 --> r4["Enviar evaluación (+10 si es a tiempo)"]
     end
 
-    a4 --> s1 --> s2 --> e1
-    e3 --> r1
-    r4 --> e6
-    s3 -.-> e4
-    e8 -->|"Aceptado"| f1(["Publicar en el catálogo"])
-    e8 -->|"Rechazado"| f2(["Archivar"])
-    e8 -->|"Requiere correcciones"| c1
+    a4 --> s1 --> s2 --> s3
+    s3 --> r1
+    s3 --> s4
+    s4 -->|"Sí"| s5 --> s3
+    r4 --> s6 --> s7
+    s7 -->|"Aceptar contra Rechazar"| s8 --> r1
+    s7 -->|"Aceptado"| f1(["Publicar en el catálogo"])
+    s7 -->|"Rechazado"| f2(["Archivar"])
+    s7 -->|"Cambios solicitados"| c1
     c2 --> s1
 ```
 
@@ -98,9 +94,10 @@ flowchart TB
 
 | Regla | Efecto en el flujo |
 |---|---|
-| Un solo Revisor activo (RN-04) | La compuerta de asignación exige revocar antes de reasignar. |
-| Plazo de 20 días, sin revocación automática (RN-05) | El temporizador solo marca; la decisión de revocar es del Editor. |
-| Doble ciego bidireccional (RN-06) | El carril del Revisor jamás recibe la identidad del Autor. |
+| Dos Revisores por versión, por coincidencia exacta de carrera, con tope de 5 asignaciones activas (spec 004) | El sistema asigna solo; con menos candidatos deja el cupo pendiente y lo completa después. |
+| Plazo de 20 días con revocación automática (spec 004, reemplaza RN-05) | Vencido el plazo, el sistema revoca, resta 20 puntos y reasigna; entregar a tiempo suma 10. |
+| Doble ciego bidireccional (RN-06) | El carril del Revisor jamás recibe la identidad del Autor, y el Autor lee «Revisor N». |
+| Veredicto por consenso (spec 004, reemplaza al Editor) | Dos dictámenes iguales deciden; aceptar contra rechazar abre el desempate de un tercer Revisor. |
 | Versiones e historial inmutables (RN-10) | Cada ciclo de corrección agrega una versión; no modifica las anteriores. |
 | Acciones críticas auditadas (RN-13) | Si la auditoría falla, la tarea no se completa. |
 | Separación de funciones (RN-17) | Nadie evalúa ni decide sobre un manuscrito propio. |
@@ -108,7 +105,7 @@ flowchart TB
 
 ## Diagrama BPMN 2.0.2
 
-El mismo proceso en notación **BPMN 2.0.2**, con un carril por participante. El plazo de 20 días es un **evento temporizador de frontera** (`P20D`) sobre el subproceso de evaluación: si vence, el Editor revoca la asignación y vuelve a asignar; si el Revisor envía antes, el flujo continúa con la revisión de la evaluación.
+El mismo proceso en notación **BPMN 2.0.2**, con un carril por participante. El plazo de 20 días es un **evento temporizador de frontera** (`P20D`) sobre el subproceso de evaluación: si vence, el sistema revoca la asignación, resta 20 puntos y vuelve a asignar; si el Revisor envía antes, el flujo continúa con el cálculo del consenso.
 
 ```{=html}
 <iframe src="../diagrams/bpmn.html" title="Diagrama BPMN del proceso editorial" loading="lazy"

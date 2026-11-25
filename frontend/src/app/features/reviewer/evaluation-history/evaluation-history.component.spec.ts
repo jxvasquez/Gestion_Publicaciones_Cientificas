@@ -80,7 +80,7 @@ describe('EvaluationHistoryComponent', () => {
         buildHistoryRow({
           manuscript_code: 'GPC-2026-000007',
           manuscript_title: 'Suelos del páramo',
-          area: 'Edafología',
+          areas: [{ code: 'edafologia', name: 'Edafología' }],
           version_number: 2,
           round_number: 1,
           recommendation: 'ACCEPT',
@@ -110,16 +110,16 @@ describe('EvaluationHistoryComponent', () => {
     });
 
     it('traduce cada decisión editorial', async () => {
-      const decided = (decision: 'ACCEPTED' | 'REJECTED' | 'REQUIRES_CORRECTIONS', id: string) =>
+      const decided = (decision: 'ACCEPTED' | 'REJECTED' | 'CHANGES_REQUESTED', id: string) =>
         buildHistoryRow({ id, editorial_result: { decision, decided_at: '2026-10-26T15:00:00Z' } });
       const { element } = await render([
         decided('ACCEPTED', 'e-1'),
         decided('REJECTED', 'e-2'),
-        decided('REQUIRES_CORRECTIONS', 'e-3'),
+        decided('CHANGES_REQUESTED', 'e-3'),
       ]);
 
       const badges = rowsOf(element).map((row) => text(row.querySelector('.badge')));
-      expect(badges).toEqual(['Aceptado', 'Rechazado', 'Requiere correcciones']);
+      expect(badges).toEqual(['Aceptado', 'Rechazado', 'Cambios solicitados']);
     });
 
     it('es de solo lectura: no ofrece editar, reenviar ni borrar', async () => {
@@ -174,11 +174,11 @@ describe('EvaluationHistoryComponent', () => {
         (row) => `${text(row.querySelector('dt'))}: ${text(row.querySelector('dd'))}`,
       );
       expect(scores).toEqual([
-        'Originalidad: 4 / 5',
-        'Metodología: 3 / 5',
-        'Claridad: 5 / 5',
-        'Relevancia: 4 / 5',
-        'Ética: 5 / 5',
+        'Pertinencia y Contribución Científica: 4 / 5',
+        'Rigor Metodológico y Reproducibilidad: 4 / 5',
+        'Estado del Arte y Sustento Bibliográfico: 5 / 5',
+        'Validez de Resultados y Conclusiones: 4 / 5',
+        'Redacción Académica y Estructura Formal: 5 / 5',
       ]);
       expect(text(detail)).toContain('Aclarar la metodología.');
       expect(toggle(element).getAttribute('aria-expanded')).toBe('true');

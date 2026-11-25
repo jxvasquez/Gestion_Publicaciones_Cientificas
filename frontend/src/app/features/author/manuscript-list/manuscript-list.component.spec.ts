@@ -65,7 +65,7 @@ describe('ManuscriptListComponent', () => {
             id: 'm-7',
             code: 'GPC-2026-000007',
             title: 'Suelos del páramo',
-            status: 'REQUIRES_CORRECTIONS',
+            status: 'CHANGES_REQUESTED',
             current_version: 2,
             current_round: 1,
             updated_at: '2026-10-21T15:30:00Z',
@@ -78,8 +78,8 @@ describe('ManuscriptListComponent', () => {
         (c.textContent ?? '').replace(/\s+/g, ' ').trim(),
       );
       expect(cells[0]).toBe('GPC-2026-000007');
-      expect(cells[1]).toBe('Suelos del páramo');
-      expect(cells[2]).toBe('Requiere correcciones');
+      expect(cells[1]).toBe('Suelos del páramo Agronomía');
+      expect(cells[2]).toBe('Cambios solicitados');
       expect(cells[3]).toBe('v2');
       expect(cells[4]).toBe('Ronda 1');
       // 15:30 UTC en la zona institucional (UTC-5) son las 10:30.
@@ -120,7 +120,7 @@ describe('ManuscriptListComponent', () => {
           Array.from(row.querySelectorAll('a')).some((a) => a.textContent?.trim() === 'Editar'),
         )
         .map((row) => row.querySelector('td')?.textContent?.trim());
-      expect(editable).toEqual(['C-DRAFT', 'C-REQUIRES_CORRECTIONS']);
+      expect(editable).toEqual(['C-DRAFT', 'C-CHANGES_REQUESTED']);
     });
 
     it('un manuscrito archivado muestra «Dado de baja», «Archivado» y no ofrece editar', async () => {
@@ -200,15 +200,15 @@ describe('ManuscriptListComponent', () => {
       listRequest().flush(buildPage([buildManuscript()]));
       await settle();
 
-      component.filters.patchValue({ status: 'REQUIRES_CORRECTIONS', date_from: '2026-10-01' });
+      component.filters.patchValue({ status: 'CHANGES_REQUESTED', date_from: '2026-10-01' });
       (element.querySelector('form button[type="submit"]') as HTMLButtonElement).click();
       await settle();
 
       expect(router.url).toBe(
-        '/app/author/manuscripts?status=REQUIRES_CORRECTIONS&date_from=2026-10-01',
+        '/app/author/manuscripts?status=CHANGES_REQUESTED&date_from=2026-10-01',
       );
       const request = listRequest();
-      expect(request.request.params.get('status')).toBe('REQUIRES_CORRECTIONS');
+      expect(request.request.params.get('status')).toBe('CHANGES_REQUESTED');
       expect(request.request.params.get('date_from')).toBe('2026-10-01');
       request.flush(buildPage([]));
       await settle();

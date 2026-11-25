@@ -1,6 +1,6 @@
 # Sistema de Gestión de Publicaciones Científicas
 
-Sistema cliente-servidor para gestionar el ciclo editorial de publicaciones científicas: registro de manuscritos, revisión por pares bajo doble ciego, veredictos editoriales, catálogo público y auditoría.
+Sistema cliente-servidor para gestionar el ciclo editorial de publicaciones científicas: registro de manuscritos, asignación automática de revisores por carrera, revisión por pares bajo doble ciego con rúbrica de cinco criterios, veredicto por consenso (con desempate), ranking de revisores, catálogo público y auditoría. No hay rol Editor.
 
 El proyecto sigue una arquitectura SPA + API REST:
 
@@ -189,12 +189,13 @@ Debe terminar con `permission denied for table audit_audit_log`.
 
 ### 3.7 Sembrar los roles institucionales
 
-El flujo funcional usa cuatro roles:
+El flujo funcional usa tres roles:
 
 - `AUTHOR`
 - `REVIEWER`
-- `EDITOR`
 - `ADMIN`
+
+El rol `EDITOR` se retiró (spec 004): `seed_roles` lo desactiva si existe y conserva su fila por el historial.
 
 El comando de inicialización es:
 
@@ -202,7 +203,7 @@ El comando de inicialización es:
 docker compose run --rm backend python manage.py seed_roles
 ```
 
-Este comando es idempotente y forma parte de la Fase 1 del plan. Cuando se ejecuta en una base vacía, crea exactamente los cuatro roles; si ya existen, no duplica registros.
+Este comando es idempotente y forma parte de la Fase 1 del plan. Cuando se ejecuta en una base vacía, crea exactamente los tres roles; si ya existen, no duplica registros.
 
 ### 3.8 Crear cuentas institucionales
 
@@ -210,10 +211,10 @@ El Django Admin **no existe en producción** (`/admin/` responde `404`, D-31): l
 
 ```bash
 docker compose run --rm backend python manage.py create_user <identificador> \
-  --first-name <Nombre> --last-name <Apellidos> --email <correo> --role EDITOR [--role REVIEWER] [--areas "Agronomía,Medicina"]
+  --first-name <Nombre> --last-name <Apellidos> --email <correo> --role REVIEWER [--role AUTHOR] [--areas "Ingeniería en Computación,Derecho"]
 ```
 
-Sin `--password` genera una contraseña aleatoria y la muestra **una sola vez**. Es idempotente: repetirlo añade roles sin duplicar la cuenta. Los roles son `AUTHOR`, `REVIEWER`, `EDITOR` y `ADMIN`; un Revisor necesita `--areas` para que el Editor pueda asignarle manuscritos (`docs/RUNBOOK.md` §11.2).
+Sin `--password` genera una contraseña aleatoria y la muestra **una sola vez**. Es idempotente: repetirlo añade roles sin duplicar la cuenta. Los roles son `AUTHOR`, `REVIEWER` y `ADMIN`. Un Revisor necesita `--areas` con nombres o códigos de **carreras activas del catálogo** (las gestiona el Administrador en la aplicación): el sistema le asigna automáticamente solo manuscritos de esas carreras (`docs/RUNBOOK.md` §11.2).
 
 #### 3.8.1 Cuentas de prueba para desarrollo
 
@@ -221,7 +222,7 @@ Sin `--password` genera una contraseña aleatoria y la muestra **una sola vez**.
 docker compose exec -e ALLOW_DEV_USERS=1 backend python manage.py seed_dev_users
 ```
 
-Crea siete cuentas con la contraseña `Gpc-dev-2026` (cámbiala con `--password`): `autor`, `autor2`, `editor`, `revisor`, `revisor2`, `admin` y `autor.revisor` (Autor y Revisor a la vez). Inicia sesión con el identificador. **Solo para desarrollo:** se niega a correr sin `ALLOW_DEV_USERS=1` (el contenedor usa ajustes de producción incluso en local, así que `DEBUG` no basta como señal). Repetirlo restablece las contraseñas sin duplicar nada. No lo ejecutes en el piloto real.
+Crea siete cuentas, sus carreras de ejemplo con la contraseña `Gpc-dev-2026` (cámbiala con `--password`): `autor`, `autor2`, `revisor`, `revisor2`, `revisor3`, `admin` y `autor.revisor` (Autor y Revisor a la vez). Inicia sesión con el identificador. **Solo para desarrollo:** se niega a correr sin `ALLOW_DEV_USERS=1` (el contenedor usa ajustes de producción incluso en local, así que `DEBUG` no basta como señal). Repetirlo restablece las contraseñas sin duplicar nada. No lo ejecutes en el piloto real.
 
 ### 3.9 Levantar el sistema completo
 
@@ -483,10 +484,10 @@ sudo cp scripts/cron/gpc.logrotate /etc/logrotate.d/gpc
 sudo logrotate -d /etc/logrotate.d/gpc    # simula y muestra errores
 ```
 
-La plantilla incluye también la expiración de asignaciones (TSK-45 y TSK-49): cada minuto ejecuta `mark_expired_assignments`, que marca como `EXPIRED` las asignaciones `ACTIVE` con `due_at <= now()`, sin revocar ni reasignar, y escribe en `/var/log/gpc-expire.log` solo cuando hubo trabajo o un error. El contenedor `backend` debe estar en ejecución. Para probarla a mano:
+La plantilla incluye también el ciclo de revisión automático (spec 004): cada minuto ejecuta `run_review_automation` (con `flock -n /var/lock/gpc-review.lock`), que revoca las asignaciones `ACTIVE` con `due_at <= now()`, resta 20 puntos al Revisor, reasigna el manuscrito, completa los cupos pendientes y reconcilia decisiones, y escribe en `/var/log/gpc-review.log` solo cuando hubo trabajo o un error. Al arrancar, `docker compose` ejecuta además `apply_auto_review_transition` (idempotente), que cierra las asignaciones del flujo anterior. El contenedor `backend` debe estar en ejecución. Para probarla a mano:
 
 ```bash
-docker compose exec backend python manage.py mark_expired_assignments
+docker compose exec backend python manage.py run_review_automation
 ```
 
 La plantilla incluye además las tareas de la Fase 5 (TSK-71 y TSK-76), todas dentro del contenedor `backend` y con un `flock` propio cada una:
@@ -636,7 +637,7 @@ Requiere Docker, `curl` y `python3`; termina con código distinto de cero si alg
 ./scripts/load_test.sh --timeouts   # añade el corte por inactividad de 120 s (~+2 min)
 ```
 
-Levanta un **stack aislado** (`docker compose -p gpc_load -f docker-compose.yml -f docker-compose.load.yml`, HTTPS en `LOAD_TLS_PORT` —18443 por defecto— y HTTP en `LOAD_WEB_PORT` —18080—, con sus propios volúmenes), siembra cuentas con una contraseña aleatoria que no se guarda, ejecuta `scripts/load/load_test.py` por el puerto público de Nginx y lo apaga al terminar (`LOAD_KEEP=1` lo conserva). La base y los PDF de trabajo no se tocan. Todo pasa por la API real (autor, editor, revisor), no por atajos en la base.
+Levanta un **stack aislado** (`docker compose -p gpc_load -f docker-compose.yml -f docker-compose.load.yml`, HTTPS en `LOAD_TLS_PORT` —18443 por defecto— y HTTP en `LOAD_WEB_PORT` —18080—, con sus propios volúmenes), siembra cuentas con una contraseña aleatoria que no se guarda, ejecuta `scripts/load/load_test.py` por el puerto público de Nginx y lo apaga al terminar (`LOAD_KEEP=1` lo conserva). La base y los PDF de trabajo no se tocan. Todo pasa por la API real (autor y revisores; la asignación y el consenso son automáticos), no por atajos en la base.
 
 Comprueba, y falla con código distinto de cero si algo no se cumple:
 
@@ -673,7 +674,7 @@ docker compose run --rm --no-deps -v "$PWD/backend:/app" backend sh -c \
   "python -m pip install --quiet --user -r requirements/development.txt; python -m pytest -q -p no:cacheprovider tests/security"
 ```
 
-`backend/tests/security/test_access_matrix.py` clasifica **cada ruta de `/api/`** por rol del módulo y por alcance del objeto y la ejecuta contra ocho tipos de actor (sin credenciales, autor propietario, otro autor, revisor asignado, otro revisor, editor, administrador y usuario sin rol): `401` sin credenciales, `403` sin el rol del módulo (también para el Administrador en manuscritos, evaluaciones y PDF), `404` —idéntico al de un objeto inexistente— para un objeto ajeno. Falla si se añade una ruta sin clasificarla. Además comprueba que un rol retirado pierde su módulo en la siguiente petición, que un Editor que es autor no alcanza su manuscrito como editor, que el Editor no ve borradores ajenos y que ni las respuestas del Revisor ni la auditoría del Administrador contienen identidades. Forma parte de la suite del backend y corre en el CI.
+`backend/tests/security/test_access_matrix.py` clasifica **cada ruta de `/api/`** por rol del módulo y por alcance del objeto y la ejecuta contra siete tipos de actor (sin credenciales, autor propietario, otro autor, revisor asignado, otro revisor, administrador y usuario sin rol): `401` sin credenciales, `403` sin el rol del módulo (también para el Administrador en manuscritos, evaluaciones y PDF), `404` —idéntico al de un objeto inexistente— para un objeto ajeno. Falla si se añade una ruta sin clasificarla. Además comprueba que un rol retirado pierde su módulo en la siguiente petición, que un Editor que es autor no alcanza su manuscrito como editor, que el Editor no ve borradores ajenos y que ni las respuestas del Revisor ni la auditoría del Administrador contienen identidades. Forma parte de la suite del backend y corre en el CI.
 
 ### 10.7 Runbook y decisiones Q1–Q5 (TSK-88)
 
@@ -702,7 +703,7 @@ cd .. && ./scripts/e2e.sh      # los 10 flujos (≈ 3 min, más la primera const
 ./scripts/e2e.sh -g "Flujo 9"  # uno solo
 ```
 
-`scripts/e2e.sh` levanta un stack **aislado** (`gpc_e2e`, HTTPS en `https://localhost:20443`; no toca tu base ni tus PDF), siembra cinco personas con una contraseña aleatoria, ejecuta Playwright en la imagen oficial `mcr.microsoft.com/playwright` (trae Chromium: el host no instala navegadores) y **borra el stack al terminar**. Los flujos están en `frontend/e2e/`: login multirrol; Autor → Editor → Revisor → veredicto → catálogo público → baja → auditoría; corrección administrativa; y fuga de identidad. Si fallan, las capturas y trazas quedan en `frontend/test-results/` (`npx playwright show-trace <trace.zip>`). Para iterar: `E2E_KEEP=1 ./scripts/e2e.sh` deja el stack y `E2E_REUSE=1 ./scripts/e2e.sh -g "…"` lo reutiliza. El CI lo ejecuta en el trabajo `e2e`.
+`scripts/e2e.sh` levanta un stack **aislado** (`gpc_e2e`, HTTPS en `https://localhost:20443`; no toca tu base ni tus PDF), siembra diez cuentas (un Autor, un Administrador, seis revisores de Ingeniería en Computación, un revisor de Derecho y una cuenta Autor–Revisor de Derecho) con una contraseña aleatoria, ejecuta Playwright en la imagen oficial `mcr.microsoft.com/playwright` (trae Chromium: el host no instala navegadores) y **borra el stack al terminar**. Los flujos están en `frontend/e2e/`: login multirrol; Autor → asignación automática → rúbrica → consenso → catálogo público → baja → auditoría; cambios solicitados, desempate y corrección administrativa; y fuga de identidad con una cuenta Autor–Revisor. Si fallan, las capturas y trazas quedan en `frontend/test-results/` (`npx playwright show-trace <trace.zip>`). Para iterar: `E2E_KEEP=1 ./scripts/e2e.sh` deja el stack y `E2E_REUSE=1 ./scripts/e2e.sh -g "…"` lo reutiliza. El CI lo ejecuta en el trabajo `e2e`.
 
 ### 10.10 Accesibilidad, responsive y build de producción (TSK-92)
 
@@ -730,7 +731,7 @@ Las suites `05` a `07` de `frontend/e2e/` recorren las pantallas de cada rol con
 
 ## 12. Estado del proyecto
 
-Fases 0 a 5 completas (identidad, autor, editor, revisor, catálogo, auditoría, avisos y corrección de veredictos) y Fase 6 (endurecimiento) en curso: pipeline de calidad en CI (TSK-85), prueba de carga de 50 MB (TSK-86), restauración y superficie expuesta (TSK-87) y runbook del piloto (TSK-88).
+Fases 0 a 5 completas (identidad, autor, revisor, catálogo, auditoría, avisos y corrección de veredictos) y la especificación 004 (asignación automática por carrera, ranking, rúbrica de cinco criterios, consenso con desempate y retiro del rol Editor) y Fase 6 (endurecimiento) en curso: pipeline de calidad en CI (TSK-85), prueba de carga de 50 MB (TSK-86), restauración y superficie expuesta (TSK-87) y runbook del piloto (TSK-88).
 
 Lo que resta antes de abrir el piloto a usuarios reales está en la sección 13 del [runbook](docs/RUNBOOK.md#13-criterios-de-aceptación-del-piloto) (certificado institucional, respaldo cifrado fuera del servidor, cron en el servidor, rotación de la credencial publicada) y en `.spec-kit/compliance.md` (matriz de cumplimiento y deuda técnica). Tareas posteriores: auditoría de seguridad e IDOR (TSK-89), consultas y cobertura (TSK-90), E2E con Playwright (TSK-91) y accesibilidad (TSK-92).
 

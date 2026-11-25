@@ -4,7 +4,7 @@ import { beforeAll } from 'vitest';
 import { MANUSCRIPT_STATUSES, ManuscriptStatus } from '../../../core/models/manuscript.model';
 import { WITHDRAWAL_REASON_MAX_LENGTH, WithdrawDialogComponent } from './withdraw-dialog.component';
 
-const REASON_REQUIRED: ManuscriptStatus[] = ['UNDER_REVIEW', 'ACCEPTED'];
+const REASON_REQUIRED: ManuscriptStatus[] = ['UNDER_REVIEW', 'TIE_BREAKER', 'ACCEPTED'];
 const REASON_OPTIONAL = MANUSCRIPT_STATUSES.filter((status) => !REASON_REQUIRED.includes(status));
 
 describe('WithdrawDialogComponent', () => {

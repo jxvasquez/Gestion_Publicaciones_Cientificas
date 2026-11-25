@@ -8,7 +8,7 @@ export type DashboardSectionStatus = 'ok' | 'error';
  * Una sección del panel unificado por rol activo.
  *
  * ``data`` llega poblada por el proveedor del dominio correspondiente
- * (Autor: TSK-32+; Revisor: TSK-60+; Editor: TSK-47+; Admin: TSK-73+)
+ * (Autor; Revisor: ranking y cupo; Administrador: reportes y manuscritos en espera)
  * y ``message`` lleva el aviso reintentable cuando la sección falló.
  */
 export interface DashboardSection {
@@ -18,12 +18,11 @@ export interface DashboardSection {
 }
 
 /** Claves de sección en el orden de renderizado del panel. */
-export type DashboardSectionKey = 'author' | 'reviewer' | 'editor' | 'admin';
+export type DashboardSectionKey = 'author' | 'reviewer' | 'admin';
 
 export const DASHBOARD_SECTION_KEYS: readonly DashboardSectionKey[] = [
   'author',
   'reviewer',
-  'editor',
   'admin',
 ];
 
@@ -33,7 +32,6 @@ export const DASHBOARD_SECTION_LABELS: Readonly<
 > = {
   author: 'Autor',
   reviewer: 'Revisor',
-  editor: 'Editor',
   admin: 'Administrador',
 };
 

@@ -11,11 +11,14 @@ Como Autor usted registra manuscritos, adjunta el PDF, los envía a revisión, r
 stateDiagram-v2
     [*] --> Borrador: Nuevo manuscrito
     Borrador --> Enviado: Enviar (crea la versión 1)
-    Enviado --> EnRevision: El Editor lo pasa a revisión
-    EnRevision --> Aceptado: Veredicto favorable
-    EnRevision --> Rechazado: Veredicto desfavorable
-    EnRevision --> RequiereCorrecciones: El Editor pide ajustes
-    RequiereCorrecciones --> Enviado: Usted envía una nueva versión
+    Enviado --> EnRevision: El sistema asigna a dos Revisores de su carrera
+    EnRevision --> Aceptado: Consenso favorable
+    EnRevision --> Rechazado: Consenso desfavorable
+    EnRevision --> EnDesempate: Un Revisor acepta y otro rechaza
+    EnDesempate --> Aceptado: Decide el tercer Revisor
+    EnDesempate --> Rechazado: Decide el tercer Revisor
+    EnRevision --> CambiosSolicitados: Los Revisores piden ajustes
+    CambiosSolicitados --> Enviado: Usted envía una nueva versión
     Aceptado --> [*]
     Rechazado --> [*]
 ```
@@ -31,7 +34,7 @@ En **Mis manuscritos**, elija **Nuevo manuscrito** y complete los datos:
 | Título | Sí | Hasta 300 caracteres. |
 | Resumen | Sí | |
 | Palabras clave | Sí | Lista de términos. |
-| Área | Sí | Es la que usa el Editor para buscar un Revisor experto. |
+| Carreras o áreas | Sí | De 1 a 3 del catálogo. El sistema asigna Revisores de esa misma carrera, por coincidencia exacta. |
 | Idioma | Sí | |
 | Autores | Sí | Nombre, correo, filiación y orden. |
 
@@ -81,14 +84,14 @@ En el detalle del manuscrito ve:
 - el **contador de rondas de corrección** y el de versiones, por separado;
 - el **historial** cronológico (estados, versiones, rondas), que nunca se edita.
 
-Cuando el Editor emite un veredicto, usted ve la decisión y los **comentarios para el autor** que dejó el Revisor. No ve quién es el Revisor ni sus comentarios confidenciales.
+Cuando el consenso decide, usted ve la decisión y los **comentarios para el autor** de cada Revisor como «Revisor 1», «Revisor 2»… (y, si hubo desempate, «Revisor 3»). Nunca ve quiénes son.
 
 ## 5. Responder a una solicitud de correcciones
 
-Si el estado pasa a **Requiere correcciones**:
+Si el estado pasa a **Cambios solicitados**:
 
-1. Lea las observaciones del Editor y los comentarios del Revisor.
-2. **Edite los metadatos** si hace falta (solo es posible en *Borrador* y *Requiere correcciones*).
+1. Lea los comentarios de los Revisores.
+2. **Edite los metadatos** si hace falta (solo es posible en *Borrador* y *Cambios solicitados*).
 3. **Envíe una nueva versión** con el PDF corregido.
 
 La nueva versión es la **v2** (luego v3…), queda atada a la ronda vigente y el manuscrito vuelve a **Enviado**. Las versiones anteriores permanecen intactas y consultables.
@@ -116,7 +119,7 @@ El listado admite filtrar por estado, área, rango de fechas y texto (código, t
 
 | Situación | Causa probable | Solución |
 |---|---|---|
-| No puedo editar los metadatos | Solo se editan en *Borrador* y *Requiere correcciones*. | Espere a una solicitud de correcciones. |
+| No puedo editar los metadatos | Solo se editan en *Borrador* y *Cambios solicitados*. | Espere a una solicitud de cambios. |
 | El envío dice que faltan campos | Falta algún dato obligatorio o la lista de autores no cumple las reglas. | Complete lo que indica el mensaje. |
 | «El archivo no es un PDF válido» | El archivo está dañado, cifrado o no es PDF. | Genere de nuevo el PDF sin contraseña. |
 | «Los datos cambiaron mientras los editaba» | Otra pestaña guardó antes. | Recargue y repita el cambio. |

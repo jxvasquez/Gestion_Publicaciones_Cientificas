@@ -137,3 +137,43 @@ textarea {
   background: var(--gpc-primary-100);
   color: var(--gpc-primary-900);
 }
+
+/* Rúbrica: cada opción lleva su nivel, su nombre y su descriptor. */
+.rubric {
+  display: grid;
+  gap: var(--gpc-space-2, 0.5rem);
+}
+
+.rubric__option {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--gpc-space-2, 0.5rem);
+  padding: var(--gpc-space-2, 0.5rem) var(--gpc-space-3, 0.75rem);
+  border: 1px solid var(--gpc-border, #c9ced6);
+  border-radius: var(--gpc-radius, 0.5rem);
+  cursor: pointer;
+
+  &:has(input:checked) {
+    border-color: var(--gpc-info-border, #1d4f91);
+    background: var(--gpc-info-bg, #eaf1fb);
+  }
+
+  &:has(input:focus-visible) {
+    outline: 3px solid var(--gpc-focus, #1d4f91);
+    outline-offset: 2px;
+  }
+
+  input {
+    margin-top: 0.25rem;
+  }
+}
+
+.rubric__text strong {
+  display: inline;
+}
+
+.counter {
+  margin: var(--gpc-space-1, 0.25rem) 0 0;
+  font-variant-numeric: tabular-nums;
+  color: var(--gpc-text-muted, #4a5260);
+}

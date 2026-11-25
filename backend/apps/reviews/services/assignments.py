@@ -1,229 +1,104 @@
-"""Editor actions over reviews: start the review, assign and revoke (TSK-47).
+"""Automatic assignment engine: slots, release and withdrawal (spec 004).
 
-Every action runs in ONE transaction that also records the audit: if the
-audit trail is unavailable nothing is kept and the answer is ``503``.
-The manuscript row is locked first, so two editors acting at once see
-each other's result instead of racing; the partial unique index of
-``reviews_assignment`` stays as the last barrier.
+The system, not an editor, assigns reviewers. ``fill_review_slots`` covers
+the missing slots of the current version of a manuscript (1 and 2, plus 3
+while it is in ``TIE_BREAKER``) with the best eligible candidates;
+``fill_pending_slots`` walks the waiting manuscripts first-come-first-served.
 
-The deadline is fixed by PostgreSQL (``now() + 20 days``) and never by
-the client clock. A reviewer must be eligible (active role, available,
-declaring the manuscript's area, no conflict of interest) and below
-their ``max_active_assignments``; the profile row is locked while the
-load is counted, so two editors cannot overbook the same reviewer.
+Concurrency (R-06): every transaction that creates assignments takes
+ONE advisory lock first and the manuscript row afterwards, so two engines
+never interleave and the load count of a reviewer is exact. Transactions
+that only free slots (evaluation, expiration, conflict, incident,
+withdrawal) never assign: they schedule ``fill_pending_slots`` with
+``transaction.on_commit``. The partial unique indexes and the capacity
+trigger of ``reviews_assignment`` stay as the last barrier.
 
-Each change is audited inside its transaction and announced after the
-commit (:mod:`apps.reviews.signals`). The withdrawal of a manuscript
-revokes its active assignment through :func:`revoke_on_withdrawal`.
+The deadline is fixed by PostgreSQL (``now() + 20 days``), never by the
+client clock. Every change is audited inside its transaction (the actor is
+empty for the system) and announced after the commit
+(:mod:`apps.reviews.signals`).
 """
 
 from __future__ import annotations
 
+import logging
 from datetime import timedelta
 from uuid import UUID
 
-from django.db import IntegrityError, transaction
-from django.db.models import TextChoices
+from django.db import IntegrityError, connection, transaction
+from django.db.models import Count, F, OuterRef, Q, Subquery, Case, IntegerField, Value, When
 from django.db.models.functions import Now
 
 from apps.audit.models import AuditLog
 from apps.audit.services import AuditService, AuditUnavailable
-from apps.publications.models import Manuscript, StatusEvent
-from apps.reviews.models import ASSIGNMENT_DAYS, Assignment
-from apps.reviews.services.eligibility import ineligibility_reason
-from apps.reviews.signals import announce, assignment_created, assignment_revoked
-from apps.users.models import ReviewerProfile, Role, User
+from apps.publications.models import Manuscript, ManuscriptVersion, StatusEvent
+from apps.reviews.models import Assignment
+from apps.reviews.policy import ASSIGNMENT_DAYS, REVIEWERS_PER_VERSION, TIE_BREAKER_SLOT
+from apps.reviews.services.eligibility import eligible_candidates
+from apps.reviews.signals import (
+    announce,
+    assignment_created,
+    assignment_revoked,
+    review_started,
+    slot_unfilled,
+)
+from apps.users.models import Role
 from apps.users.services.auth import AUDIT_UNAVAILABLE_MESSAGE
 from config.exceptions import DomainError, ErrorCode
 
-NOT_ACTIVE_MESSAGE = "El manuscrito fue dado de baja."
-NOT_SUBMITTED_MESSAGE = "Solo un manuscrito enviado puede pasar a revisión."
-NOT_UNDER_REVIEW_MESSAGE = (
-    "El manuscrito debe estar en revisión para asignar un Revisor."
-)
-ACTIVE_ASSIGNMENT_MESSAGE = "El manuscrito ya tiene un Revisor activo."
-EXPIRED_ASSIGNMENT_MESSAGE = (
-    "La asignación vencida debe revocarse antes de asignar a otro Revisor."
-)
-NOT_REVOCABLE_MESSAGE = "Solo una asignación activa o vencida puede revocarse."
-EARLY_CAUSE_MESSAGE = (
-    "Una asignación vigente solo se revoca por conflicto de interés, "
-    "error de asignación o cuenta inhabilitada."
-)
-OVERDUE_CAUSE_MESSAGE = "La causa 'plazo vencido' exige que la asignación haya vencido."
-REVIEWER_CAPACITY_MESSAGE = "El Revisor alcanzó su máximo de asignaciones activas."
-WITHDRAWAL_REASON = "Baja lógica del manuscrito por su Autor."
-INCIDENT_REVOCATION_REASON = "Revocada al resolver un incidente confidencial."
-#: Cause announced to the listeners; it is not an editor-selectable ``RevocationCause``.
-INCIDENT_CAUSE = "IDENTITY_LEAK"
+logger = logging.getLogger(__name__)
 
+#: Key of the advisory lock shared by every transaction that creates assignments.
+ASSIGNMENT_LOCK_KEY = "reviews_assignment_engine"
 
-class RevocationCause(TextChoices):
-    """Why an editor revokes an assignment."""
-
-    CONFLICT_OF_INTEREST = "CONFLICT_OF_INTEREST", "Conflicto de interés"
-    ASSIGNMENT_ERROR = "ASSIGNMENT_ERROR", "Error de asignación"
-    ACCOUNT_DISABLED = "ACCOUNT_DISABLED", "Cuenta inhabilitada"
-    OVERDUE = "OVERDUE", "Plazo vencido"
-    # Solo la fija el sistema al dar de baja el manuscrito.
-    MANUSCRIPT_WITHDRAWN = "MANUSCRIPT_WITHDRAWN", "Baja lógica del manuscrito"
-
-
-#: Causes allowed while the assignment is still within its deadline.
-EARLY_CAUSES = (
-    RevocationCause.CONFLICT_OF_INTEREST,
-    RevocationCause.ASSIGNMENT_ERROR,
-    RevocationCause.ACCOUNT_DISABLED,
+#: Statuses whose manuscripts can wait for reviewers.
+ENGINE_STATUSES = (
+    Manuscript.Status.SUBMITTED,
+    Manuscript.Status.UNDER_REVIEW,
+    Manuscript.Status.TIE_BREAKER,
 )
 
+#: Statuses of an assignment that covers its slot.
+LIVE_STATUSES = (Assignment.Status.ACTIVE, Assignment.Status.COMPLETED)
 
-def record_editor_audit(
+#: Fixed reason stored with every release: it never repeats free text.
+RELEASE_REASONS = {
+    Assignment.ReleaseCause.OVERDUE: "Venció el plazo de 20 días de la asignación.",
+    Assignment.ReleaseCause.CONFLICT_OF_INTEREST: "El revisor declaró un conflicto de interés.",
+    Assignment.ReleaseCause.INCIDENT_REASSIGN: "Liberada al resolver un incidente confidencial.",
+    Assignment.ReleaseCause.ANONYMIZATION_REQUESTED: (
+        "Liberada al solicitar una versión anonimizada."
+    ),
+    Assignment.ReleaseCause.MANUSCRIPT_WITHDRAWN: "Baja lógica del manuscrito por su Autor.",
+    Assignment.ReleaseCause.LEGACY_TRANSITION: (
+        "Cerrada en la transición a la asignación automática."
+    ),
+}
+NOT_RELEASABLE_MESSAGE = "Solo una asignación activa o completada puede liberarse."
+
+
+def record_review_audit(
+    actor,
+    actor_role: str | None,
     action: str,
     entity_type: str,
     entity_id: UUID,
-    editor: User,
-    context: dict,
+    context: dict | None = None,
     **extra,
 ) -> None:
-    """Append an audit event of an editor action to the current transaction."""
+    """Append an audit event of the review flow to the current transaction.
+
+    ``actor`` and ``actor_role`` are ``None`` when the system acts.
+    """
     AuditService.record(
         action=action,
         entity_type=entity_type,
         entity_id=entity_id,
         result=AuditLog.Result.SUCCESS,
-        actor=editor,
-        actor_role=Role.Code.EDITOR,
+        actor=actor,
+        actor_role=actor_role,
         **extra,
-        **context,
-    )
-
-
-def _validation_error(field: str, message: str) -> DomainError:
-    return DomainError(
-        message, code=ErrorCode.VALIDATION_ERROR, details={field: [message]}
-    )
-
-
-def _lock_manuscript(manuscript_id: UUID) -> Manuscript:
-    manuscript = Manuscript.objects.select_for_update().get(pk=manuscript_id)
-    if not manuscript.is_active:
-        raise DomainError(
-            NOT_ACTIVE_MESSAGE,
-            code=ErrorCode.STATE_CONFLICT,
-            details={"status": manuscript.status, "is_active": False},
-        )
-    return manuscript
-
-
-def _ensure_no_open_assignment(manuscript: Manuscript) -> None:
-    """One reviewer at a time; an expired one is revoked first, never replaced."""
-    open_statuses = manuscript.assignments.filter(
-        status__in=(Assignment.Status.ACTIVE, Assignment.Status.EXPIRED)
-    ).values_list("status", flat=True)
-    if Assignment.Status.ACTIVE in open_statuses:
-        raise DomainError(ACTIVE_ASSIGNMENT_MESSAGE, code=ErrorCode.ASSIGNMENT_CONFLICT)
-    if Assignment.Status.EXPIRED in open_statuses:
-        raise DomainError(EXPIRED_ASSIGNMENT_MESSAGE, code=ErrorCode.ASSIGNMENT_CONFLICT)
-
-
-def _reviewer_for_assignment(manuscript: Manuscript, reviewer_id: UUID) -> User:
-    """The eligible reviewer, with their profile locked and capacity checked."""
-    problem = ineligibility_reason(manuscript, reviewer_id)
-    if problem is not None:
-        raise _validation_error("reviewer_id", problem)
-    profile = ReviewerProfile.objects.select_for_update().select_related("user").get(
-        user_id=reviewer_id
-    )
-    active = Assignment.objects.filter(
-        reviewer_id=reviewer_id, status=Assignment.Status.ACTIVE
-    ).count()
-    if active >= profile.max_active_assignments:
-        raise DomainError(
-            REVIEWER_CAPACITY_MESSAGE,
-            code=ErrorCode.ASSIGNMENT_CONFLICT,
-            details={"active": active, "max": profile.max_active_assignments},
-        )
-    return profile.user
-
-
-def _create_assignment(
-    manuscript: Manuscript, reviewer_id: UUID, editor: User, context: dict
-) -> Assignment:
-    """Insert the assignment inside the caller's transaction."""
-    _ensure_no_open_assignment(manuscript)
-    reviewer = _reviewer_for_assignment(manuscript, reviewer_id)
-    version = manuscript.versions.get(version_number=manuscript.current_version)
-    try:
-        with transaction.atomic():
-            assignment = Assignment.objects.create(
-                manuscript=manuscript,
-                version=version,
-                reviewer=reviewer,
-                assigned_by=editor,
-                # `Now()` es el instante de la transacción: ambos campos
-                # coinciden con la restricción `due_at = assigned_at + 20 días`.
-                assigned_at=Now(),
-                due_at=Now() + timedelta(days=ASSIGNMENT_DAYS),
-            )
-    except IntegrityError as exc:
-        raise DomainError(ACTIVE_ASSIGNMENT_MESSAGE, code=ErrorCode.ASSIGNMENT_CONFLICT) from exc
-    assignment.refresh_from_db()
-    record_editor_audit(
-        "ASSIGNMENT_CREATED",
-        "ASSIGNMENT",
-        assignment.pk,
-        editor,
-        context,
-        details={
-            "manuscript_id": str(manuscript.pk),
-            "code": manuscript.code,
-            "reviewer_id": str(reviewer.pk),
-            "version_number": version.version_number,
-            "due_at": assignment.due_at.isoformat(),
-        },
-    )
-    transaction.on_commit(
-        lambda: announce(
-            assignment_created,
-            assignment_id=assignment.pk,
-            manuscript_id=manuscript.pk,
-            reviewer_id=reviewer.pk,
-            assigned_by_id=editor.pk,
-        )
-    )
-    return assignment
-
-
-def _mark_revoked(assignment: Assignment, *, revoked_by: User | None, reason: str) -> None:
-    """Close the assignment as ``REVOKED``; the instant is the database's."""
-    assignment.status = Assignment.Status.REVOKED
-    assignment.revoked_by = revoked_by
-    assignment.revocation_reason = reason
-    assignment.revoked_at = Now()
-    assignment.lock_version += 1
-    assignment.save(
-        update_fields=(
-            "status",
-            "revoked_by",
-            "revoked_at",
-            "revocation_reason",
-            "lock_version",
-            "updated_at",
-        )
-    )
-    assignment.refresh_from_db()
-
-
-def _announce_revocation(assignment: Assignment, cause: str) -> None:
-    """Tell the listeners once the revocation is committed."""
-    transaction.on_commit(
-        lambda: announce(
-            assignment_revoked,
-            assignment_id=assignment.pk,
-            manuscript_id=assignment.manuscript_id,
-            reviewer_id=assignment.reviewer_id,
-            cause=str(cause),
-        )
+        **(context or {}),
     )
 
 
@@ -236,173 +111,361 @@ def run_audited(work):
         raise DomainError(AUDIT_UNAVAILABLE_MESSAGE, code=ErrorCode.AUDIT_UNAVAILABLE) from exc
 
 
-def start_review(
-    *, manuscript_id: UUID, editor: User, reviewer_id: UUID | None, context: dict
-) -> tuple[Manuscript, Assignment | None]:
-    """Move ``SUBMITTED`` to ``UNDER_REVIEW``, optionally assigning a reviewer.
+def lock_assignment_engine() -> None:
+    """Take the transaction-scoped advisory lock of the engine (before any row)."""
+    with connection.cursor() as cursor:
+        cursor.execute("SELECT pg_advisory_xact_lock(hashtext(%s))", [ASSIGNMENT_LOCK_KEY])
 
-    Both changes commit together or not at all.
-    """
 
-    def work() -> tuple[Manuscript, Assignment | None]:
-        manuscript = _lock_manuscript(manuscript_id)
-        if manuscript.status != Manuscript.Status.SUBMITTED:
-            raise DomainError(
-                NOT_SUBMITTED_MESSAGE,
-                code=ErrorCode.STATE_CONFLICT,
-                details={"status": manuscript.status},
-            )
-        manuscript.status = Manuscript.Status.UNDER_REVIEW
-        manuscript.lock_version += 1
-        manuscript.save(update_fields=("status", "lock_version", "updated_at"))
-        StatusEvent.objects.create(
-            manuscript=manuscript,
-            from_status=Manuscript.Status.SUBMITTED,
-            to_status=Manuscript.Status.UNDER_REVIEW,
-            actor=editor,
-            metadata={"round_number": manuscript.current_round},
+# --- Slots ------------------------------------------------------------------
+
+
+def required_slots(manuscript: Manuscript) -> tuple[int, ...]:
+    """Slots the current version needs: 1 and 2, plus the tie-break while it lasts."""
+    slots = tuple(range(1, REVIEWERS_PER_VERSION + 1))
+    if manuscript.status == Manuscript.Status.TIE_BREAKER:
+        slots += (TIE_BREAKER_SLOT,)
+    return slots
+
+
+def covered_slots(version: ManuscriptVersion) -> set[int]:
+    """Slots of the version with an ``ACTIVE`` or ``COMPLETED`` assignment."""
+    return set(
+        Assignment.objects.filter(version=version, status__in=LIVE_STATUSES).values_list(
+            "slot", flat=True
         )
-        record_editor_audit(
-            "REVIEW_STARTED",
-            "MANUSCRIPT",
-            manuscript.pk,
-            editor,
-            context,
-            details={"code": manuscript.code, "reviewer_assigned": reviewer_id is not None},
-        )
-        assignment = None
-        if reviewer_id is not None:
-            assignment = _create_assignment(manuscript, reviewer_id, editor, context)
-        return manuscript, assignment
-
-    return run_audited(work)
-
-
-def assign_reviewer(
-    *, manuscript_id: UUID, editor: User, reviewer_id: UUID, context: dict
-) -> Assignment:
-    """Create the single active assignment of a manuscript under review."""
-
-    def work() -> Assignment:
-        manuscript = _lock_manuscript(manuscript_id)
-        if manuscript.status != Manuscript.Status.UNDER_REVIEW:
-            raise DomainError(
-                NOT_UNDER_REVIEW_MESSAGE,
-                code=ErrorCode.STATE_CONFLICT,
-                details={"status": manuscript.status},
-            )
-        return _create_assignment(manuscript, reviewer_id, editor, context)
-
-    return run_audited(work)
-
-
-def revoke_assignment(
-    *, assignment_id: UUID, editor: User, cause: str, reason: str, context: dict
-) -> Assignment:
-    """Revoke an active or expired assignment; the reason is mandatory.
-
-    While the deadline has not passed only the early causes are valid.
-    The manuscript stays ``UNDER_REVIEW``, pending a new assignment, and
-    evaluations already written are left untouched.
-    """
-
-    def work() -> Assignment:
-        assignment = Assignment.objects.select_for_update().get(pk=assignment_id)
-        if assignment.status not in (Assignment.Status.ACTIVE, Assignment.Status.EXPIRED):
-            raise DomainError(
-                NOT_REVOCABLE_MESSAGE,
-                code=ErrorCode.STATE_CONFLICT,
-                details={"status": assignment.status},
-            )
-        overdue = assignment.status == Assignment.Status.EXPIRED or Assignment.objects.filter(
-            pk=assignment.pk, due_at__lte=Now()
-        ).exists()
-        if not overdue and cause not in EARLY_CAUSES:
-            raise _validation_error(
-                "cause",
-                OVERDUE_CAUSE_MESSAGE
-                if cause == RevocationCause.OVERDUE
-                else EARLY_CAUSE_MESSAGE,
-            )
-        previous_status = assignment.status
-        _mark_revoked(assignment, revoked_by=editor, reason=reason)
-        record_editor_audit(
-            "ASSIGNMENT_REVOKED",
-            "ASSIGNMENT",
-            assignment.pk,
-            editor,
-            context,
-            reason=reason,
-            details={
-                "manuscript_id": str(assignment.manuscript_id),
-                "cause": cause,
-                "previous_status": previous_status,
-            },
-        )
-        _announce_revocation(assignment, cause)
-        return assignment
-
-    return run_audited(work)
-
-
-def revoke_on_withdrawal(*, manuscript_id: UUID, withdrawn_by_id: UUID) -> Assignment | None:
-    """Revoke the active assignment of a manuscript its author withdrew.
-
-    Runs inside the withdrawal's transaction (the ``manuscript_withdrawing``
-    signal): if the audit cannot be written the whole withdrawal aborts.
-    The system revokes it, so ``revoked_by`` stays empty and the author's
-    identity never reaches the assignment. Evaluations are left untouched.
-    """
-    assignment = (
-        Assignment.objects.select_for_update()
-        .filter(manuscript_id=manuscript_id, status=Assignment.Status.ACTIVE)
-        .first()
     )
-    if assignment is None:
+
+
+def awaiting_reviewers():
+    """Active manuscripts whose current version lacks at least one required slot.
+
+    Ordered first-come-first-served by the submission of the current
+    version and then by ``id`` (FR-014). A manuscript with all its slots
+    covered, withdrawn, or outside the engine statuses never appears.
+    """
+    version_submitted_at = ManuscriptVersion.objects.filter(
+        manuscript=OuterRef("pk"), version_number=OuterRef("current_version")
+    ).values("submitted_at")[:1]
+    required = Case(
+        When(status=Manuscript.Status.TIE_BREAKER, then=Value(REVIEWERS_PER_VERSION + 1)),
+        default=Value(REVIEWERS_PER_VERSION),
+        output_field=IntegerField(),
+    )
+    return (
+        Manuscript.objects.filter(is_active=True, status__in=ENGINE_STATUSES)
+        .annotate(
+            live_slots=Count(
+                "assignments",
+                filter=Q(
+                    assignments__version__version_number=F("current_version"),
+                    assignments__status__in=LIVE_STATUSES,
+                ),
+                distinct=True,
+            ),
+            required_slots=required,
+            version_submitted_at=Subquery(version_submitted_at),
+        )
+        .filter(live_slots__lt=F("required_slots"))
+        .order_by("version_submitted_at", "id")
+    )
+
+
+# --- Engine -----------------------------------------------------------------
+
+
+def _slot_already_reported(manuscript: Manuscript, version: ManuscriptVersion, slot: int) -> bool:
+    return AuditLog.objects.filter(
+        action="ASSIGNMENT_SLOT_UNFILLED",
+        entity_id=manuscript.pk,
+        details__version_number=version.version_number,
+        details__slot=slot,
+    ).exists()
+
+
+def _create_assignment(
+    manuscript: Manuscript, version: ManuscriptVersion, reviewer, slot: int, context: dict
+) -> Assignment | None:
+    """Insert one assignment; ``None`` if a barrier of the database refused it."""
+    try:
+        with transaction.atomic():
+            assignment = Assignment.objects.create(
+                manuscript=manuscript,
+                version=version,
+                reviewer=reviewer,
+                slot=slot,
+                assigned_by=None,
+                # `Now()` es el instante de la transacción: ambos campos
+                # coinciden con la restricción `due_at = assigned_at + 20 días`.
+                assigned_at=Now(),
+                due_at=Now() + timedelta(days=ASSIGNMENT_DAYS),
+            )
+    except IntegrityError:
+        logger.warning("La base rechazó la asignación del cupo %s de %s", slot, manuscript.pk)
         return None
-    _mark_revoked(assignment, revoked_by=None, reason=WITHDRAWAL_REASON)
-    AuditService.record(
-        action="ASSIGNMENT_REVOKED",
-        entity_type="ASSIGNMENT",
-        entity_id=assignment.pk,
-        result=AuditLog.Result.SUCCESS,
-        actor_id=withdrawn_by_id,
-        actor_role=Role.Code.AUTHOR,
-        reason=WITHDRAWAL_REASON,
+    assignment.refresh_from_db()
+    record_review_audit(
+        None,
+        None,
+        "AUTO_ASSIGNMENT_CREATED",
+        "ASSIGNMENT",
+        assignment.pk,
+        context,
         details={
-            "manuscript_id": str(manuscript_id),
-            "cause": RevocationCause.MANUSCRIPT_WITHDRAWN,
-            "previous_status": Assignment.Status.ACTIVE,
+            "manuscript_id": str(manuscript.pk),
+            "code": manuscript.code,
+            "reviewer_id": str(reviewer.pk),
+            "version_number": version.version_number,
+            "slot": slot,
+            "due_at": assignment.due_at.isoformat(),
         },
     )
-    _announce_revocation(assignment, RevocationCause.MANUSCRIPT_WITHDRAWN)
+    transaction.on_commit(
+        lambda: announce(
+            assignment_created,
+            assignment_id=assignment.pk,
+            manuscript_id=manuscript.pk,
+            reviewer_id=reviewer.pk,
+        )
+    )
     return assignment
 
 
-def revoke_for_incident(assignment: Assignment, *, editor: User, context: dict) -> bool:
-    """Revoke the ``ACTIVE`` or ``EXPIRED`` assignment an incident resolution closes.
+def _start_review(manuscript: Manuscript, version: ManuscriptVersion) -> None:
+    """``SUBMITTED`` → ``UNDER_REVIEW`` with the first assignment of the version."""
+    manuscript.status = Manuscript.Status.UNDER_REVIEW
+    manuscript.lock_version += 1
+    manuscript.save(update_fields=("status", "lock_version", "updated_at"))
+    StatusEvent.objects.create(
+        manuscript=manuscript,
+        from_status=Manuscript.Status.SUBMITTED,
+        to_status=Manuscript.Status.UNDER_REVIEW,
+        actor=None,
+        metadata={"round_number": manuscript.current_round},
+    )
+    transaction.on_commit(
+        lambda: announce(
+            review_started, manuscript_id=manuscript.pk, version_id=version.pk
+        )
+    )
 
-    Runs inside the resolution's transaction, with the assignment already
-    locked by the caller. One already revoked or completed is left as it
-    is. The reason is a fixed text: it never repeats the reviewer's report.
-    Returns whether something was revoked.
+
+def fill_review_slots(manuscript_id: UUID, *, context: dict | None = None) -> list[Assignment]:
+    """Cover the missing slots of the current version with the best candidates.
+
+    Idempotent: with every slot covered, a withdrawn manuscript or a status
+    outside the engine, it does nothing. A slot without a candidate stays
+    pending (audited and announced once) and a later run covers it.
     """
-    if assignment.status not in (Assignment.Status.ACTIVE, Assignment.Status.EXPIRED):
-        return False
+    context = context or {}
+
+    def work() -> list[Assignment]:
+        lock_assignment_engine()
+        manuscript = Manuscript.objects.select_for_update(of=("self",)).get(pk=manuscript_id)
+        if not manuscript.is_active or manuscript.status not in ENGINE_STATUSES:
+            return []
+        version = manuscript.versions.get(version_number=manuscript.current_version)
+        missing = [slot for slot in required_slots(manuscript) if slot not in covered_slots(version)]
+        if not missing:
+            return []
+
+        candidates = list(eligible_candidates(manuscript, version)[: len(missing)])
+        created: list[Assignment] = []
+        unfilled: list[int] = []
+        remaining = iter(candidates)
+        for slot in missing:
+            reviewer = next(remaining, None)
+            assignment = (
+                _create_assignment(manuscript, version, reviewer, slot, context)
+                if reviewer is not None
+                else None
+            )
+            if assignment is None:
+                unfilled.append(slot)
+                continue
+            if manuscript.status == Manuscript.Status.SUBMITTED:
+                _start_review(manuscript, version)
+            created.append(assignment)
+
+        for slot in unfilled:
+            if _slot_already_reported(manuscript, version, slot):
+                continue
+            record_review_audit(
+                None,
+                None,
+                "ASSIGNMENT_SLOT_UNFILLED",
+                "MANUSCRIPT",
+                manuscript.pk,
+                context,
+                details={
+                    "code": manuscript.code,
+                    "version_number": version.version_number,
+                    "slot": slot,
+                },
+            )
+            transaction.on_commit(
+                lambda slot=slot: announce(
+                    slot_unfilled,
+                    manuscript_id=manuscript.pk,
+                    version_id=version.pk,
+                    slot=slot,
+                )
+            )
+        return created
+
+    return run_audited(work)
+
+
+def fill_pending_slots(*, context: dict | None = None) -> int:
+    """Cover the pending slots of every waiting manuscript, oldest submission first.
+
+    Each manuscript is its own transaction: if the audit trail fails for
+    one, it stays pending for the next run and the rest are still served.
+    Returns how many assignments were created.
+    """
+    total = 0
+    for manuscript_id in list(awaiting_reviewers().values_list("pk", flat=True)):
+        try:
+            total += len(fill_review_slots(manuscript_id, context=context))
+        except DomainError as error:
+            if error.code != ErrorCode.AUDIT_UNAVAILABLE:
+                raise
+            logger.error("No se pudo auditar la asignación del manuscrito %s", manuscript_id)
+    return total
+
+
+def schedule_fill_pending_slots() -> None:
+    """Run :func:`fill_pending_slots` once the current transaction commits."""
+    transaction.on_commit(_fill_pending_after_commit)
+
+
+def _fill_pending_after_commit() -> None:
+    try:
+        fill_pending_slots()
+    except Exception:  # noqa: BLE001 - la reasignación nunca revierte lo ya confirmado
+        logger.exception("Falló la reasignación automática de cupos")
+
+
+# --- Release ----------------------------------------------------------------
+
+
+def mark_released(
+    assignment: Assignment, *, status: str, cause: str, actor, reason: str | None = None
+) -> None:
+    """Close ``assignment`` as ``REVOKED`` or ``EXPIRED``; the instant is the database's."""
+    assignment.status = status
+    assignment.release_cause = cause
+    assignment.revoked_by = actor
+    assignment.revocation_reason = reason or RELEASE_REASONS.get(cause)
+    assignment.revoked_at = Now()
+    assignment.lock_version += 1
+    assignment.save(
+        update_fields=(
+            "status",
+            "release_cause",
+            "revoked_by",
+            "revoked_at",
+            "revocation_reason",
+            "lock_version",
+            "updated_at",
+        )
+    )
+    assignment.refresh_from_db()
+
+
+def release_assignment(
+    assignment: Assignment,
+    *,
+    cause: str,
+    actor,
+    actor_role: str | None,
+    context: dict | None = None,
+) -> Assignment:
+    """Release an assignment without touching the ranking (FR-031).
+
+    Runs inside the caller's transaction, with the assignment already
+    locked. It audits ``ASSIGNMENT_RELEASED``, announces the release after
+    the commit and schedules the engine to cover the freed slot. The
+    evaluation of a ``COMPLETED`` assignment is kept untouched.
+    """
+    if assignment.status not in (Assignment.Status.ACTIVE, Assignment.Status.COMPLETED):
+        raise DomainError(
+            NOT_RELEASABLE_MESSAGE,
+            code=ErrorCode.STATE_CONFLICT,
+            details={"status": assignment.status},
+        )
     previous_status = assignment.status
-    _mark_revoked(assignment, revoked_by=editor, reason=INCIDENT_REVOCATION_REASON)
-    record_editor_audit(
-        "ASSIGNMENT_REVOKED",
+    mark_released(assignment, status=Assignment.Status.REVOKED, cause=cause, actor=actor)
+    record_review_audit(
+        actor,
+        actor_role,
+        "ASSIGNMENT_RELEASED",
         "ASSIGNMENT",
         assignment.pk,
-        editor,
         context,
-        reason=INCIDENT_REVOCATION_REASON,
+        reason=assignment.revocation_reason,
         details={
             "manuscript_id": str(assignment.manuscript_id),
-            "cause": INCIDENT_CAUSE,
+            "cause": cause,
+            "slot": assignment.slot,
             "previous_status": previous_status,
         },
     )
-    _announce_revocation(assignment, INCIDENT_CAUSE)
-    return True
+    transaction.on_commit(
+        lambda: announce(
+            assignment_revoked,
+            assignment_id=assignment.pk,
+            manuscript_id=assignment.manuscript_id,
+            reviewer_id=assignment.reviewer_id,
+            cause=str(cause),
+        )
+    )
+    schedule_fill_pending_slots()
+    return assignment
+
+
+def release_on_withdrawal(*, manuscript_id: UUID, withdrawn_by_id: UUID) -> list[Assignment]:
+    """Release every ``ACTIVE`` assignment of a manuscript its author withdrew.
+
+    Runs inside the withdrawal's transaction (the ``manuscript_withdrawing``
+    signal): if the audit cannot be written the whole withdrawal aborts.
+    ``revoked_by`` stays empty so the author's identity never reaches the
+    assignment. Evaluations are left untouched.
+    """
+    released = []
+    assignments = Assignment.objects.select_for_update().filter(
+        manuscript_id=manuscript_id, status=Assignment.Status.ACTIVE
+    )
+    for assignment in assignments:
+        mark_released(
+            assignment,
+            status=Assignment.Status.REVOKED,
+            cause=Assignment.ReleaseCause.MANUSCRIPT_WITHDRAWN,
+            actor=None,
+        )
+        AuditService.record(
+            action="ASSIGNMENT_RELEASED",
+            entity_type="ASSIGNMENT",
+            entity_id=assignment.pk,
+            result=AuditLog.Result.SUCCESS,
+            actor_id=withdrawn_by_id,
+            actor_role=Role.Code.AUTHOR,
+            reason=assignment.revocation_reason,
+            details={
+                "manuscript_id": str(manuscript_id),
+                "cause": Assignment.ReleaseCause.MANUSCRIPT_WITHDRAWN,
+                "slot": assignment.slot,
+                "previous_status": Assignment.Status.ACTIVE,
+            },
+        )
+        transaction.on_commit(
+            lambda assignment=assignment: announce(
+                assignment_revoked,
+                assignment_id=assignment.pk,
+                manuscript_id=assignment.manuscript_id,
+                reviewer_id=assignment.reviewer_id,
+                cause=str(Assignment.ReleaseCause.MANUSCRIPT_WITHDRAWN),
+            )
+        )
+        released.append(assignment)
+    return released

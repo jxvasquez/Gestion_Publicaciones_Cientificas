@@ -24,8 +24,7 @@ Al entrar **no se le pide elegir un rol**. El panel muestra a la vez todos los a
 |---|---|
 | Autor | Mis manuscritos |
 | Revisor | Mis asignaciones · Historial de evaluaciones |
-| Editor | Bandeja de envíos · Plazos vencidos · Incidentes confidenciales |
-| Administrador | Auditoría |
+| Administrador | Incidentes · Revisores · Carreras · Auditoría |
 
 Cada sección del panel se carga por separado. Si una falla, las demás siguen funcionando y la que falló ofrece un botón para recargar.
 

@@ -10,7 +10,14 @@ from __future__ import annotations
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as DjangoUserAdmin
 
-from apps.users.models import LoginAttempt, ReviewerProfile, Role, User, UserRole
+from apps.users.models import (
+    AcademicArea,
+    LoginAttempt,
+    ReviewerProfile,
+    Role,
+    User,
+    UserRole,
+)
 
 
 @admin.register(User)
@@ -67,7 +74,7 @@ class UserRoleAdmin(admin.ModelAdmin):
 
 @admin.register(ReviewerProfile)
 class ReviewerProfileAdmin(admin.ModelAdmin):
-    list_display = ("user", "is_available", "max_active_assignments")
+    list_display = ("user", "is_available", "ranking_score")
     list_filter = ("is_available",)
     search_fields = ("user__username", "user__institutional_id")
     autocomplete_fields = ("user",)
@@ -90,3 +97,10 @@ class LoginAttemptAdmin(admin.ModelAdmin):
 
     def has_delete_permission(self, request, obj=None) -> bool:
         return False
+
+
+@admin.register(AcademicArea)
+class AcademicAreaAdmin(admin.ModelAdmin):
+    list_display = ("name", "code", "is_active")
+    list_filter = ("is_active",)
+    search_fields = ("name", "code")

@@ -1,7 +1,7 @@
 """Query-string filters of the public catalog (plan section 2.6, TSK-74).
 
-``search`` covers title, authors, keywords, area, abstract and code;
-``area``, ``language``, ``keyword``, ``date_from`` and ``date_to`` (the
+``search`` covers title, authors, keywords, careers, abstract and code;
+``area`` (career code), ``language``, ``keyword``, ``date_from`` and ``date_to`` (the
 publication date) narrow the list; ``ordering`` is ``published_at`` or
 ``title``, with a leading ``-`` for descending. A malformed value is a
 ``400``, never ignored.

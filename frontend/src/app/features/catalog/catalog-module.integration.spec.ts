@@ -10,6 +10,7 @@ import { AuthStore } from '../../core/auth/auth.store';
 import { API_BASE_URL } from '../../core/http/api-base-url.token';
 import { errorInterceptor } from '../../core/http/error.interceptor';
 import { buildArticle, buildArticlePage } from './testing/catalog.fixtures';
+import { AREA_SERVICE_STUB } from '../../core/testing/stubs';
 
 /**
  * El catálogo público a través de las rutas reales de la SPA (TSK-80):
@@ -23,6 +24,7 @@ describe('Catálogo público (rutas reales)', () => {
   beforeEach(() => {
     TestBed.configureTestingModule({
       providers: [
+        AREA_SERVICE_STUB,
         provideRouter(routes),
         provideHttpClient(withInterceptors([authInterceptor, errorInterceptor])),
         provideHttpClientTesting(),

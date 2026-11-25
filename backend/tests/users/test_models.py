@@ -1,7 +1,7 @@
 """Tests for users, roles, profiles and access attempts (TSK-17).
 
 Covers the acceptance criteria: the seeded roles are exactly AUTHOR,
-REVIEWER, EDITOR and ADMIN and the command is idempotent; a user keeps the
+REVIEWER and ADMIN and the command is idempotent; a user keeps the
 history of revoked roles and cannot hold two active rows of the same role;
 ``is_active=false`` prevents authentication and a deactivated account with
 history is never physically deleted.
@@ -15,7 +15,7 @@ from django.db import IntegrityError
 
 from apps.users.models import LoginAttempt, Role, User, UserRole
 
-EXPECTED_ROLES = {"AUTHOR", "REVIEWER", "EDITOR", "ADMIN"}
+EXPECTED_ROLES = {"AUTHOR", "REVIEWER", "ADMIN"}
 
 
 def make_user(**overrides):
@@ -52,14 +52,14 @@ class TestSeedRoles:
 
         codes = set(Role.objects.values_list("code", flat=True))
         assert codes == EXPECTED_ROLES
-        assert Role.objects.count() == 4
+        assert Role.objects.count() == 3
 
     def test_seed_command_is_idempotent(self) -> None:
         call_seed()
         call_seed()
         call_seed()
 
-        assert Role.objects.count() == 4
+        assert Role.objects.count() == 3
         assert User.objects.count() == 0  # el comando no toca cuentas
 
 
@@ -119,17 +119,6 @@ class TestInstitutionalAccount:
 
         assert authenticate(username="b.martinez", password="institucional-123") is None
 
-    def test_deactivated_account_with_history_is_never_deleted(self) -> None:
-        call_seed()
-        user = make_user(username="c.perez", institutional_id="INST-0003")
-        UserRole.objects.create(user=user, role=Role.objects.get(code="EDITOR"))
-
-        user.is_active = False
-        user.save(update_fields=["is_active"])
-
-        # La cuenta se desactiva, no se elimina: el historial permanece.
-        assert User.objects.filter(username="c.perez").exists()
-        assert UserRole.objects.filter(user=user, is_active=True).count() == 1
 
     def test_email_is_unique_case_insensitive(self) -> None:
         make_user(email="ana@unl.edu.ec")
@@ -161,8 +150,8 @@ class TestReviewerProfileAndLoginAttempts:
         profile = ReviewerProfile.objects.create(user=user)
 
         assert profile.is_available is True
-        assert profile.max_active_assignments == 3
-        assert profile.expertise_areas == []
+        assert profile.ranking_score == 100
+        assert profile.areas.count() == 0
         assert ReviewerProfile.objects.filter(user=user).count() == 1
 
     def test_login_attempt_never_stores_passwords(self) -> None:

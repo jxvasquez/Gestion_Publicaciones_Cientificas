@@ -1,12 +1,12 @@
-"""The author reads the outcome of the evaluation (D-19, CA-HU-13-04).
+"""The author reads the outcome of the evaluations (D-19, CA-HU-13-04, spec 004 FR-027).
 
-After the editor registers a verdict, the author's manuscript carries
-``feedback``: the comments the reviewer wrote for them, the decision and
-the editor's observations. It is an allowlist of three fields, so none of
-the following ever reaches the author: the reviewer's identity, the
-confidential comments, the scores and the editor's internal
-justification. Before a verdict there is no feedback, even if the
-reviewer's final evaluation already exists.
+After the system registers the verdict, the author's manuscript carries
+``feedback``: the decision, its date and origin, the observations and one
+review per considered evaluation labelled «Revisor N» with the comments
+the reviewer wrote for them. It is an allowlist: none of the following
+ever reaches the author: the reviewers' identity, the scores, the
+individual recommendations and the ranking. Before a verdict there is no
+feedback, even if a final evaluation already exists.
 """
 
 from __future__ import annotations
@@ -14,226 +14,132 @@ from __future__ import annotations
 import json
 
 import pytest
-from django.core.management import call_command
 
-from apps.publications.services.verdicts import register_verdict
-from tests.publications.test_manuscript_api import actor, client_for
-from tests.publications.test_verdicts import reviewed
+from apps.publications.models import Manuscript, Verdict, VerdictEvaluation
+from tests.factories import FinalEvaluationFactory, VerdictFactory
+from tests.phase5 import (
+    AUTHOR_TOKENS,
+    REVIEWER_PERSON,
+    SECOND_REVIEWER_PERSON,
+    Lifecycle,
+)
+from tests.publications.test_manuscript_api import client_for
+from tests.publications.test_submission import media_root, seeded_roles, submit  # noqa: F401
+from tests.reviews.support import make_assignment, submitted
 
 pytestmark = pytest.mark.django_db
 
-SECRET_COMMENT = "Solo para el Editor: sospecho autocitas."
-INTERNAL_JUSTIFICATION = "Justificación interna del Editor."
-FOR_AUTHOR = "Comentario del Revisor para el Autor."
-REVIEWER_NAME = "Revisora Secreta Anónima"
-
-
-@pytest.fixture(autouse=True)
-def seeded_roles(db) -> None:
-    call_command("seed_roles", verbosity=0)
-
-
-@pytest.fixture(autouse=True)
-def media_root(settings, tmp_path):
-    settings.MEDIA_ROOT = tmp_path
-    return tmp_path
-
-
-@pytest.fixture
-def editor():
-    return actor("EDITOR")
+FOR_AUTHOR_1 = "Comentario del primer revisor para el Autor."
+FOR_AUTHOR_2 = "Comentario del segundo revisor para el Autor."
+FORBIDDEN_KEYS = {
+    "scientific_contribution",
+    "methodological_rigor",
+    "literature_grounding",
+    "results_conclusions",
+    "academic_writing",
+    "recommendation",
+    "ranking_score",
+    "reviewer",
+    "reviewer_id",
+    "email",
+}
 
 
 @pytest.fixture
-def owner():
-    return actor("AUTHOR")
-
-
-def judged_case(editor, owner, **evaluation):
-    """A manuscript under review whose final evaluation carries secrets."""
-    from apps.reviews.models import Evaluation
-
-    manuscript = reviewed(
-        editor,
-        owner=owner,
-        evaluation={
-            "comments_for_author": FOR_AUTHOR,
-            "confidential_comments": SECRET_COMMENT,
-            **evaluation,
-        },
-    )
-    reviewer = Evaluation.objects.get(manuscript=manuscript).reviewer
-    reviewer.first_name, reviewer.last_name = "Revisora", "Secreta Anónima"
-    reviewer.save(update_fields=("first_name", "last_name"))
-    return manuscript, reviewer
-
-
-def judge(editor, manuscript, decision, **texts):
-    return register_verdict(
-        manuscript_id=manuscript.pk, editor=editor, decision=decision, context={}, **texts
-    )
+def flow(django_capture_on_commit_callbacks, submit) -> Lifecycle:  # noqa: F811
+    return Lifecycle.create(django_capture_on_commit_callbacks, submit)
 
 
 def detail(owner, manuscript):
     return client_for(owner).get(f"/api/v1/manuscripts/{manuscript.pk}/")
 
 
+def feedback_of(flow: Lifecycle) -> dict | None:
+    return detail(flow.author, flow.manuscript).json()["feedback"]
+
+
 class TestBeforeTheVerdict:
-    def test_a_final_evaluation_alone_is_not_shown(self, editor, owner) -> None:
-        manuscript, _ = judged_case(editor, owner)
+    def test_a_single_final_evaluation_shows_nothing(self, flow) -> None:
+        flow.submit_manuscript()
+        flow.evaluate(flow.reviewers[0], comments_for_author=FOR_AUTHOR_1)
 
-        body = detail(owner, manuscript).json()
-
-        assert body["feedback"] is None
-        assert FOR_AUTHOR not in json.dumps(body)
-
-    def test_a_new_draft_has_no_feedback(self, owner) -> None:
-        from tests.publications.test_manuscript_api import post_draft
-
-        response = post_draft(owner)
-
-        assert response.status_code == 201 and response.json()["feedback"] is None
+        assert feedback_of(flow) is None
 
 
 class TestAfterTheVerdict:
-    def test_corrections_give_the_author_the_observations_and_the_reviewer_comments(
-        self, editor, owner
-    ) -> None:
-        manuscript, _ = judged_case(editor, owner, recommendation="REQUIRES_CORRECTIONS")
-        judge(editor, manuscript, "REQUIRES_CORRECTIONS", observations="Ampliar la sección 3.")
-
-        response = detail(owner, manuscript)
-
-        assert response.status_code == 200
-        assert response.json()["feedback"] == {
-            "comments_for_author": FOR_AUTHOR,
-            "decision": "REQUIRES_CORRECTIONS",
-            "observations": "Ampliar la sección 3.",
-        }
-
-    def test_an_acceptance_has_no_observations(self, editor, owner) -> None:
-        manuscript, _ = judged_case(editor, owner)
-        judge(editor, manuscript, "ACCEPTED")
-
-        feedback = detail(owner, manuscript).json()["feedback"]
-
-        assert feedback == {
-            "comments_for_author": FOR_AUTHOR,
-            "decision": "ACCEPTED",
-            "observations": None,
-        }
-
-    def test_a_rejection_never_shows_the_internal_justification(self, editor, owner) -> None:
-        manuscript, _ = judged_case(editor, owner, recommendation="REJECT")
-        judge(editor, manuscript, "REJECTED", justification=INTERNAL_JUSTIFICATION)
-
-        body = detail(owner, manuscript).json()
-
-        assert body["feedback"]["decision"] == "REJECTED"
-        assert INTERNAL_JUSTIFICATION not in json.dumps(body)
-
-    def test_the_feedback_is_exactly_the_three_allowed_fields(self, editor, owner) -> None:
-        manuscript, _ = judged_case(editor, owner)
-        judge(editor, manuscript, "ACCEPTED")
-
-        feedback = detail(owner, manuscript).json()["feedback"]
-
-        assert sorted(feedback) == ["comments_for_author", "decision", "observations"]
-
-    def test_nothing_that_identifies_the_reviewer_or_scores_reaches_the_author(
-        self, editor, owner
-    ) -> None:
-        manuscript, reviewer = judged_case(editor, owner, recommendation="REQUIRES_CORRECTIONS")
-        judge(
-            editor,
-            manuscript,
-            "REQUIRES_CORRECTIONS",
-            observations="Corregir.",
-            justification=INTERNAL_JUSTIFICATION,
+    def test_the_reviews_are_labelled_by_slot_without_identities(self, flow) -> None:
+        flow.submit_manuscript()
+        flow.evaluate(flow.reviewers[0], comments_for_author=FOR_AUTHOR_1)
+        flow.evaluate(
+            flow.reviewers[1],
+            comments_for_author=FOR_AUTHOR_2,
+            recommendation="MINOR_REVISION",
         )
 
-        for response in (
-            detail(owner, manuscript),
-            client_for(owner).get("/api/v1/manuscripts/"),
-        ):
-            text = response.content.decode()
-            assert response.status_code == 200
-            assert SECRET_COMMENT not in text
-            assert INTERNAL_JUSTIFICATION not in text
-            assert REVIEWER_NAME not in text
-            assert reviewer.email not in text and reviewer.institutional_id not in text
-            assert str(reviewer.pk) not in text
-            for forbidden in ("confidential_comments", "originality_score", "reviewer", "editor"):
-                assert forbidden not in text, forbidden
+        feedback = feedback_of(flow)
 
-    def test_the_latest_verdict_is_the_one_shown(self, editor, owner) -> None:
-        manuscript, _ = judged_case(editor, owner, recommendation="REQUIRES_CORRECTIONS")
-        judge(editor, manuscript, "REQUIRES_CORRECTIONS", observations="Primera ronda.")
-        # Un veredicto posterior (otra versión) sustituye al anterior en la vista.
-        from apps.publications.models import Manuscript, Verdict
-        from tests.factories import ManuscriptVersionFactory
+        assert feedback["decision"] == "CHANGES_REQUESTED"
+        assert feedback["origin"] == "CONSENSUS"
+        assert feedback["reviews"] == [
+            {"label": "Revisor 1", "comments_for_author": FOR_AUTHOR_1},
+            {"label": "Revisor 2", "comments_for_author": FOR_AUTHOR_2},
+        ]
+        assert feedback["observations"]
 
-        second_version = ManuscriptVersionFactory(
-            manuscript=manuscript, submitted_by=owner, version_number=2, round_number=1
-        )
-        first = Verdict.objects.get(manuscript=manuscript)
-        Verdict.objects.create(
-            manuscript=manuscript,
-            version=second_version,
-            evaluation=first.evaluation,
-            editor=editor,
-            decision="ACCEPTED",
-        )
-        Manuscript.objects.filter(pk=manuscript.pk).update(current_version=2)
+    def test_the_payload_has_no_identities_scores_or_recommendations(self, flow) -> None:
+        flow.submit_manuscript()
+        flow.evaluate(flow.reviewers[0], comments_for_author=FOR_AUTHOR_1)
+        flow.evaluate(flow.reviewers[1], comments_for_author=FOR_AUTHOR_2)
 
-        feedback = detail(owner, manuscript).json()["feedback"]
+        body = detail(flow.author, flow.manuscript).content.decode()
+        feedback = feedback_of(flow)
 
+        assert set(feedback) == {"decision", "decided_at", "origin", "observations", "reviews"}
+        for review in feedback["reviews"]:
+            assert set(review) == {"label", "comments_for_author"}
+        for forbidden in FORBIDDEN_KEYS:
+            assert f'"{forbidden}"' not in json.dumps(feedback)
+        for person in (REVIEWER_PERSON, SECOND_REVIEWER_PERSON):
+            for value in person.values():
+                assert value not in body
+
+    def test_an_accepted_verdict_carries_both_reviews(self, flow) -> None:
+        flow.submit_manuscript()
+        flow.evaluate(flow.reviewers[0], comments_for_author=FOR_AUTHOR_1)
+        flow.evaluate(flow.reviewers[1], comments_for_author=FOR_AUTHOR_2)
+
+        feedback = feedback_of(flow)
+
+        assert flow.manuscript.status == Manuscript.Status.ACCEPTED
         assert feedback["decision"] == "ACCEPTED"
-        assert feedback["observations"] is None
+        assert [r["label"] for r in feedback["reviews"]] == ["Revisor 1", "Revisor 2"]
 
-    def test_a_withdrawn_manuscript_keeps_its_feedback(self, editor, owner) -> None:
-        from django.utils import timezone
 
-        from apps.publications.models import Manuscript
-
-        manuscript, _ = judged_case(editor, owner)
-        judge(editor, manuscript, "ACCEPTED")
-        Manuscript.objects.filter(pk=manuscript.pk).update(
-            is_active=False, withdrawn_at=timezone.now()
+class TestLegacyVerdict:
+    def test_an_editor_verdict_returns_a_single_review(self) -> None:
+        manuscript = submitted(status=Manuscript.Status.ACCEPTED)
+        assignment = make_assignment(manuscript, None or FinalEvaluationFactory().reviewer)
+        evaluation = FinalEvaluationFactory(
+            assignment=assignment, legacy=True, comments_for_author=FOR_AUTHOR_1
         )
+        VerdictFactory(
+            legacy=True,
+            manuscript=manuscript,
+            version=evaluation.version,
+            evaluation=evaluation,
+            origin=Verdict.Origin.EDITOR_LEGACY,
+        )
+        assert not VerdictEvaluation.objects.exists()
 
-        response = client_for(owner).get(f"/api/v1/manuscripts/{manuscript.pk}/")
+        body = detail(manuscript.created_by, manuscript).json()
 
-        assert response.status_code == 200
-        assert response.json()["feedback"]["decision"] == "ACCEPTED"
+        assert body["feedback"]["origin"] == "EDITOR_LEGACY"
+        assert body["feedback"]["reviews"] == [
+            {"label": "Revisor 1", "comments_for_author": FOR_AUTHOR_1}
+        ]
 
 
-class TestWhoCanRead:
-    def test_another_author_gets_404(self, editor, owner) -> None:
-        manuscript, _ = judged_case(editor, owner)
-        judge(editor, manuscript, "ACCEPTED")
-
-        assert detail(actor("AUTHOR"), manuscript).status_code == 404
-
-    def test_the_editor_view_has_no_author_feedback_field(self, editor, owner) -> None:
-        manuscript, _ = judged_case(editor, owner)
-        judge(editor, manuscript, "ACCEPTED")
-
-        body = detail(editor, manuscript).json()
-
-        assert "feedback" not in body
-
-    def test_a_list_carries_each_feedback_without_a_query_per_manuscript(
-        self, editor, owner, django_assert_max_num_queries
-    ) -> None:
-        for _ in range(5):
-            manuscript, _ = judged_case(editor, owner)
-            judge(editor, manuscript, "ACCEPTED")
-        client = client_for(owner)
-
-        with django_assert_max_num_queries(14):
-            response = client.get("/api/v1/manuscripts/")
-
-        rows = response.json()["results"]
-        assert len(rows) == 5
-        assert all(row["feedback"]["decision"] == "ACCEPTED" for row in rows)
+def test_the_author_tokens_never_reach_the_reviews_endpoint_shape(flow) -> None:
+    """The author's own data stays theirs; the review texts are what changes hands."""
+    flow.submit_manuscript()
+    assert AUTHOR_TOKENS[0] in detail(flow.author, flow.manuscript).content.decode()

@@ -46,7 +46,7 @@ def test_a_final_evaluation_is_complete() -> None:
 
 
 def test_a_verdict_hangs_from_its_final_evaluation() -> None:
-    verdict = VerdictFactory()
+    verdict = VerdictFactory(legacy=True)
 
     assert verdict.decision == Verdict.Decision.ACCEPTED
     assert verdict.manuscript == verdict.evaluation.manuscript
@@ -64,5 +64,5 @@ def test_a_catalog_entry_is_active_and_relative_to_the_catalog() -> None:
 def test_a_reviewer_profile_has_the_default_capacity() -> None:
     profile = ReviewerProfileFactory()
 
-    assert profile.is_available and profile.max_active_assignments == 3
-    assert profile.expertise_areas == ["Agronomía"]
+    assert profile.is_available and profile.ranking_score == 100
+    assert [area.code for area in profile.areas.all()] == ["agronomia"]

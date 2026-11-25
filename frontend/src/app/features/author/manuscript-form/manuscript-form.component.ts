@@ -28,6 +28,8 @@ import { LoadingSpinnerComponent } from '../../../shared/components/loading-spin
 import { StatusBadgeComponent } from '../../../shared/components/status-badge.component';
 import { authorRosterValidator, rosterMessages } from './author-roster.validator';
 import { KEYWORD_MAX_LENGTH, parseKeywords } from './keywords';
+import { AreaService } from '../../../core/services/area.service';
+import { AcademicArea, MAX_AREAS_PER_MANUSCRIPT } from '../../../core/models/area.model';
 
 type AuthorGroup = FormGroup<{
   full_name: FormControl<string>;
@@ -37,7 +39,7 @@ type AuthorGroup = FormGroup<{
 }>;
 
 /** Campos del formulario que el backend valida y puede devolver en `details`. */
-const SERVER_FIELDS = ['title', 'abstract', 'keywords', 'area', 'language'] as const;
+const SERVER_FIELDS = ['title', 'abstract', 'keywords', 'areas', 'language'] as const;
 type ServerField = (typeof SERVER_FIELDS)[number];
 
 /** Metadatos que la presentación formal exige (CA-HU-04-02). */
@@ -45,9 +47,17 @@ const REQUIRED_LABELS: Record<ServerField, string> = {
   title: 'Título',
   abstract: 'Resumen',
   keywords: 'Palabras clave',
-  area: 'Área de conocimiento',
+  areas: 'Carreras o áreas',
   language: 'Idioma',
 };
+
+/** Máximo de carreras por manuscrito (FR-008); el servidor aplica el mismo. */
+function maxAreas(control: AbstractControl): ValidationErrors | null {
+  const selected = control.value as string[] | null;
+  return Array.isArray(selected) && selected.length > MAX_AREAS_PER_MANUSCRIPT
+    ? { maxAreas: MAX_AREAS_PER_MANUSCRIPT }
+    : null;
+}
 
 /** Validador de palabras clave: ninguna supera el máximo de la API. */
 function keywordsLength(control: AbstractControl): ValidationErrors | null {
@@ -67,14 +77,14 @@ function keywordsRequired(control: AbstractControl): ValidationErrors | null {
  * autores (plan sección 3.5, HU-04 y HU-07).
  *
  * * Crea un borrador (`/new`) o edita los metadatos (`/:id/edit`), solo
- *   en `DRAFT` o `REQUIRES_CORRECTIONS`; en otro estado el formulario
+ *   en `DRAFT` o `CHANGES_REQUESTED`; en otro estado el formulario
  *   queda bloqueado y se explica por qué.
  * * **Bloquea el guardado** sin autores o sin exactamente un autor
  *   responsable, con correos repetidos o si el autor que registra no
  *   figura en la lista. Un campo de autor vacío también bloquea.
  * * Un borrador puede guardarse con metadatos incompletos
  *   (CA-HU-04-01): se avisa qué falta para poder enviarlo. En
- *   `REQUIRES_CORRECTIONS` esos campos pasan a ser obligatorios.
+ *   `CHANGES_REQUESTED` esos campos pasan a ser obligatorios.
  * * Implementa `UnsavedChangesAware`: el guard avisa antes de abandonar.
  * * Un `409` por `ETag` desactualizado se explica y ofrece recargar.
  */
@@ -96,6 +106,12 @@ export class ManuscriptFormComponent implements UnsavedChangesAware {
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
   private readonly auth = inject(AuthStore);
+  private readonly areaService = inject(AreaService);
+
+  /** Carreras activas del catálogo; el Autor elige de 1 a 3. */
+  protected readonly areaOptions = signal<AcademicArea[]>([]);
+  protected readonly areasLoadError = signal('');
+  protected readonly maxAreas = MAX_AREAS_PER_MANUSCRIPT;
 
   /** Identificador del manuscrito en edición; `null` al crear. */
   protected readonly id = this.route.snapshot.paramMap.get('id');
@@ -109,7 +125,7 @@ export class ManuscriptFormComponent implements UnsavedChangesAware {
     title: ['', [Validators.maxLength(300)]],
     abstract: [''],
     keywords: ['', [keywordsLength]],
-    area: ['', [Validators.maxLength(120)]],
+    areas: this.formBuilder.control<string[]>([], [maxAreas]),
     language: ['', [Validators.pattern(/^[a-z]{2}$/)]],
     authors: this.authors,
   });
@@ -161,6 +177,10 @@ export class ManuscriptFormComponent implements UnsavedChangesAware {
   });
 
   constructor() {
+    this.areaService.list().subscribe({
+      next: (areas) => this.areaOptions.set(areas),
+      error: () => this.areasLoadError.set('No se pudieron cargar las carreras. Intente de nuevo.'),
+    });
     if (this.isEdit) {
       this.load();
     } else {
@@ -266,6 +286,19 @@ export class ManuscriptFormComponent implements UnsavedChangesAware {
     );
   }
 
+  /** Marca o desmarca una carrera; el límite de tres lo valida el formulario. */
+  protected toggleArea(code: string, checked: boolean): void {
+    const control = this.form.controls.areas;
+    const current = control.value;
+    control.setValue(checked ? [...current.filter((c) => c !== code), code] : current.filter((c) => c !== code));
+    control.markAsDirty();
+    control.markAsTouched();
+  }
+
+  protected isAreaSelected(code: string): boolean {
+    return this.form.controls.areas.value.includes(code);
+  }
+
   protected authorInvalid(group: AuthorGroup, field: keyof AuthorGroup['controls']): boolean {
     const control = group.controls[field];
     return control.invalid && (control.touched || this.attempted());
@@ -277,6 +310,12 @@ export class ManuscriptFormComponent implements UnsavedChangesAware {
       return server;
     }
     const errors = this.form.controls[field].errors;
+    if (errors?.['maxAreas']) {
+      return `Seleccione como máximo ${MAX_AREAS_PER_MANUSCRIPT} carreras.`;
+    }
+    if (errors?.['required'] && field === 'areas') {
+      return 'Seleccione al menos una carrera.';
+    }
     if (errors?.['required']) {
       return 'Este campo es obligatorio.';
     }
@@ -327,7 +366,7 @@ export class ManuscriptFormComponent implements UnsavedChangesAware {
         title: manuscript.title,
         abstract: manuscript.abstract,
         keywords: manuscript.keywords.join(', '),
-        area: manuscript.area,
+        areas: manuscript.areas.map((area) => area.code),
         language: manuscript.language,
       },
       { emitEvent: false },
@@ -338,7 +377,7 @@ export class ManuscriptFormComponent implements UnsavedChangesAware {
       .forEach((author) => this.authors.push(this.authorGroup(author), { emitEvent: false }));
 
     // En correcciones los metadatos obligatorios ya no pueden quedar vacíos.
-    const strict = manuscript.status === 'REQUIRES_CORRECTIONS';
+    const strict = manuscript.status === 'CHANGES_REQUESTED';
     this.strict.set(strict);
     for (const field of SERVER_FIELDS) {
       const control = this.form.controls[field];
@@ -365,7 +404,7 @@ export class ManuscriptFormComponent implements UnsavedChangesAware {
       title: value.title.trim(),
       abstract: value.abstract.trim(),
       keywords: parseKeywords(value.keywords),
-      area: value.area.trim(),
+      areas: value.areas,
       language: value.language.trim(),
       authors: value.authors.map((author) => ({
         full_name: author.full_name.trim(),

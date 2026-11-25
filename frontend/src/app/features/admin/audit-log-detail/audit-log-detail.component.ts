@@ -10,15 +10,19 @@ import {
   AuditEventDetail,
   DECISION_LABELS,
   actionLabel,
+  actorRoleLabel,
   detailLabel,
   detailValue,
   resultLabel,
 } from '../../../core/models/audit.model';
-import { ROLE_LABELS } from '../../../core/models/role.model';
+import { AdminService } from '../../../core/services/admin.service';
 import { AuditService } from '../../../core/services/audit.service';
 import { ErrorStateComponent } from '../../../shared/components/error-state.component';
 import { LoadingSpinnerComponent } from '../../../shared/components/loading-spinner.component';
-import { VerdictCorrectionDialogComponent } from '../verdict-correction-dialog/verdict-correction-dialog.component';
+import {
+  CorrectionChoice,
+  VerdictCorrectionDialogComponent,
+} from '../verdict-correction-dialog/verdict-correction-dialog.component';
 
 /** Las fechas se muestran en la zona institucional (UTC-5, sin horario de verano). */
 const INSTITUTIONAL_OFFSET = '-0500';
@@ -50,6 +54,7 @@ const INSTITUTIONAL_OFFSET = '-0500';
 })
 export class AuditLogDetailComponent {
   private readonly service = inject(AuditService);
+  private readonly admin = inject(AdminService);
   private readonly route = inject(ActivatedRoute);
   private readonly destroyRef = inject(DestroyRef);
 
@@ -67,7 +72,7 @@ export class AuditLogDetailComponent {
   protected readonly correctionDone = signal(false);
 
   /** Identifica esta intención; un reintento con el mismo motivo repite la clave. */
-  private correctionAttempt: { reason: string; key: string } | null = null;
+  private correctionAttempt: { signature: string; key: string } | null = null;
 
   private readonly retry$ = new BehaviorSubject<void>(undefined);
 
@@ -104,7 +109,7 @@ export class AuditLogDetailComponent {
 
   protected role(): string {
     const role = this.event()?.actor_role;
-    return role ? ROLE_LABELS[role] : '—';
+    return actorRoleLabel(role ?? null);
   }
 
   /** Campos de `details` que se muestran; el manuscrito ya tiene su fila propia. */
@@ -134,17 +139,18 @@ export class AuditLogDetailComponent {
     this.correctionError.set('');
   }
 
-  protected authorizeCorrection(reason: string): void {
+  protected correct(choice: CorrectionChoice): void {
     const verdict = this.event()?.verdict;
     if (!verdict || this.correctionBusy()) {
       return;
     }
-    if (this.correctionAttempt?.reason !== reason) {
-      this.correctionAttempt = { reason, key: newIdempotencyKey() };
+    const signature = JSON.stringify(choice);
+    if (this.correctionAttempt?.signature !== signature) {
+      this.correctionAttempt = { signature, key: newIdempotencyKey() };
     }
     this.correctionBusy.set(true);
     this.correctionError.set('');
-    this.service.authorizeCorrection(verdict.id, reason, this.correctionAttempt.key).subscribe({
+    this.admin.correctVerdict(verdict.id, choice, this.correctionAttempt.key).subscribe({
       next: () => {
         this.correctionBusy.set(false);
         this.correctionOpen.set(false);
@@ -167,7 +173,7 @@ export class AuditLogDetailComponent {
     });
   }
 
-  /** El backend ya no la autorizaría: se retira la acción sin releer el evento. */
+  /** El backend ya no la aceptaría: se retira la acción sin releer el evento. */
   private hideCorrection(): void {
     this.event.update((current) =>
       current ? { ...current, can_authorize_correction: false } : current,

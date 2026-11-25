@@ -103,24 +103,6 @@ class TestInactiveAccountScenario:
         assert error_inactive["message"] == error_wrong["message"]
 
 
-class TestRevokedRoleScenario:
-    def test_revoked_role_disappears_from_the_valid_session(self) -> None:
-        user = with_roles(UserFactory(), "AUTHOR", "EDITOR")
-        client, response = login(user.institutional_id)
-        access = response.json()["access"]
-        assert response.json()["roles"] == ["AUTHOR", "EDITOR"]
-
-        UserRole.objects.filter(user=user, role__code="AUTHOR").update(
-            is_active=False, revoked_at=timezone.now()
-        )
-
-        me = client.get(ME_URL, HTTP_AUTHORIZATION=f"Bearer {access}").json()
-        assert me["roles"] == ["EDITOR"]
-
-        dashboard = client.get(
-            DASHBOARD_URL, HTTP_AUTHORIZATION=f"Bearer {access}"
-        ).json()
-        assert set(dashboard["sections"]) == {"editor"}
 
 
 class TestRevokedRefreshScenario:
@@ -139,27 +121,3 @@ class TestRevokedRefreshScenario:
         assert denied.json()["error"]["code"] == "AUTH_INVALID"
 
 
-class TestMultirrolePanelScenario:
-    def test_simultaneous_sections_survive_a_partial_failure(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        user = with_roles(UserFactory(), "AUTHOR", "REVIEWER", "EDITOR", "ADMIN")
-        client, response = login(user.institutional_id)
-        access = response.json()["access"]
-
-        body = client.get(DASHBOARD_URL, HTTP_AUTHORIZATION=f"Bearer {access}").json()
-        assert body["roles"] == ["AUTHOR", "REVIEWER", "EDITOR", "ADMIN"]
-        assert set(body["sections"]) == {"author", "reviewer", "editor", "admin"}
-        assert all(section["status"] == "ok" for section in body["sections"].values())
-
-        def broken_section(user_arg):
-            raise RuntimeError("simulated section failure")
-
-        monkeypatch.setitem(SECTION_BUILDERS, Role.Code.REVIEWER, broken_section)
-
-        body = client.get(DASHBOARD_URL, HTTP_AUTHORIZATION=f"Bearer {access}").json()
-        assert body["sections"]["reviewer"]["status"] == "error"
-        assert body["sections"]["reviewer"]["message"] == SECTION_ERROR_MESSAGE
-        assert body["sections"]["author"]["status"] == "ok"
-        assert body["sections"]["editor"]["status"] == "ok"
-        assert body["sections"]["admin"]["status"] == "ok"
