@@ -13,6 +13,7 @@
   }
   <div class="app-header__session">
     <app-notification-bell [unreadCount]="unreadCount()" (opened)="bellOpened.emit()" />
+    <app-theme-toggle />
     @if (userName(); as name) {
       <details class="app-header__account">
         <summary class="btn btn--ghost app-header__account-toggle">Mi cuenta</summary>

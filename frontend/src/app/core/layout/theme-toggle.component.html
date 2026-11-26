@@ -1,0 +1,15 @@
+<button
+  type="button"
+  class="btn btn--ghost btn--icon"
+  aria-label="Tema oscuro"
+  [attr.aria-pressed]="themes.isDark()"
+  (click)="themes.toggle()"
+>
+  <svg class="btn__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+    @if (themes.isDark()) {
+      <use href="icons/ui.svg#sun" />
+    } @else {
+      <use href="icons/ui.svg#moon" />
+    }
+  </svg>
+</button>

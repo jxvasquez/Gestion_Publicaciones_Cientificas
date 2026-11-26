@@ -12,6 +12,8 @@ revisa además lo que sirve Nginx en un contenedor en marcha. Código 1 si algo 
 3. ``package.json``: ``dependencies`` solo trae el runtime de Angular; todo lo demás
    (Playwright, axe, Vitest, jsdom, Prettier…) está en ``devDependencies``.
 4. El ``Dockerfile`` de la imagen final no instala ni copia Node ni ``node_modules``.
+5. El arranque del tema: ``theme-init.js`` se carga en ``<head>`` antes de la SPA y
+   ``index.html`` no tiene ningún ``<script>`` en línea, que la CSP bloquearía.
 """
 
 from __future__ import annotations
@@ -70,6 +72,34 @@ def bundle(dist: Path) -> None:
           not [p.name for p in files if p.suffix == ".ts" or ".spec." in p.name])
 
 
+def theme_boot(dist: Path) -> None:
+    print("Arranque del tema")
+    index, script = dist / "index.html", dist / "theme-init.js"
+    if not index.is_file():
+        check("existe index.html en el build", False)
+        return
+    html = index.read_text(encoding="utf-8")
+    scripts = list(re.finditer(r"<script\b([^>]*)>(.*?)</script>", html, re.S))
+    inline = [m for m in scripts if "src=" not in m.group(1) or m.group(2).strip()]
+    check("index.html no tiene scripts en línea (CSP «script-src 'self'»)", not inline,
+          f"{len(inline)} en línea" if inline else "")
+    boot = next((m for m in scripts if re.search(r'src="theme-init\.js(\?[^"]*)?"', m.group(1))), None)
+    check("index.html carga theme-init.js", boot is not None)
+    if boot is not None:
+        head_end = html.find("</head>")
+        check("theme-init.js va en <head>", 0 <= boot.start() < head_end)
+        check("theme-init.js es síncrono (sin defer, async ni module)",
+              not re.search(r"\b(defer|async)\b|type=[\"']module", boot.group(1)), boot.group(1).strip())
+        modules = [m.start() for m in scripts if re.search(r"type=[\"']module", m.group(1))]
+        check("theme-init.js precede a los scripts de la SPA",
+              bool(modules) and boot.start() < min(modules))
+    check("el build publica theme-init.js", script.is_file())
+    if script.is_file():
+        source = script.read_text(encoding="utf-8")
+        check("theme-init.js usa la clave «gpc-theme»", "'gpc-theme'" in source)
+        check("theme-init.js pesa menos de 1 kB", script.stat().st_size < 1024, f"{script.stat().st_size} bytes")
+
+
 def dependencies() -> None:
     print("package.json")
     runtime = json.loads((FRONTEND / "package.json").read_text(encoding="utf-8"))["dependencies"]
@@ -103,6 +133,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
     configuration()
     bundle(args.dist.resolve())
+    theme_boot(args.dist.resolve())
     dependencies()
     image()
     if args.container:

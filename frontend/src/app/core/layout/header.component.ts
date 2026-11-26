@@ -3,15 +3,16 @@ import { RouterLink } from '@angular/router';
 
 import { Role, ROLE_LABELS } from '../models/role.model';
 import { NotificationBellComponent } from './notification-bell.component';
+import { ThemeToggleComponent } from './theme-toggle.component';
 
 /**
  * Encabezado del área interna: título institucional, roles activos
  * como insignias informativas (nunca un selector o conmutador de
- * rol), campana de avisos, nombre y cierre de sesión.
+ * rol), campana de avisos, botón de tema, nombre y cierre de sesión.
  */
 @Component({
   selector: 'app-header',
-  imports: [RouterLink, NotificationBellComponent],
+  imports: [RouterLink, NotificationBellComponent, ThemeToggleComponent],
   templateUrl: './header.component.html',
   styleUrl: './header.component.scss',
 })

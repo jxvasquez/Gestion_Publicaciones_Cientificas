@@ -12,6 +12,13 @@ body {
   padding: 0;
 }
 
+/* El cambio de tema no anima colores (ThemeService pone la marca solo mientras cambia). */
+:root[data-theme-switching] *,
+:root[data-theme-switching] *::before,
+:root[data-theme-switching] *::after {
+  transition: none !important;
+}
+
 body {
   font-family: var(--gpc-font-sans);
   font-size: var(--gpc-text-base);

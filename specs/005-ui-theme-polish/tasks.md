@@ -69,7 +69,7 @@ description: "Tareas de implementación del tema claro y oscuro descansado y del
 
 ### Tests for User Story 1 ⚠️
 
-- [ ] T012 [P] [US1] Crear `frontend/src/app/core/theme/theme.service.spec.ts` con `localStorage` y `matchMedia` simulados:
+- [x] T012 [P] [US1] Crear `frontend/src/app/core/theme/theme.service.spec.ts` con `localStorage` y `matchMedia` simulados:
   - Estado inicial tomado del atributo `data-theme` que fijó el script.
   - Sin atributo: valor guardado válido, valor inválido, `prefers-color-scheme: dark` y ninguna preferencia.
   - `toggle()` fija el atributo, guarda `gpc-theme` y marca la elección como explícita.
@@ -77,10 +77,10 @@ description: "Tareas de implementación del tema claro y oscuro descansado y del
   - Sin elección explícita sigue el cambio de `matchMedia`; con elección lo ignora.
   - El evento `storage` de la clave `gpc-theme` adopta el tema de otra pestaña y el de otras claves se ignora.
   - Un entorno sin `matchMedia` no produce errores.
-- [ ] T013 [P] [US1] Crear `frontend/src/app/core/layout/theme-toggle.component.spec.ts`. Es un `button` de tipo `button` con `aria-label="Tema oscuro"` constante, `aria-pressed` en `false` o `true` según el tema, icono `moon` en claro y `sun` en oscuro con `aria-hidden="true"`, clases `btn--ghost` y `btn--icon`, y al pulsarlo llama a `toggle()`.
-- [ ] T014 [P] [US1] Actualizar `frontend/src/app/core/layout/shell.component.spec.ts`. La cabecera muestra el botón de tema entre la campana y «Mi cuenta» y sigue sin `select` ni `[role="listbox"]`.
-- [ ] T015 [P] [US1] Ampliar `scripts/check_frontend_build.py` con la sección «Arranque del tema». En `dist/gpc-frontend/browser/index.html`, `<script src="theme-init.js">` va en `<head>`, sin `defer`, `async` ni `type="module"`, antes de cualquier script de módulo. Ningún `<script>` tiene cuerpo en línea, con la misma expresión de `backend/tests/test_openapi.py`. `theme-init.js` existe, contiene `gpc-theme` y pesa menos de 1 kB. Debe fallar antes de T017.
-- [ ] T016 [P] [US1] Crear `frontend/e2e/08-tema-y-acciones.e2e.ts` con las pruebas del tema:
+- [x] T013 [P] [US1] Crear `frontend/src/app/core/layout/theme-toggle.component.spec.ts`. Es un `button` de tipo `button` con `aria-label="Tema oscuro"` constante, `aria-pressed` en `false` o `true` según el tema, icono `moon` en claro y `sun` en oscuro con `aria-hidden="true"`, clases `btn--ghost` y `btn--icon`, y al pulsarlo llama a `toggle()`.
+- [x] T014 [P] [US1] Actualizar `frontend/src/app/core/layout/shell.component.spec.ts`. La cabecera muestra el botón de tema entre la campana y «Mi cuenta» y sigue sin `select` ni `[role="listbox"]`.
+- [x] T015 [P] [US1] Ampliar `scripts/check_frontend_build.py` con la sección «Arranque del tema». En `dist/gpc-frontend/browser/index.html`, `<script src="theme-init.js">` va en `<head>`, sin `defer`, `async` ni `type="module"`, antes de cualquier script de módulo. Ningún `<script>` tiene cuerpo en línea, con la misma expresión de `backend/tests/test_openapi.py`. `theme-init.js` existe, contiene `gpc-theme` y pesa menos de 1 kB. Debe fallar antes de T017.
+- [x] T016 [P] [US1] Crear `frontend/e2e/08-tema-y-acciones.e2e.ts` con las pruebas del tema:
   - `emulateMedia({ colorScheme: 'dark' })` sin preferencia da `data-theme="dark"` en `/login` y en el panel; con `light`, `data-theme="light"`.
   - El botón de la cabecera cambia el atributo y `aria-pressed`. La elección persiste al recargar, aun con el sistema en el tema contrario, y en una página nueva del mismo contexto.
   - Dos páginas del mismo contexto: alternar en una cambia la otra sin recargar.
@@ -89,10 +89,10 @@ description: "Tareas de implementación del tema claro y oscuro descansado y del
 
 ### Implementation for User Story 1
 
-- [ ] T017 [US1] Crear `frontend/public/theme-init.js` según el paso 1 del «Flujo del tema» de [plan.md](plan.md#flujo-del-tema): función autoejecutable, accesos protegidos con `try`, valores `light` y `dark` y un comentario que remite a `THEME_STORAGE_KEY` de `theme.service.ts`. Agregar `<script src="theme-init.js"></script>` a `<head>` de `frontend/src/index.html`, sin `defer` ni `async`.
-- [ ] T018 [US1] Crear `frontend/src/app/core/theme/theme.service.ts` (`providedIn: 'root'`). Exporta `Theme`, `THEME_STORAGE_KEY = 'gpc-theme'` y la función pura `resolveTheme(stored, prefersDark)`. Expone `theme` y `isDark` como señales, `toggle()` y `set()`. Usa `DOCUMENT` y registra los escuchas de `matchMedia` y `storage` solo si existen. Al cambiar el tema, suspende las transiciones de color vigentes (`.btn` y la navegación lateral) para que el cambio no se anime (caso límite «Movimiento reducido» de [spec.md](spec.md#edge-cases)).
-- [ ] T019 [US1] Inyectar `ThemeService` en `frontend/src/app/app.component.ts` para que funcione también en las rutas públicas, y comprobar en `frontend/src/app/app.component.spec.ts` que al crear la raíz el atributo `data-theme` existe.
-- [ ] T020 [US1] Crear `frontend/src/app/core/layout/theme-toggle.component.ts`, `.html` y `.scss` según FR-007. Incorporarlo en `frontend/src/app/core/layout/header.component.html` y `.ts`, entre `app-notification-bell` y «Mi cuenta», y ajustar `header.component.scss` para que la sesión se reparta en varias líneas a 320 px.
+- [x] T017 [US1] Crear `frontend/public/theme-init.js` según el paso 1 del «Flujo del tema» de [plan.md](plan.md#flujo-del-tema): función autoejecutable, accesos protegidos con `try`, valores `light` y `dark` y un comentario que remite a `THEME_STORAGE_KEY` de `theme.service.ts`. Agregar `<script src="theme-init.js"></script>` a `<head>` de `frontend/src/index.html`, sin `defer` ni `async`.
+- [x] T018 [US1] Crear `frontend/src/app/core/theme/theme.service.ts` (`providedIn: 'root'`). Exporta `Theme`, `THEME_STORAGE_KEY = 'gpc-theme'` y la función pura `resolveTheme(stored, prefersDark)`. Expone `theme` y `isDark` como señales, `toggle()` y `set()`. Usa `DOCUMENT` y registra los escuchas de `matchMedia` y `storage` solo si existen. Al cambiar el tema, suspende las transiciones de color vigentes (`.btn` y la navegación lateral) para que el cambio no se anime (caso límite «Movimiento reducido» de [spec.md](spec.md#edge-cases)).
+- [x] T019 [US1] Inyectar `ThemeService` en `frontend/src/app/app.component.ts` para que funcione también en las rutas públicas, y comprobar en `frontend/src/app/app.component.spec.ts` que al crear la raíz el atributo `data-theme` existe.
+- [x] T020 [US1] Crear `frontend/src/app/core/layout/theme-toggle.component.ts`, `.html` y `.scss` según FR-007. Incorporarlo en `frontend/src/app/core/layout/header.component.html` y `.ts`, entre `app-notification-bell` y «Mi cuenta», y ajustar `header.component.scss` para que la sesión se reparta en varias líneas a 320 px.
 
 **Checkpoint**: T012 a T016 pasan. El tema se elige, persiste y arranca sin destello. US1 se verifica sola.
 
@@ -404,6 +404,10 @@ Medidas el 2026-11-25 sobre `45ffaeb`, cuyo árbol de `frontend/` y `scripts/` e
 | `success-700` / `track` | relleno de barra de éxito | 3.0:1 | 5.29 | 5.37 |
 | `warning-700` / `track` | relleno de barra de advertencia | 3.0:1 | 3.99 | 4.88 |
 | `danger-700` / `track` | relleno de barra de peligro | 3.0:1 | 5.30 | 4.41 |
+
+### Tema claro y oscuro (US1, T012 a T020)
+
+**2026-11-25.** Antes de implementar, las pruebas nuevas fallaron (módulos inexistentes en Vitest y 2 comprobaciones del arranque en `scripts/check_frontend_build.py`). Con la implementación: `tsc` de app, specs y E2E limpios; `TZ=UTC npx ng test --watch=false` con 78 archivos y 1228 pruebas en verde; build de producción sin avisos (paquete inicial de 311,41 kB); arranque del tema correcto en el build (`theme-init.js` de 522 bytes, síncrono en `<head>` y sin scripts en línea); y `./scripts/e2e.sh` desde un stack nuevo con 45 pruebas en verde en 2,4 min, 6 de ellas de `08-tema-y-acciones` (sistema oscuro y claro, persistencia, otra pestaña, sin destello con el paquete principal retenido y almacenamiento bloqueado). `05-accesibilidad` aún corre solo en tema claro: el oscuro se verifica en US2.
 
 ### Accesibilidad y estados (T024 y T023)
 

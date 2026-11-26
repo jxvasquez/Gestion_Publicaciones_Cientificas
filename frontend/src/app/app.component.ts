@@ -1,5 +1,7 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
+
+import { ThemeService } from './core/theme/theme.service';
 
 /**
  * Componente raíz de la SPA.
@@ -12,4 +14,7 @@ import { RouterOutlet } from '@angular/router';
   imports: [RouterOutlet],
   template: '<router-outlet />',
 })
-export class AppComponent {}
+export class AppComponent {
+  /** Se crea con la raíz para que el tema siga vivo también en las páginas públicas. */
+  private readonly theme = inject(ThemeService);
+}

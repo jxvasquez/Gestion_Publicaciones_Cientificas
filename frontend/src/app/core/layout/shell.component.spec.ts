@@ -81,6 +81,25 @@ describe('ShellComponent', () => {
     });
   });
 
+  it('ofrece el botón de tema entre la campana y «Mi cuenta»', async () => {
+    setSession();
+    const fixture = await render();
+    const element = fixture.nativeElement as HTMLElement;
+    const session = element.querySelector('.app-header__session')!;
+
+    expect(Array.from(session.children, (child) => child.tagName.toLowerCase())).toEqual([
+      'app-notification-bell',
+      'app-theme-toggle',
+      'details',
+      'button',
+    ]);
+    expect(session.querySelector('app-theme-toggle button')?.getAttribute('aria-label')).toBe(
+      'Tema oscuro',
+    );
+    expect(element.querySelector('select')).toBeNull();
+    expect(element.querySelector('[role="listbox"]')).toBeNull();
+  });
+
   it('la navegación muestra los módulos de todos los roles activos', async () => {
     setSession();
     const fixture = await render();

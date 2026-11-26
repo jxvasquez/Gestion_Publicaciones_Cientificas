@@ -22,4 +22,12 @@ describe('AppComponent', () => {
     const compiled = fixture.nativeElement as HTMLElement;
     expect(compiled.querySelector('router-outlet')).not.toBeNull();
   });
+
+  it('activa el tema en todas las rutas, también las públicas', () => {
+    document.documentElement.removeAttribute('data-theme');
+
+    TestBed.createComponent(AppComponent);
+
+    expect(document.documentElement.getAttribute('data-theme')).toMatch(/^(light|dark)$/);
+  });
 });
