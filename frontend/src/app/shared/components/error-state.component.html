@@ -4,7 +4,7 @@
   </svg>
   <p class="error-state__message" role="alert">{{ message() }}</p>
   @if (retryLabel()) {
-    <button type="button" class="btn btn--primary" (click)="retry.emit()">
+    <button type="button" class="btn btn--ghost" (click)="retry.emit()">
       {{ retryLabel() }}
     </button>
   }

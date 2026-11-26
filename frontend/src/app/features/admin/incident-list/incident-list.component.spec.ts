@@ -150,6 +150,23 @@ describe('IncidentListComponent', () => {
       ]);
     });
 
+    it('las tres resoluciones pesan igual y las destructivas van en tono de peligro', async () => {
+      const { element } = await render([buildIncident()]);
+
+      const tones = Array.from(
+        cards(element)[0].querySelectorAll('.incident__actions button'),
+        (b) =>
+          Array.from(b.classList)
+            .filter((name) => name.startsWith('btn--'))
+            .sort(),
+      );
+      expect(tones).toEqual([
+        ['btn--danger-text', 'btn--ghost'],
+        ['btn--danger-text', 'btn--ghost'],
+        ['btn--ghost'],
+      ]);
+    });
+
     it('un reporte resuelto muestra el resultado y no ofrece acciones', async () => {
       const { element } = await render([
         buildIncident({
@@ -280,6 +297,10 @@ describe('IncidentListComponent', () => {
       await settle();
 
       expect(dialog(element).hasAttribute('open')).toBe(true);
+      // La confirmación conserva el relleno rojo en las resoluciones destructivas.
+      expect(dialog(element).querySelector('.btn--danger') !== null).toBe(
+        label !== 'Descartar reporte',
+      );
       expect(text(dialog(element))).toContain(effect);
       expect(text(dialog(element))).toContain('no se puede deshacer');
       http.expectNone((r) => r.method === 'POST');

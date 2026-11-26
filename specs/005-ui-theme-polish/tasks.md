@@ -201,28 +201,28 @@ description: "Tareas de implementación del tema claro y oscuro descansado y del
 
 ### Tests for User Story 6 ⚠️
 
-- [ ] T048 [P] [US6] Actualizar `frontend/src/app/features/author/manuscript-detail/manuscript-detail.component.spec.ts`. Dentro de `.actions` hay un `details.disclosure.disclosure--more` plegado con el resumen «Más acciones», que contiene «Dar de baja» con `btn--danger`. Al abrir el diálogo, el panel sigue abierto. «Editar manuscrito» tiene `btn--ghost` e «Historial de versiones» `btn--subtle`. En borrador, fuera de diálogos y de «Más acciones», solo hay una acción con relleno: «Enviar manuscrito».
-- [ ] T049 [P] [US6] Actualizar `frontend/src/app/features/author/manuscript-list/manuscript-list.component.spec.ts`. Los filtros viven en `details.disclosure` «Filtros», plegado sin filtros y abierto con filtros desde la URL o con el error de rango de fechas. El resumen cuenta los filtros activos. «Filtrar» tiene `btn--ghost` y `a.btn--primary` sigue siendo «Nuevo manuscrito».
-- [ ] T050 [P] [US6] Actualizar `frontend/src/app/features/admin/audit-filters/audit-filters.component.spec.ts`: panel «Filtros» abierto con filtros activos o con un error, conteo correcto y «Limpiar» con `btn--subtle`.
-- [ ] T051 [P] [US6] Actualizar `frontend/src/app/features/catalog/catalog-search/catalog-search.component.spec.ts`. El buscador y «Buscar» quedan fuera del panel. Carrera, palabra clave, idioma, fechas y orden quedan dentro de «Filtros», que se abre si alguno llega por la URL. La sincronización con la URL no cambia.
-- [ ] T052 [P] [US6] Actualizar las pruebas de las demás vistas del inventario:
+- [x] T048 [P] [US6] Actualizar `frontend/src/app/features/author/manuscript-detail/manuscript-detail.component.spec.ts`. Dentro de `.actions` hay un `details.disclosure.disclosure--more` plegado con el resumen «Más acciones», que contiene «Dar de baja» con `btn--danger`. Al abrir el diálogo, el panel sigue abierto. «Editar manuscrito» tiene `btn--ghost` e «Historial de versiones» `btn--subtle`. En borrador, fuera de diálogos y de «Más acciones», solo hay una acción con relleno: «Enviar manuscrito».
+- [x] T049 [P] [US6] Actualizar `frontend/src/app/features/author/manuscript-list/manuscript-list.component.spec.ts`. Los filtros viven en `details.disclosure` «Filtros», plegado sin filtros y abierto con filtros desde la URL o con el error de rango de fechas. El resumen cuenta los filtros activos. «Filtrar» tiene `btn--ghost` y `a.btn--primary` sigue siendo «Nuevo manuscrito».
+- [x] T050 [P] [US6] Actualizar `frontend/src/app/features/admin/audit-filters/audit-filters.component.spec.ts`: panel «Filtros» abierto con filtros activos o con un error, conteo correcto y «Limpiar» con `btn--subtle`.
+- [x] T051 [P] [US6] Actualizar `frontend/src/app/features/catalog/catalog-search/catalog-search.component.spec.ts`. El buscador y «Buscar» quedan fuera del panel. Carrera, palabra clave, idioma, fechas y orden quedan dentro de «Filtros», que se abre si alguno llega por la URL. La sincronización con la URL no cambia.
+- [x] T052 [P] [US6] Actualizar las pruebas de las demás vistas del inventario:
   - `frontend/src/app/features/author/version-history/version-history.component.spec.ts`: sin `btn--primary`.
   - `frontend/src/app/shared/components/pdf-viewer.component.spec.ts`: «Descargar» con `btn--ghost`.
   - `frontend/src/app/features/reviewer/evaluation-form/evaluation-form.component.spec.ts`: en el aviso de borrador desactualizado, ambas opciones con `btn--ghost`.
   - `frontend/src/app/features/author/manuscript-form/manuscript-form.component.spec.ts`: «Quitar autor N» con `btn--subtle` y `btn--danger-text`, en lugar de `button.btn--danger`, y «Recargar datos» con `btn--ghost`.
   - `frontend/src/app/features/admin/area-catalog/area-catalog.component.spec.ts` y `reviewer-roster/reviewer-roster.component.spec.ts`: acciones por fila con `btn--subtle`, desactivar con `btn--danger-text` y «Guardar» en línea con `btn--ghost`.
   - `frontend/src/app/features/admin/incident-list/incident-list.component.spec.ts`: tres resoluciones con `btn--ghost`, las destructivas con `btn--danger-text` y la confirmación con relleno rojo.
-- [ ] T053 [US6] Adaptar los E2E a los paneles. En `frontend/e2e/support/ui.ts`, agregar `openMoreActions(page)` y hacer que `filterAudit()` abra «Filtros» si está plegado. En `frontend/e2e/02-ciclo-completo.e2e.ts` y `05-accesibilidad.e2e.ts`, abrir «Más acciones» antes de «Dar de baja». En `frontend/e2e/06-teclado.e2e.ts`, abrir el panel con el teclado, comprobar el atrapado de foco y que al cerrar con Escape el foco vuelve a «Dar de baja» dentro del panel abierto. En `05-accesibilidad.e2e.ts`, analizar también «Filtros» abierto en mis manuscritos, auditoría y catálogo, y «Más acciones» abierto, en ambos temas.
-- [ ] T054 [US6] Agregar a `frontend/e2e/08-tema-y-acciones.e2e.ts` el conteo de acciones destacadas en cada pantalla de `screens(world)`. Contar los `.btn--primary`, `.btn--success` y `.btn--danger` visibles fuera de `dialog` y de `details.disclosure--more[open]`, agrupados por la fila (`tr`) o el elemento de lista (`li`) más cercano. Cada grupo y el resto de la vista deben tener como máximo uno.
+- [x] T053 [US6] Adaptar los E2E a los paneles. En `frontend/e2e/support/ui.ts`, agregar `openMoreActions(page)` y hacer que `filterAudit()` abra «Filtros» si está plegado. En `frontend/e2e/02-ciclo-completo.e2e.ts` y `05-accesibilidad.e2e.ts`, abrir «Más acciones» antes de «Dar de baja». En `frontend/e2e/06-teclado.e2e.ts`, abrir el panel con el teclado, comprobar el atrapado de foco y que al cerrar con Escape el foco vuelve a «Dar de baja» dentro del panel abierto. En `05-accesibilidad.e2e.ts`, analizar también «Filtros» abierto en mis manuscritos, auditoría y catálogo, y «Más acciones» abierto, en ambos temas.
+- [x] T054 [US6] Agregar a `frontend/e2e/08-tema-y-acciones.e2e.ts` el conteo de acciones destacadas en cada pantalla de `screens(world)`. Contar los `.btn--primary`, `.btn--success` y `.btn--danger` visibles fuera de `dialog` y de `details.disclosure--more[open]`, agrupados por la fila (`tr`) o el elemento de lista (`li`) más cercano. Cada grupo y el resto de la vista deben tener como máximo uno.
 
 ### Implementation for User Story 6
 
-- [ ] T055 [US6] Reorganizar las acciones de `frontend/src/app/features/author/manuscript-detail/manuscript-detail.component.html` y `.scss` según el mapa de cambios: «Editar manuscrito» con borde, «Historial de versiones» compacto y «Más acciones» con una frase sobre la baja lógica y «Dar de baja».
-- [ ] T056 [US6] Mover los filtros de `frontend/src/app/features/author/manuscript-list/manuscript-list.component.html` al panel «Filtros» con `[open]` enlazado a `hasFilters()` o al error de fechas. Agregar `activeFilterCount()` en `manuscript-list.component.ts` y ajustar la jerarquía de «Filtrar» y «Limpiar».
-- [ ] T057 [US6] Mover los campos de `frontend/src/app/features/admin/audit-filters/audit-filters.component.html` al panel «Filtros», con conteo y apertura en `audit-filters.component.ts`, y «Limpiar» compacto.
-- [ ] T058 [US6] En `frontend/src/app/features/catalog/catalog-search/catalog-search.component.html`, `.ts` y `.scss`, dejar visible el buscador con «Buscar» y mover los filtros avanzados al panel «Filtros», con conteo y apertura desde la URL.
-- [ ] T059 [P] [US6] Ajustar la jerarquía de `frontend/src/app/features/author/version-history/version-history.component.html`, `frontend/src/app/shared/components/pdf-viewer.component.html`, `frontend/src/app/features/reviewer/evaluation-form/evaluation-form.component.html`, `frontend/src/app/features/author/manuscript-form/manuscript-form.component.html` y `frontend/src/app/features/reviewer/assignment-detail/assignment-detail.component.html` según el inventario de acciones. Pasar a `.btn--ghost` la acción de `frontend/src/app/shared/components/empty-state.component.html` y `error-state.component.html`.
-- [ ] T060 [P] [US6] Ajustar las acciones por fila y por reporte de `frontend/src/app/features/admin/area-catalog/area-catalog.component.html`, `frontend/src/app/features/admin/reviewer-roster/reviewer-roster.component.html` y `frontend/src/app/features/admin/incident-list/incident-list.component.html` según FR-018.
+- [x] T055 [US6] Reorganizar las acciones de `frontend/src/app/features/author/manuscript-detail/manuscript-detail.component.html` y `.scss` según el mapa de cambios: «Editar manuscrito» con borde, «Historial de versiones» compacto y «Más acciones» con una frase sobre la baja lógica y «Dar de baja».
+- [x] T056 [US6] Mover los filtros de `frontend/src/app/features/author/manuscript-list/manuscript-list.component.html` al panel «Filtros» con `[open]` enlazado a `hasFilters()` o al error de fechas. Agregar `activeFilterCount()` en `manuscript-list.component.ts` y ajustar la jerarquía de «Filtrar» y «Limpiar».
+- [x] T057 [US6] Mover los campos de `frontend/src/app/features/admin/audit-filters/audit-filters.component.html` al panel «Filtros», con conteo y apertura en `audit-filters.component.ts`, y «Limpiar» compacto.
+- [x] T058 [US6] En `frontend/src/app/features/catalog/catalog-search/catalog-search.component.html`, `.ts` y `.scss`, dejar visible el buscador con «Buscar» y mover los filtros avanzados al panel «Filtros», con conteo y apertura desde la URL.
+- [x] T059 [P] [US6] Ajustar la jerarquía de `frontend/src/app/features/author/version-history/version-history.component.html`, `frontend/src/app/shared/components/pdf-viewer.component.html`, `frontend/src/app/features/reviewer/evaluation-form/evaluation-form.component.html`, `frontend/src/app/features/author/manuscript-form/manuscript-form.component.html` y `frontend/src/app/features/reviewer/assignment-detail/assignment-detail.component.html` según el inventario de acciones. Pasar a `.btn--ghost` la acción de `frontend/src/app/shared/components/empty-state.component.html` y `error-state.component.html`.
+- [x] T060 [P] [US6] Ajustar las acciones por fila y por reporte de `frontend/src/app/features/admin/area-catalog/area-catalog.component.html`, `frontend/src/app/features/admin/reviewer-roster/reviewer-roster.component.html` y `frontend/src/app/features/admin/incident-list/incident-list.component.html` según FR-018.
 
 **Checkpoint**: el conteo de T054 pasa en las 23 pantallas y ninguna acción ni destino desapareció.
 
@@ -451,6 +451,25 @@ Decisiones tomadas al implementar:
 **2026-11-25.** Antes de implementar, las pruebas nuevas fallaron (`remainingFraction` no existía). Con la implementación: `TZ=UTC npx ng test --watch=false` con 80 archivos y 1327 pruebas en verde, `tsc` de app, specs y E2E limpios, build de producción sin avisos (paquete inicial de 311,74 kB) y los dos validadores en orden. `standingMetric()` ya leía `dd`; solo cambió `activeSlots()` (T044).
 
 `./scripts/e2e.sh` completo: 58 pruebas en verde. Con un spec temporal (borrado), que altera en el navegador respuestas reales de la API, se revisaron el plazo completo, a la mitad, con menos de 24 horas y vencido, el formulario de evaluación y el cupo en 1/5 y 5/5 en «Mi desempeño» y en el panel, en ambos temas a 1366 y 320 px: cero infracciones axe, sin desbordamiento de la página y el ancho de cada barra proporcional a su valor. A 320 px la tabla «Historial de ajustes» parte las palabras de sus columnas; es anterior a esta funcionalidad y no se cambió.
+
+### Jerarquía de acciones (US6, T048 a T060)
+
+**2026-11-25.** Antes de implementar fallaron 45 pruebas nuevas o actualizadas. Con la implementación: `TZ=UTC npx ng test --watch=false` con 81 archivos y 1376 pruebas en verde, `tsc` de app, specs y E2E limpios y build de producción sin avisos de presupuesto (paquete inicial de 311,74 kB). `./scripts/e2e.sh` completo: 63 pruebas en verde, con cero infracciones axe también con «Filtros» y «Más acciones» abiertos en ambos temas. Con un spec temporal (borrado) se revisaron los paneles abiertos y cerrados a 1366 y 320 px, sin desbordamiento de la página.
+
+**Conteo de acciones destacadas (T054).** Como máximo una por vista, fila y elemento de lista en las 23 pantallas. Las que quedan:
+
+| Rol | Acciones destacadas encontradas |
+| --- | --- |
+| Público | «Ingresar», «Buscar», «Ver el documento (PDF)» |
+| Autor | «Nuevo manuscrito», «Guardar borrador», «Enviar manuscrito», «Guardar cambios» |
+| Revisor | «Evaluar manuscrito», «Enviar evaluación» |
+| Administrador | «Crear carrera» |
+
+Decisiones tomadas al implementar:
+
+- Los paneles «Filtros» usan la directiva `appOpenWhen` (`shared/directives/open-when.directive.ts`) en lugar de enlazar `[open]`. El enlace cerraba el panel al corregir un error de fechas, con la persona escribiendo dentro. La directiva solo abre: con filtros aplicados o con un error, y después manda la persona.
+- El conteo del resumen incluye «Ver archivados» en el listado y un orden distinto del predeterminado en el catálogo, porque ambos viven dentro del panel.
+- En un caso que el inventario de pantallas no recorre conviven dos rellenos en tarjetas distintas: al elegir un archivo en un borrador, «Subir» del cargador aparece junto a «Enviar manuscrito». Cada tarjeta mantiene una sola acción destacada.
 
 ### Resultados finales (T064 a T066)
 

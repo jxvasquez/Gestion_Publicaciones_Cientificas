@@ -1,6 +1,6 @@
 import { AcademicArea } from '../../../core/models/area.model';
 import { AreaService } from '../../../core/services/area.service';
-import { Component, effect, inject, input, output, signal } from '@angular/core';
+import { Component, computed, effect, inject, input, output, signal } from '@angular/core';
 import { NonNullableFormBuilder, ReactiveFormsModule } from '@angular/forms';
 
 import {
@@ -10,6 +10,7 @@ import {
   CatalogOrdering,
   DEFAULT_CATALOG_ORDERING,
 } from '../../../core/models/catalog.model';
+import { OpenWhenDirective } from '../../../shared/directives/open-when.directive';
 
 /**
  * Formulario de búsqueda y filtros combinados del catálogo (HU-18).
@@ -17,11 +18,12 @@ import {
  * Es presentacional: recibe los filtros vigentes (los de la URL) y emite
  * los nuevos al enviar; quien lo contiene los lleva a la URL y consulta.
  * Un campo vacío no es un filtro, y la fecha «Desde» no puede ser
- * posterior a «Hasta» (el backend respondería `400`).
+ * posterior a «Hasta» (el backend respondería `400`). El buscador queda a la vista y el
+ * resto en un panel plegable que se abre si alguno está aplicado (spec 005, FR-017).
  */
 @Component({
   selector: 'app-catalog-search',
-  imports: [ReactiveFormsModule],
+  imports: [ReactiveFormsModule, OpenWhenDirective],
   templateUrl: './catalog-search.component.html',
   styleUrl: './catalog-search.component.scss',
 })
@@ -40,6 +42,13 @@ export class CatalogSearchComponent {
 
   /** Se quitaron todos los filtros. */
   readonly cleared = output<void>();
+
+  /** Filtros del panel que están aplicados; el texto de búsqueda queda fuera. */
+  protected readonly activeFilterCount = computed(() => {
+    const { search: _, ordering, ...rest } = this.filters();
+    const reordered = ordering !== undefined && ordering !== DEFAULT_CATALOG_ORDERING;
+    return Object.values(rest).filter(Boolean).length + (reordered ? 1 : 0);
+  });
 
   protected readonly languages = CATALOG_LANGUAGES;
   protected readonly orderings = CATALOG_ORDERINGS;

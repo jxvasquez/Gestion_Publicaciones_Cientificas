@@ -36,4 +36,12 @@ describe('EmptyStateComponent', () => {
     await withAction.whenStable();
     expect(activated).toBe(true);
   });
+
+  it('su acción es un botón con borde, para no competir con la principal de la vista', async () => {
+    const fixture = await render('Crear manuscrito');
+    const button = (fixture.nativeElement as HTMLElement).querySelector('button')!;
+
+    expect(button.classList).toContain('btn--ghost');
+    expect(button.classList).not.toContain('btn--primary');
+  });
 });

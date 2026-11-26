@@ -25,6 +25,7 @@ import {
   STATUS_LABELS,
   StatusBadgeComponent,
 } from '../../../shared/components/status-badge.component';
+import { OpenWhenDirective } from '../../../shared/directives/open-when.directive';
 
 /** Tamaño de página del listado (la API admite hasta 100). */
 export const PAGE_SIZE = 20;
@@ -39,7 +40,8 @@ const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
  *
  * * Tabla paginada con código, título, estado, versión, ronda, última
  *   actualización y acción pendiente.
- * * Filtros por estado y fecha, y vista de archivados (dados de baja).
+ * * Filtros por estado y fecha, y vista de archivados (dados de baja), en un panel
+ *   plegable que se abre cuando hay alguno aplicado (spec 005, FR-017).
  * * El estado vive en la URL (`status`, `date_from`, `date_to`,
  *   `archived`, `page`): recargar o compartir el enlace conserva la
  *   vista. Un parámetro manipulado a mano que no es válido se ignora
@@ -58,6 +60,7 @@ const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
     LoadingSpinnerComponent,
     ErrorStateComponent,
     EmptyStateComponent,
+    OpenWhenDirective,
   ],
   templateUrl: './manuscript-list.component.html',
   styleUrl: './manuscript-list.component.scss',
@@ -95,6 +98,8 @@ export class ManuscriptListComponent {
   protected readonly currentPage = signal(1);
   protected readonly archivedView = signal(false);
   protected readonly hasFilters = signal(false);
+  /** Filtros aplicados según la URL, archivados incluido: lo dice el resumen del panel. */
+  protected readonly activeFilterCount = signal(0);
 
   private readonly retry$ = new BehaviorSubject<void>(undefined);
 
@@ -185,6 +190,9 @@ export class ManuscriptListComponent {
     this.currentPage.set(list.page ?? 1);
     this.archivedView.set(!!list.archived);
     this.hasFilters.set(!!(list.status || list.date_from || list.date_to));
+    this.activeFilterCount.set(
+      [list.status, list.date_from, list.date_to, list.archived].filter(Boolean).length,
+    );
     this.filters.reset(
       {
         status: list.status ?? '',

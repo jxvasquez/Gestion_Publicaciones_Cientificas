@@ -72,4 +72,15 @@ describe('PdfViewerComponent', () => {
 
     expect(openSpy).toHaveBeenCalledWith(url, '_blank', 'noopener');
   });
+
+  it('descargar y abrir son acciones con borde, sin relleno', async () => {
+    const fixture = await render(new Blob(['%PDF-1.7'], { type: 'application/pdf' }));
+    const buttons = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('button'));
+
+    expect(buttons.map((b) => b.textContent?.trim())).toContain('Descargar');
+    for (const button of buttons) {
+      expect(button.classList).toContain('btn--ghost');
+      expect(button.classList).not.toContain('btn--primary');
+    }
+  });
 });

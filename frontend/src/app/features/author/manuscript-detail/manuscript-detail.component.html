@@ -88,15 +88,23 @@
 
     <div class="actions">
       @if (editable()) {
-        <a class="btn btn--primary" [routerLink]="['/app/author/manuscripts', m.id, 'edit']">
+        <a class="btn btn--ghost" [routerLink]="['/app/author/manuscripts', m.id, 'edit']">
           Editar manuscrito
         </a>
       }
-      <a class="btn btn--ghost" [routerLink]="['/app/author/manuscripts', m.id, 'history']">
+      <a class="btn btn--subtle" [routerLink]="['/app/author/manuscripts', m.id, 'history']">
         Historial de versiones
       </a>
       @if (m.is_active) {
-        <button type="button" class="btn btn--danger" (click)="openWithdraw()">Dar de baja</button>
+        <details class="disclosure disclosure--more">
+          <summary>Más acciones</summary>
+          <div class="disclosure__panel">
+            <p>La baja lógica retira el manuscrito de los listados y conserva todo su historial.</p>
+            <button type="button" class="btn btn--danger" (click)="openWithdraw()">
+              Dar de baja
+            </button>
+          </div>
+        </details>
       }
     </div>
 

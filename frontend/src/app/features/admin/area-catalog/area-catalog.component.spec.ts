@@ -191,6 +191,37 @@ describe('AreaCatalogComponent', () => {
     });
   });
 
+  describe('jerarquía de acciones', () => {
+    const tones = (node: Element) =>
+      Array.from(node.classList)
+        .filter((name) => name.startsWith('btn--'))
+        .sort();
+
+    it('las acciones de cada fila son compactas y desactivar va en tono de peligro', async () => {
+      const { button } = await render([
+        buildAdminArea(),
+        buildAdminArea({ code: 'medicina', name: 'Medicina', is_active: false }),
+      ]);
+
+      expect(tones(button('Renombrar Derecho'))).toEqual(['btn--subtle']);
+      expect(tones(button('Desactivar Derecho'))).toEqual(['btn--danger-text', 'btn--subtle']);
+      expect(tones(button('Activar Medicina'))).toEqual(['btn--subtle']);
+    });
+
+    it('al renombrar, «Guardar» tiene borde y la única destacada es «Crear carrera»', async () => {
+      const { element, settle, button } = await render();
+
+      button('Renombrar Derecho').click();
+      await settle();
+
+      const save = Array.from(element.querySelectorAll('button')).find((b) => text(b) === 'Guardar')!;
+      expect(tones(save)).toEqual(['btn--ghost']);
+      expect(
+        Array.from(element.querySelectorAll('section > form .btn--primary, table .btn--primary'), text),
+      ).toEqual(['Crear carrera']);
+    });
+  });
+
   describe('activar y desactivar', () => {
     const dialog = (element: HTMLElement) =>
       element.querySelector('app-confirm-dialog dialog') as HTMLDialogElement;

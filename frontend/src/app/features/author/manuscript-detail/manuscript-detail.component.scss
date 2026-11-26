@@ -73,7 +73,20 @@
 }
 
 .actions {
+  align-items: flex-start;
   margin-block: var(--gpc-space-4);
+}
+
+.disclosure--more .disclosure__panel {
+  max-inline-size: 24rem;
+  padding: var(--gpc-space-3);
+  border: 1px solid var(--gpc-border);
+  border-radius: var(--gpc-radius);
+  background: var(--gpc-surface-alt);
+}
+
+.disclosure--more p {
+  margin: 0 0 var(--gpc-space-2);
 }
 
 .card {

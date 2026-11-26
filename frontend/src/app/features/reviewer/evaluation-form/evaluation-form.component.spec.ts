@@ -458,6 +458,25 @@ describe('EvaluationFormComponent', () => {
       expect(button(view.element, 'Enviar evaluación').disabled).toBe(true);
     });
 
+    it('las dos salidas del conflicto pesan igual: ninguna compite con el envío', async () => {
+      const view = await open(buildCompleteEvaluation(), '"2"');
+      await type(view, 0, 'Mi texto');
+      button(view.element, 'Guardar borrador').click();
+      await view.settle();
+      http
+        .expectOne((r) => r.method === 'PUT')
+        .flush(errorEnvelope('VERSION_CONFLICT', 'Desfasado.'), {
+          status: 409,
+          statusText: 'Conflict',
+        });
+      await view.settle();
+
+      for (const label of ['Conservar mi texto', 'Usar la versión guardada']) {
+        expect(button(view.element, label).classList, label).toContain('btn--ghost');
+        expect(button(view.element, label).classList, label).not.toContain('btn--primary');
+      }
+    });
+
     it('«Conservar mi texto» toma el ETag vigente y deja guardar de nuevo', async () => {
       const view = await open(buildCompleteEvaluation(), '"2"');
       await type(view, 0, 'Mi texto sin perder');

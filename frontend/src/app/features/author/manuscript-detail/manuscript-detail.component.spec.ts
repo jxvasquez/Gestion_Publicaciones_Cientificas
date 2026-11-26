@@ -319,6 +319,76 @@ describe('ManuscriptDetailComponent', () => {
     });
   });
 
+  describe('jerarquía de acciones', () => {
+    const DRAFT_FILE = {
+      filename: 'articulo.pdf',
+      size_bytes: 1024,
+      uploaded_at: '2026-10-20T15:30:00Z',
+    };
+    const more = (element: HTMLElement) =>
+      element.querySelector<HTMLDetailsElement>('.actions details.disclosure.disclosure--more')!;
+    const link = (element: HTMLElement, label: string) =>
+      Array.from(element.querySelectorAll('.actions a')).find(
+        (a) => a.textContent?.trim() === label,
+      )!;
+    const filled = (element: HTMLElement) =>
+      Array.from(element.querySelectorAll('.btn--primary, .btn--success, .btn--danger'))
+        .filter((node) => !node.closest('dialog, details.disclosure--more'))
+        .map((node) => node.textContent?.trim());
+
+    it('«Dar de baja» vive en «Más acciones», plegado y en rojo', async () => {
+      const { element } = await open({ status: 'UNDER_REVIEW' });
+
+      const panel = more(element);
+      expect(panel.open).toBe(false);
+      expect(panel.querySelector('summary')?.textContent?.trim()).toBe('Más acciones');
+      const withdraw = panel.querySelector('button')!;
+      expect(withdraw.textContent?.trim()).toBe('Dar de baja');
+      expect(withdraw.classList).toContain('btn--danger');
+      expect(text(panel)).toContain('baja lógica');
+    });
+
+    it('al abrir el diálogo el panel sigue abierto', async () => {
+      const { element, settle } = await open({ status: 'UNDER_REVIEW' });
+      const panel = more(element);
+      panel.open = true;
+
+      panel.querySelector('button')!.click();
+      await settle();
+
+      expect(element.querySelector('dialog')?.hasAttribute('open')).toBe(true);
+      expect(panel.open).toBe(true);
+    });
+
+    it('un manuscrito dado de baja no ofrece «Más acciones»', async () => {
+      const { element } = await open({ is_active: false, withdrawn_at: '2026-10-22T17:00:00Z' });
+
+      expect(element.querySelector('.disclosure--more')).toBeNull();
+    });
+
+    it('editar es un botón con borde y el historial una acción compacta', async () => {
+      const { element } = await open({ status: 'DRAFT' });
+
+      expect(link(element, 'Editar manuscrito').classList).toContain('btn--ghost');
+      expect(link(element, 'Historial de versiones').classList).toContain('btn--subtle');
+    });
+
+    it('en borrador la única acción destacada es «Enviar manuscrito»', async () => {
+      const { element } = await open({ status: 'DRAFT', draft_file: DRAFT_FILE });
+
+      expect(filled(element)).toEqual(['Enviar manuscrito']);
+    });
+
+    it.each(MANUSCRIPT_STATUSES.filter((status) => status !== 'DRAFT'))(
+      'en %s no hay acciones destacadas fuera de «Más acciones»',
+      async (status) => {
+        const { element } = await open({ status });
+
+        expect(filled(element)).toEqual([]);
+      },
+    );
+  });
+
   describe('siguiente acción', () => {
     it('SUBMITTED explica la asignación automática y muestra las carreras como badges', async () => {
       const { element } = await open({

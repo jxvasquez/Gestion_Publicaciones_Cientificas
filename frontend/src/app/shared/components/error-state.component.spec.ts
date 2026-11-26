@@ -39,4 +39,12 @@ describe('ErrorStateComponent', () => {
     const fixture = await render(null);
     expect((fixture.nativeElement as HTMLElement).querySelector('button')).toBeNull();
   });
+
+  it('su acción es un botón con borde, para no competir con la principal de la vista', async () => {
+    const fixture = await render('Reintentar');
+    const button = (fixture.nativeElement as HTMLElement).querySelector('button')!;
+
+    expect(button.classList).toContain('btn--ghost');
+    expect(button.classList).not.toContain('btn--primary');
+  });
 });

@@ -142,4 +142,60 @@ describe('CatalogSearchComponent', () => {
 
     expect(host.cleared).toBe(1);
   });
+
+  describe('panel «Filtros»', () => {
+    const panel = (element: HTMLElement) =>
+      element.querySelector<HTMLDetailsElement>('details.disclosure')!;
+    const count = (element: HTMLElement) =>
+      panel(element).querySelector('summary .disclosure__count')?.textContent?.trim();
+
+    it('deja a la vista el buscador y «Buscar», y guarda dentro los demás filtros', async () => {
+      const { element } = await setup();
+
+      expect(element.querySelector('#catalog-search')!.closest('details')).toBeNull();
+      expect(element.querySelector('button[type="submit"]')!.closest('details')).toBeNull();
+      for (const id of ['area', 'keyword', 'language', 'from', 'to', 'ordering']) {
+        expect(panel(element).querySelector(`#catalog-${id}`), id).not.toBeNull();
+      }
+      expect(panel(element).open).toBe(false);
+      expect(count(element)).toBeUndefined();
+    });
+
+    it('buscar solo por texto no lo abre', async () => {
+      const { element } = await setup({ search: 'glaciares' });
+
+      expect(panel(element).open).toBe(false);
+    });
+
+    it.each([
+      [{ area: 'agronomia' }, '1'],
+      [{ keyword: 'suelo' }, '1'],
+      [{ language: 'es' }, '1'],
+      [{ date_from: '2026-01-01', date_to: '2026-02-01' }, '2'],
+      [{ ordering: 'title' as const }, '1'],
+      [{ search: 'x', area: 'agronomia', language: 'es' }, '2'],
+    ])('con %j en la URL se abre y cuenta %s', async (filters, expected) => {
+      const { element } = await setup(filters);
+
+      expect(panel(element).open).toBe(true);
+      expect(count(element)).toBe(expected);
+    });
+
+    it('se abre con el error del rango de fechas', async () => {
+      const { element, fixture, type, submit } = await setup();
+
+      type('catalog-from', '2026-10-31');
+      type('catalog-to', '2026-10-01');
+      submit();
+      await fixture.whenStable();
+
+      expect(panel(element).open).toBe(true);
+    });
+
+    it('«Limpiar» es una acción compacta', async () => {
+      const { element } = await setup();
+
+      expect(element.querySelector('button[type="button"]')!.classList).toContain('btn--subtle');
+    });
+  });
 });

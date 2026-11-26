@@ -5,78 +5,93 @@
   (ngSubmit)="submit()"
   aria-label="Buscar en el catálogo"
 >
-  <div class="search__field search__field--wide">
-    <label for="catalog-search">Buscar</label>
-    <div class="search__input">
-      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-        <use href="icons/ui.svg#search" />
-      </svg>
-      <input
-        id="catalog-search"
-        type="search"
-        formControlName="search"
-        maxlength="200"
-        placeholder="Título, autor, palabra clave, área o resumen"
-      />
+  <div class="search__main">
+    <div class="search__field search__field--main">
+      <label for="catalog-search">Buscar</label>
+      <div class="search__input">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <use href="icons/ui.svg#search" />
+        </svg>
+        <input
+          id="catalog-search"
+          type="search"
+          formControlName="search"
+          maxlength="200"
+          placeholder="Título, autor, palabra clave, área o resumen"
+        />
+      </div>
+    </div>
+    <div class="search__actions">
+      <button type="submit" class="btn btn--primary">Buscar</button>
+      <button type="button" class="btn btn--subtle" (click)="clear()">Limpiar</button>
     </div>
   </div>
-  <div class="search__field">
-    <label for="catalog-area">Carrera</label>
-    <select id="catalog-area" formControlName="area">
-      <option value="">Todas</option>
-      @for (area of areas(); track area.code) {
-        <option [value]="area.code">{{ area.name }}</option>
+  <details
+    class="disclosure"
+    [appOpenWhen]="activeFilterCount() > 0 || !!form.errors?.['dateRange']"
+  >
+    <summary>
+      Filtros
+      @if (activeFilterCount() > 0) {
+        <span class="disclosure__count">{{ activeFilterCount() }}</span>
       }
-    </select>
-  </div>
-  <div class="search__field">
-    <label for="catalog-keyword">Palabra clave</label>
-    <input id="catalog-keyword" type="text" formControlName="keyword" maxlength="100" />
-  </div>
-  <div class="search__field">
-    <label for="catalog-language">Idioma</label>
-    <select id="catalog-language" formControlName="language">
-      <option value="">Todos</option>
-      @for (language of languages; track language.value) {
-        <option [value]="language.value">{{ language.label }}</option>
+    </summary>
+    <div class="disclosure__panel search__filters">
+      <div class="search__field">
+        <label for="catalog-area">Carrera</label>
+        <select id="catalog-area" formControlName="area">
+          <option value="">Todas</option>
+          @for (area of areas(); track area.code) {
+            <option [value]="area.code">{{ area.name }}</option>
+          }
+        </select>
+      </div>
+      <div class="search__field">
+        <label for="catalog-keyword">Palabra clave</label>
+        <input id="catalog-keyword" type="text" formControlName="keyword" maxlength="100" />
+      </div>
+      <div class="search__field">
+        <label for="catalog-language">Idioma</label>
+        <select id="catalog-language" formControlName="language">
+          <option value="">Todos</option>
+          @for (language of languages; track language.value) {
+            <option [value]="language.value">{{ language.label }}</option>
+          }
+        </select>
+      </div>
+      <div class="search__field">
+        <label for="catalog-from">Publicado desde</label>
+        <input
+          id="catalog-from"
+          type="date"
+          formControlName="date_from"
+          [attr.aria-invalid]="form.errors?.['dateRange'] || null"
+          [attr.aria-describedby]="form.errors?.['dateRange'] ? 'catalog-date-error' : null"
+        />
+      </div>
+      <div class="search__field">
+        <label for="catalog-to">Publicado hasta</label>
+        <input
+          id="catalog-to"
+          type="date"
+          formControlName="date_to"
+          [attr.aria-invalid]="form.errors?.['dateRange'] || null"
+          [attr.aria-describedby]="form.errors?.['dateRange'] ? 'catalog-date-error' : null"
+        />
+      </div>
+      <div class="search__field">
+        <label for="catalog-ordering">Ordenar por</label>
+        <select id="catalog-ordering" formControlName="ordering">
+          @for (ordering of orderings; track ordering.value) {
+            <option [value]="ordering.value">{{ ordering.label }}</option>
+          }
+        </select>
+      </div>
+      @if (form.errors?.['dateRange']) {
+        <p id="catalog-date-error" class="search__error" role="alert">
+          La fecha «Desde» no puede ser posterior a «Hasta».
+        </p>
       }
-    </select>
-  </div>
-  <div class="search__field">
-    <label for="catalog-from">Publicado desde</label>
-    <input
-      id="catalog-from"
-      type="date"
-      formControlName="date_from"
-      [attr.aria-invalid]="form.errors?.['dateRange'] || null"
-      [attr.aria-describedby]="form.errors?.['dateRange'] ? 'catalog-date-error' : null"
-    />
-  </div>
-  <div class="search__field">
-    <label for="catalog-to">Publicado hasta</label>
-    <input
-      id="catalog-to"
-      type="date"
-      formControlName="date_to"
-      [attr.aria-invalid]="form.errors?.['dateRange'] || null"
-      [attr.aria-describedby]="form.errors?.['dateRange'] ? 'catalog-date-error' : null"
-    />
-  </div>
-  <div class="search__field">
-    <label for="catalog-ordering">Ordenar por</label>
-    <select id="catalog-ordering" formControlName="ordering">
-      @for (ordering of orderings; track ordering.value) {
-        <option [value]="ordering.value">{{ ordering.label }}</option>
-      }
-    </select>
-  </div>
-  @if (form.errors?.['dateRange']) {
-    <p id="catalog-date-error" class="search__error" role="alert">
-      La fecha «Desde» no puede ser posterior a «Hasta».
-    </p>
-  }
-  <div class="search__actions">
-    <button type="submit" class="btn btn--primary">Buscar</button>
-    <button type="button" class="btn btn--ghost" (click)="clear()">Limpiar</button>
-  </div>
+    </div>
+  </details>
 </form>

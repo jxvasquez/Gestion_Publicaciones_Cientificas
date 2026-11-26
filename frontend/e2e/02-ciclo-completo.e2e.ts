@@ -15,6 +15,7 @@ import {
   fillRubric,
   filterAudit,
   loginUi,
+  openMoreActions,
   sendEvaluation,
   standingMetric,
   visibleText,
@@ -196,6 +197,7 @@ test.describe('Flujos 2 a 8 — del envío al retiro', () => {
   }) => {
     await loginUi(page, 'author');
     await page.goto(manuscriptUrl);
+    await openMoreActions(page);
     await page.getByRole('button', { name: 'Dar de baja' }).click();
     const dialog = page.getByRole('dialog');
     await dialog.getByLabel(/Motivo de la baja/).fill('Retiro voluntario de los autores.');

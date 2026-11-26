@@ -21,11 +21,33 @@ export async function visibleText(page: Page): Promise<string> {
   return page.locator('body').innerText();
 }
 
+/** Abre un panel plegable por su resumen, si está cerrado. */
+async function openPanel(page: Page, name: 'Filtros' | 'Más acciones'): Promise<void> {
+  const panel = page
+    .locator('details.disclosure')
+    .filter({ has: page.locator('summary', { hasText: name }) });
+  if (!(await panel.evaluate((details: HTMLDetailsElement) => details.open))) {
+    await panel.locator('summary').click();
+  }
+  await expect(panel).toHaveAttribute('open', '');
+}
+
+/** Panel «Filtros» de los listados y del catálogo. */
+export async function openFilters(page: Page): Promise<void> {
+  await openPanel(page, 'Filtros');
+}
+
+/** Panel «Más acciones» de un detalle: ahí está «Dar de baja». */
+export async function openMoreActions(page: Page): Promise<void> {
+  await openPanel(page, 'Más acciones');
+}
+
 /**
  * Filtra la auditoría por acción (código) y manuscrito SIN recargar la página:
  * cada recarga completa de la SPA rota la cookie de sesión y encadenarlas es frágil.
  */
 export async function filterAudit(page: Page, action: string, manuscriptId: string): Promise<void> {
+  await openFilters(page);
   await page.getByLabel('Acción').fill(action);
   await page.getByLabel('Manuscrito (id)').fill(manuscriptId);
   await page.getByRole('button', { name: 'Filtrar' }).click();

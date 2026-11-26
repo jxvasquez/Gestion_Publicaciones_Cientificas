@@ -203,6 +203,26 @@ describe('AssignmentDetailComponent', () => {
     });
   });
 
+  describe('jerarquía de acciones', () => {
+    const tones = (node: Element) =>
+      Array.from(node.classList).filter((name) => name.startsWith('btn--'));
+
+    it('«Evaluar manuscrito» es la única primaria; el documento y el reporte pesan menos', async () => {
+      const { element } = await open();
+
+      // El diálogo del reporte es un contexto propio y conserva su acción primaria.
+      const primary = Array.from(element.querySelectorAll('.btn--primary')).filter(
+        (node) => !node.closest('dialog'),
+      );
+      expect(primary.map((node) => text(node))).toEqual(['Evaluar manuscrito']);
+      expect(tones(button(element, 'Ver documento')!)).toEqual(['btn--ghost']);
+      expect(tones(button(element, 'Descargar PDF')!)).toEqual(['btn--subtle']);
+      expect(tones(button(element, 'Reportar posible fuga de identidad')!)).toEqual([
+        'btn--subtle',
+      ]);
+    });
+  });
+
   describe('documento', () => {
     let clicked: HTMLAnchorElement[];
     let click: ReturnType<typeof vi.spyOn>;

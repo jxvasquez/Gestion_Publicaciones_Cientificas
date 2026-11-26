@@ -90,7 +90,7 @@
                   @for (option of resolutions; track option.value) {
                     <button
                       type="button"
-                      [class]="option.destructive ? 'btn btn--danger' : 'btn btn--ghost'"
+                      [class]="option.destructive ? 'btn btn--ghost btn--danger-text' : 'btn btn--ghost'"
                       [disabled]="resolving()"
                       [attr.aria-label]="
                         option.action + ' del reporte de ' + incident.manuscript_code

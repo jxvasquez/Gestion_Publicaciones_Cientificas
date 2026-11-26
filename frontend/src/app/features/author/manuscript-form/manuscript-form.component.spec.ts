@@ -318,8 +318,11 @@ describe('ManuscriptFormComponent', () => {
     it('agrega y quita autores; con uno solo no se puede quitar', async () => {
       const { component, element, settle } = await create();
       const remove = () =>
-        Array.from(element.querySelectorAll<HTMLButtonElement>('button.btn--danger'));
+        Array.from(element.querySelectorAll<HTMLButtonElement>('button.btn--danger-text'));
       expect(remove()[0].disabled).toBe(true);
+      expect(remove()[0].textContent?.trim()).toBe('Quitar autor 1');
+      expect(remove()[0].classList).toContain('btn--subtle');
+      expect(element.querySelector('button.btn--danger')).toBeNull();
 
       (element.querySelector('button.btn--ghost[type="button"]') as HTMLButtonElement).click();
       await settle();
@@ -578,11 +581,11 @@ describe('ManuscriptFormComponent', () => {
         'cambiaron',
       );
 
-      (
-        Array.from(element.querySelectorAll('button')).find(
-          (b) => b.textContent?.trim() === 'Recargar datos',
-        ) as HTMLButtonElement
-      ).click();
+      const reload = Array.from(element.querySelectorAll('button')).find(
+        (b) => b.textContent?.trim() === 'Recargar datos',
+      ) as HTMLButtonElement;
+      expect(reload.classList).toContain('btn--ghost');
+      reload.click();
       await settle();
       http.expectOne('/api/v1/manuscripts/m-1/').flush(buildManuscript({ title: 'Título del otro' }), {
         headers: { ETag: '"2"' },

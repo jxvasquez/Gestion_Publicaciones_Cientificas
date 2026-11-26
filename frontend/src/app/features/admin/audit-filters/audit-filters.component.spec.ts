@@ -120,4 +120,48 @@ describe('AuditFiltersComponent', () => {
 
     expect(host.cleared).toBe(1);
   });
+
+  describe('panel «Filtros»', () => {
+    const panel = (root: HTMLElement) =>
+      root.querySelector<HTMLDetailsElement>('details.disclosure')!;
+    const count = (root: HTMLElement) =>
+      panel(root).querySelector('summary .disclosure__count')?.textContent?.trim();
+
+    it('contiene el formulario, plegado y sin conteo cuando no hay filtros', async () => {
+      const { root } = await setup();
+
+      expect(panel(root).querySelector('summary')?.textContent?.trim()).toBe('Filtros');
+      expect(panel(root).querySelector('form')).not.toBeNull();
+      expect(panel(root).open).toBe(false);
+      expect(count(root)).toBeUndefined();
+    });
+
+    it('con filtros activos se abre y dice cuántos son', async () => {
+      const { root } = await setup({ action: 'LOGIN', result: 'DENIED', actor: ACTOR_ID });
+
+      expect(panel(root).open).toBe(true);
+      expect(count(root)).toBe('3');
+    });
+
+    it.each([
+      ['audit-actor', 'jperez'],
+      ['audit-manuscript', 'uno'],
+      ['audit-action', 'login ahora'],
+    ])('se abre con un error en %s', async (id, value) => {
+      const { root, fixture, type, submit } = await setup();
+
+      type(id, value);
+      submit();
+      await fixture.whenStable();
+
+      expect(panel(root).open).toBe(true);
+    });
+
+    it('«Filtrar» sigue siendo la acción destacada y «Limpiar» es compacta', async () => {
+      const { root } = await setup();
+
+      expect(root.querySelector('button[type="submit"]')!.classList).toContain('btn--primary');
+      expect(root.querySelector('button[type="button"]')!.classList).toContain('btn--subtle');
+    });
+  });
 });

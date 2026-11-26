@@ -215,6 +215,15 @@ describe('ReviewerRosterComponent', () => {
     const editButton = (element: HTMLElement) =>
       element.querySelector<HTMLButtonElement>('button[aria-label="Editar a Rosa Revisora"]')!;
 
+    it('«Editar» es una acción compacta en cada fila', async () => {
+      const { element, settle } = await open();
+      listRequest().flush(page([buildRosterReviewer()]));
+      await settle();
+
+      expect(editButton(element).classList).toContain('btn--subtle');
+      expect(editButton(element).classList).not.toContain('btn--ghost');
+    });
+
     it('«Editar» abre el diálogo con el revisor, sin enviar nada', async () => {
       const { element, settle } = await open();
       listRequest().flush(page([buildRosterReviewer()]));

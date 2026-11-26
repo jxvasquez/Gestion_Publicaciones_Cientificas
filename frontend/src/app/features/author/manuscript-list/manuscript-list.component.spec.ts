@@ -258,6 +258,71 @@ describe('ManuscriptListComponent', () => {
     });
   });
 
+  describe('panel «Filtros»', () => {
+    const panel = (element: HTMLElement) =>
+      element.querySelector<HTMLDetailsElement>('details.disclosure')!;
+    const count = (element: HTMLElement) =>
+      panel(element).querySelector('summary .disclosure__count')?.textContent?.trim();
+    const button = (element: HTMLElement, label: string) =>
+      Array.from(panel(element).querySelectorAll('button')).find(
+        (b) => b.textContent?.trim() === label,
+      )!;
+    const load = async (url?: string) => {
+      const view = await open(url);
+      listRequest().flush(buildPage([buildManuscript()]));
+      await view.settle();
+      return view;
+    };
+
+    it('contiene el formulario y está plegado sin filtros aplicados', async () => {
+      const { element } = await load();
+
+      expect(panel(element).querySelector('summary')?.textContent?.trim()).toBe('Filtros');
+      expect(panel(element).querySelector('form #filter-status')).not.toBeNull();
+      expect(panel(element).open).toBe(false);
+      expect(count(element)).toBeUndefined();
+    });
+
+    it.each([
+      ['?status=DRAFT', '1'],
+      ['?status=DRAFT&date_from=2026-10-01&date_to=2026-10-31', '3'],
+      ['?archived=true', '1'],
+    ])('con %s en la URL se abre y cuenta %s', async (query, expected) => {
+      const { element } = await load(`/app/author/manuscripts${query}`);
+
+      expect(panel(element).open).toBe(true);
+      expect(count(element)).toBe(expected);
+    });
+
+    it('un parámetro no válido no cuenta como filtro', async () => {
+      const { element } = await load('/app/author/manuscripts?status=HACKED&page=2');
+
+      expect(panel(element).open).toBe(false);
+      expect(count(element)).toBeUndefined();
+    });
+
+    it('se abre con el error del rango de fechas', async () => {
+      const { component, element, settle } = await load();
+      component.filters.patchValue({ date_from: '2026-11-01', date_to: '2026-10-01' });
+
+      button(element, 'Filtrar').click();
+      await settle();
+
+      expect(panel(element).open).toBe(true);
+      expect(panel(element).querySelector('.filters__error')).not.toBeNull();
+    });
+
+    it('«Filtrar» tiene borde y «Limpiar» es compacto: la destacada es «Nuevo manuscrito»', async () => {
+      const { element } = await load();
+
+      expect(button(element, 'Filtrar').classList).toContain('btn--ghost');
+      expect(button(element, 'Limpiar').classList).toContain('btn--subtle');
+      expect(
+        Array.from(element.querySelectorAll('.btn--primary'), (b) => b.textContent?.trim()),
+      ).toEqual(['Nuevo manuscrito']);
+    });
+  });
+
   describe('vista de archivados', () => {
     it('activar «Ver archivados» pide archived=true y cambia el título', async () => {
       const { component, element, settle } = await open();

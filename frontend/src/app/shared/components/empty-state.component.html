@@ -4,7 +4,7 @@
   </svg>
   <p class="empty-state__message" role="status">{{ message() }}</p>
   @if (actionLabel()) {
-    <button type="button" class="btn btn--primary" (click)="action.emit()">
+    <button type="button" class="btn btn--ghost" (click)="action.emit()">
       {{ actionLabel() }}
     </button>
   }

@@ -10,7 +10,7 @@ import {
   withTheme,
 } from './support/a11y';
 import { RUN } from './support/env';
-import { loginUi } from './support/ui';
+import { loginUi, openFilters, openMoreActions } from './support/ui';
 import { accountFor, buildWorld, World } from './support/world';
 
 /**
@@ -61,6 +61,8 @@ for (const theme of THEMES) {
       await c.check(page, 'login');
       await visit(page, '/catalog');
       await c.check(page, 'catálogo');
+      await openFilters(page);
+      await c.check(page, 'catálogo con «Filtros» abierto');
       await visit(page, `/catalog/${world.accepted.code}`);
       await c.check(page, 'ficha del catálogo');
       c.done();
@@ -82,7 +84,12 @@ for (const theme of THEMES) {
         await visit(page, path);
         await c.check(page, `autor: ${name}`);
       }
+      await visit(page, '/app/author/manuscripts');
+      await openFilters(page);
+      await c.check(page, 'autor: mis manuscritos con «Filtros» abierto');
       await visit(page, `/app/author/manuscripts/${world.review.id}`);
+      await openMoreActions(page);
+      await c.check(page, 'autor: «Más acciones» abierto');
       await page.getByRole('button', { name: 'Dar de baja' }).click();
       await expect(page.getByRole('dialog')).toBeVisible();
       await c.check(page, 'autor: diálogo de baja');
@@ -128,6 +135,8 @@ for (const theme of THEMES) {
         await c.check(page, `admin: ${name}`);
       }
       await visit(page, '/app/admin/audit');
+      await openFilters(page);
+      await c.check(page, 'admin: auditoría con «Filtros» abierto');
       await page
         .getByRole('link', { name: /Ver detalle/ })
         .first()

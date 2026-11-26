@@ -89,8 +89,15 @@ test('un diálogo atrapa el foco, se cierra con Escape y devuelve el foco al bot
 }) => {
   await loginUi(page, 'author');
   await visit(page, `/app/author/manuscripts/${world.review.id}`);
+  // «Dar de baja» está en «Más acciones»: se abre y se alcanza solo con el teclado.
+  const panel = page.locator('details.disclosure--more');
   const opener = page.getByRole('button', { name: 'Dar de baja' });
-  await opener.focus();
+  await expect(opener).toBeHidden();
+  await panel.locator('summary').focus();
+  await page.keyboard.press('Enter');
+  await expect(opener).toBeVisible();
+  await page.keyboard.press('Tab');
+  await expect(opener).toBeFocused();
   await page.keyboard.press('Enter');
   const dialog = page.getByRole('dialog');
   await expect(dialog).toBeVisible();
@@ -108,5 +115,6 @@ test('un diálogo atrapa el foco, se cierra con Escape y devuelve el foco al bot
   }
   await page.keyboard.press('Escape');
   await expect(dialog).toBeHidden();
+  await expect(panel).toHaveAttribute('open', '');
   await expect(opener).toBeFocused();
 });

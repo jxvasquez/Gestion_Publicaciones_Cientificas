@@ -1,9 +1,17 @@
+:host {
+  display: block;
+}
+
+.filters-panel {
+  margin-block: var(--gpc-space-4);
+}
+
 .filters {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr));
   align-items: end;
   gap: var(--gpc-space-4);
-  margin-block: var(--gpc-space-4);
+  margin-block-end: 0;
   padding: var(--gpc-space-4);
 }
 

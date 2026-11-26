@@ -98,16 +98,16 @@
                   <td>
                     <div class="areas__actions">
                       @if (editing() === area.code) {
-                        <button type="button" class="btn btn--primary" (click)="saveName(area)">
+                        <button type="button" class="btn btn--ghost" (click)="saveName(area)">
                           Guardar
                         </button>
-                        <button type="button" class="btn btn--ghost" (click)="cancelEdit()">
+                        <button type="button" class="btn btn--subtle" (click)="cancelEdit()">
                           Cancelar
                         </button>
                       } @else {
                         <button
                           type="button"
-                          class="btn btn--ghost"
+                          class="btn btn--subtle"
                           [attr.aria-label]="'Renombrar ' + area.name"
                           (click)="startEdit(area)"
                         >
@@ -115,7 +115,7 @@
                         </button>
                         <button
                           type="button"
-                          [class]="area.is_active ? 'btn btn--danger' : 'btn btn--ghost'"
+                          [class]="area.is_active ? 'btn btn--subtle btn--danger-text' : 'btn btn--subtle'"
                           [attr.aria-label]="(area.is_active ? 'Desactivar ' : 'Activar ') + area.name"
                           (click)="askToggle(area)"
                         >

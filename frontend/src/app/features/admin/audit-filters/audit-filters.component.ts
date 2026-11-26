@@ -1,4 +1,4 @@
-import { Component, effect, inject, input, output } from '@angular/core';
+import { Component, computed, effect, inject, input, output } from '@angular/core';
 import {
   AbstractControl,
   NonNullableFormBuilder,
@@ -12,6 +12,7 @@ import {
   AuditFilters,
   AuditResult,
 } from '../../../core/models/audit.model';
+import { OpenWhenDirective } from '../../../shared/directives/open-when.directive';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const ACTION = /^[A-Z0-9_]{1,64}$/;
@@ -34,11 +35,12 @@ function optionalAction(control: AbstractControl): ValidationErrors | null {
  * Es presentacional: recibe los filtros vigentes (los de la URL) y emite
  * los nuevos al enviar; quien lo contiene los lleva a la URL y consulta.
  * Un campo vacío no es un filtro, y solo se envía lo que el backend acepta:
- * «Desde» no puede ser posterior a «Hasta», y actor y manuscrito son ids.
+ * «Desde» no puede ser posterior a «Hasta», y actor y manuscrito son ids. Vive en un
+ * panel plegable que se abre cuando hay filtros aplicados o un error (spec 005, FR-017).
  */
 @Component({
   selector: 'app-audit-filters',
-  imports: [ReactiveFormsModule],
+  imports: [ReactiveFormsModule, OpenWhenDirective],
   templateUrl: './audit-filters.component.html',
   styleUrl: './audit-filters.component.scss',
 })
@@ -53,6 +55,11 @@ export class AuditFiltersComponent {
 
   /** Se quitaron todos los filtros. */
   readonly cleared = output<void>();
+
+  /** Filtros aplicados: lo dice el resumen del panel. */
+  protected readonly activeFilterCount = computed(
+    () => Object.values(this.filters()).filter(Boolean).length,
+  );
 
   protected readonly actions = AUDIT_ACTIONS;
   protected readonly results = AUDIT_RESULTS;

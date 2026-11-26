@@ -479,4 +479,13 @@ describe('VersionHistoryComponent', () => {
     const back = element.querySelector('nav a') as HTMLAnchorElement;
     expect(back.getAttribute('href')).toBe('/app/author/manuscripts/m-1');
   });
+
+  it('las descargas son botones con borde: ninguna acción destacada', async () => {
+    const { element } = await open();
+
+    expect(element.querySelector('.btn--primary')).toBeNull();
+    for (const card of versionCards(element)) {
+      expect(card.querySelector('button')!.classList).toContain('btn--ghost');
+    }
+  });
 });

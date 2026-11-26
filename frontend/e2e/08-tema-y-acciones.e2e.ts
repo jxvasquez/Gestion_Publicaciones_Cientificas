@@ -3,12 +3,13 @@ import { expect, Page, test } from '@playwright/test';
 import { expectTheme, THEMES, visit, withTheme } from './support/a11y';
 import { measureView, read, Sample } from './support/contrast';
 import { loginUi } from './support/ui';
-import { accountFor, buildWorld, Role, World } from './support/world';
+import { accountFor, buildWorld, Role, screens, World } from './support/world';
 
 /**
  * Tema claro y oscuro (spec 005). US1: preferencia del sistema, elección persistente,
  * sincronía entre pestañas, arranque sin destello y almacenamiento bloqueado. US2:
- * contraste medido en reposo, hover, foco y error en ambos temas.
+ * contraste medido en reposo, hover, foco y error en ambos temas. US6: como máximo una
+ * acción destacada por vista, por fila de tabla y por elemento de lista.
  */
 const KEY = 'gpc-theme';
 
@@ -173,5 +174,71 @@ test.describe('contraste de estados', () => {
         expect(low, `[tema ${theme}] ${view.name}:\n${low.join('\n')}`).toEqual([]);
       });
     }
+  }
+});
+
+/**
+ * Textos de las acciones con relleno visibles, agrupadas por la fila o el elemento de
+ * lista más cercano (el resto de la vista es un grupo). Los diálogos y un «Más acciones»
+ * que la persona abrió son contextos propios (FR-015).
+ */
+async function highlightedActions(page: Page): Promise<string[][]> {
+  return page.evaluate(() => {
+    const groups = new Map<Element | null, string[]>();
+    for (const el of Array.from(
+      document.querySelectorAll<HTMLElement>('.btn--primary, .btn--success, .btn--danger'),
+    )) {
+      if (
+        !el.checkVisibility({ visibilityProperty: true }) ||
+        el.closest('dialog, details.disclosure--more[open]')
+      ) {
+        continue;
+      }
+      const group = el.closest('tr, li');
+      groups.set(group, [...(groups.get(group) ?? []), (el.textContent ?? '').trim()]);
+    }
+    return Array.from(groups.values());
+  });
+}
+
+test('control: el conteo detecta dos acciones destacadas juntas (no pasa en vacío)', async ({
+  page,
+}) => {
+  await page.setContent(
+    '<!doctype html><body><button class="btn--primary">Una</button><button class="btn--danger">Dos</button>' +
+      '<ul><li><button class="btn--success">Fila</button></li></ul>' +
+      '<dialog><button class="btn--primary">Diálogo</button></dialog>' +
+      '<details class="disclosure--more" open><summary>Más</summary><button class="btn--danger">Baja</button></details></body>',
+  );
+  expect(await highlightedActions(page)).toEqual([['Una', 'Dos'], ['Fila']]);
+});
+
+test.describe('acciones destacadas', () => {
+  let world: World;
+  test.beforeAll(async () => {
+    world = await buildWorld('Acciones');
+  });
+
+  for (const role of [null, 'author', 'reviewer', 'admin'] as const) {
+    test(`como máximo una por vista y por fila (${role ?? 'público'})`, async ({ page }) => {
+      if (role) {
+        await loginUi(page, accountFor(role, world));
+      }
+      const found: string[] = [];
+      const excess: string[] = [];
+      for (const screen of screens(world).filter((s) => s.role === role)) {
+        await visit(page, screen.path);
+        for (const group of await highlightedActions(page)) {
+          found.push(...group);
+          if (group.length > 1) {
+            excess.push(`${screen.name}: ${group.join(' + ')}`);
+          }
+        }
+      }
+      console.log(`ACCIONES | ${role ?? 'público'} | ${found.join(' · ')}`);
+      expect(excess, excess.join('\n')).toEqual([]);
+      // El revisor y los demás tienen al menos una: el selector sigue encontrando botones.
+      expect(found.length).toBeGreaterThan(0);
+    });
   }
 });
