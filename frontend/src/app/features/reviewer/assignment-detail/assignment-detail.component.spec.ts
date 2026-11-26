@@ -173,6 +173,36 @@ describe('AssignmentDetailComponent', () => {
     });
   });
 
+  describe('contexto de la asignación', () => {
+    it('agrupa al inicio la tarjeta de plazo, con su barra, y la nota del doble ciego', async () => {
+      const { element } = await open(
+        buildAssignmentDetail({ assigned_at: isoFromNow(-10), due_at: isoFromNow(10) }),
+      );
+
+      const context = element.querySelector('.assignment-context')!;
+      expect(context.previousElementSibling?.classList).toContain('detail-header');
+      expect(context.querySelector('app-deadline-countdown [role="meter"]')).not.toBeNull();
+      expect(context.querySelector('app-deadline-countdown .countdown__assigned')).not.toBeNull();
+      expect(text(context.querySelector('[role="note"]'))).toContain('doble ciego');
+    });
+
+    it('una asignación completada conserva la nota y no muestra barra', async () => {
+      const { element } = await open(
+        buildAssignmentDetail({
+          status: 'COMPLETED',
+          state: 'EVALUATED',
+          completed_at: isoFromNow(-1),
+          document_url: null,
+        }),
+      );
+
+      const context = element.querySelector('.assignment-context')!;
+      expect(text(context.querySelector('[role="note"]'))).toContain('doble ciego');
+      expect(text(context)).toContain('Evaluación enviada');
+      expect(element.querySelector('[role="meter"]')).toBeNull();
+    });
+  });
+
   describe('documento', () => {
     let clicked: HTMLAnchorElement[];
     let click: ReturnType<typeof vi.spyOn>;

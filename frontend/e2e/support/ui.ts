@@ -82,5 +82,5 @@ export async function standingMetric(page: Page, label: string): Promise<string>
 /** «3/5»: asignaciones activas sobre el tope, tal como se ven en «Mi desempeño». */
 export async function activeSlots(page: Page): Promise<string> {
   const metric = page.locator('.kpi-card__metric').filter({ hasText: 'Asignaciones activas' });
-  return (await metric.locator('[aria-hidden="true"]').first().innerText()).trim();
+  return (await metric.locator('dd [aria-hidden="true"]').first().innerText()).trim();
 }

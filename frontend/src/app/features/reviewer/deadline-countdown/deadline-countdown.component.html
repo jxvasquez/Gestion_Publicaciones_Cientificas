@@ -17,6 +17,31 @@
       <span class="visually-hidden">Tiempo restante: </span>{{ label() }}
     </p>
   }
+  @let remaining = percent();
+  @if (remaining !== null) {
+    <span
+      class="meter-bar countdown__meter"
+      role="meter"
+      aria-label="Plazo restante"
+      aria-valuemin="0"
+      aria-valuemax="100"
+      [attr.aria-valuenow]="remaining"
+      [attr.aria-valuetext]="'Queda el ' + remaining + ' % del plazo'"
+    >
+      <span
+        class="meter-bar__fill"
+        [class.meter-bar__fill--warning]="urgent()"
+        [class.meter-bar__fill--danger]="isExpired()"
+        [style.inline-size.%]="remaining"
+      ></span>
+    </span>
+  }
+  @if (assigned(); as since) {
+    <p class="countdown__assigned">
+      Asignada el
+      <time [attr.datetime]="since">{{ since | date: 'dd/MM/yyyy HH:mm' : offset }}</time>
+    </p>
+  }
   <p class="countdown__due">
     Fecha límite:
     <time [attr.datetime]="dueAt()">{{ dueAt() | date: 'dd/MM/yyyy HH:mm' : offset }}</time>

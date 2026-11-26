@@ -34,6 +34,20 @@ export function formatRemaining(ms: number): string {
 }
 
 /**
+ * Fracción del plazo que queda, de 1 (recién asignada) a 0 (vencida). `null` si no hay
+ * un plazo calculable: alguna fecha no es válida o la límite no es posterior.
+ */
+export function remainingFraction(assignedAt: string, dueAt: string, now: number): number | null {
+  const start = Date.parse(assignedAt);
+  const end = Date.parse(dueAt);
+  // Con una fecha no válida la comparación también es falsa.
+  if (!(end > start)) {
+    return null;
+  }
+  return Math.min(1, Math.max(0, (end - now) / (end - start)));
+}
+
+/**
  * Contador del plazo de una asignación (plan sección 3.5, HU-14).
  *
  * * Cuenta contra `due_at`, la fecha exacta que fijó el backend. El reloj
@@ -47,6 +61,8 @@ export function formatRemaining(ms: number): string {
  *   el servidor al recibir el envío.
  * * El contador no anuncia cada segundo a los lectores de pantalla; el
  *   vencimiento sí se anuncia (`role="status"`).
+ * * Con `assignedAt` añade la fecha de asignación y un medidor del plazo restante
+ *   (spec 005, FR-012), calculado con la misma hora del servidor.
  */
 @Component({
   selector: 'app-deadline-countdown',
@@ -57,6 +73,9 @@ export function formatRemaining(ms: number): string {
 export class DeadlineCountdownComponent {
   /** Fecha límite en ISO 8601, tal como la devuelve el backend. */
   readonly dueAt = input.required<string>();
+
+  /** Fecha de asignación en ISO 8601; sin ella no hay medidor del plazo. */
+  readonly assignedAt = input<string | null>(null);
 
   /** Diferencia `servidor − navegador` en milisegundos. */
   readonly serverOffsetMs = input(0);
@@ -81,6 +100,25 @@ export class DeadlineCountdownComponent {
   );
 
   protected readonly label = computed(() => formatRemaining(this.remainingMs()));
+
+  /** La fecha de asignación, solo si se puede mostrar. */
+  protected readonly assigned = computed(() => {
+    const value = this.assignedAt();
+    return value !== null && !Number.isNaN(Date.parse(value)) ? value : null;
+  });
+
+  /** Porcentaje entero del plazo que queda; `null` si no se puede calcular. */
+  protected readonly percent = computed(() => {
+    const assigned = this.assigned();
+    if (assigned === null) {
+      return null;
+    }
+    const fraction = remainingFraction(assigned, this.dueAt(), this.serverNow());
+    if (fraction === null) {
+      return null;
+    }
+    return this.isExpired() ? 0 : Math.round(fraction * 100);
+  });
 
   constructor() {
     effect((onCleanup) => {

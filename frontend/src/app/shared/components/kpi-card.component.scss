@@ -50,6 +50,18 @@
   margin: 0;
 }
 
+.kpi-card__metric .kpi-card__meter {
+  flex-basis: 100%;
+}
+
+.kpi-card__full {
+  display: block;
+  margin-block-start: var(--gpc-space-1);
+  color: var(--gpc-warning-800);
+  font-size: var(--gpc-text-sm);
+  font-weight: var(--gpc-weight-semibold);
+}
+
 .kpi-card__metric dt {
   display: flex;
   flex: 1 1 10rem;

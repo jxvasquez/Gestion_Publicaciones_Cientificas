@@ -11,7 +11,12 @@
       icon="reviewer"
       [metrics]="[
         { label: 'Puntaje de ranking', value: s.ranking_score },
-        { label: 'Asignaciones activas', value: s.active_assignments, max: s.max_active_assignments },
+        {
+          label: 'Asignaciones activas',
+          value: s.active_assignments,
+          max: s.max_active_assignments,
+          fullLabel: 'Cupo completo',
+        },
         { label: 'Evaluadas a tiempo', value: s.on_time_evaluations },
         { label: 'Plazos vencidos', value: s.missed_deadlines },
       ]"

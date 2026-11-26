@@ -173,21 +173,21 @@ description: "Tareas de implementación del tema claro y oscuro descansado y del
 
 ### Tests for User Story 5 ⚠️
 
-- [ ] T040 [P] [US5] Ampliar `frontend/src/app/features/reviewer/deadline-countdown/deadline-countdown.component.spec.ts`:
+- [x] T040 [P] [US5] Ampliar `frontend/src/app/features/reviewer/deadline-countdown/deadline-countdown.component.spec.ts`:
   - `remainingFraction()` da 1 al inicio, 0.5 a la mitad, 0 al vencer o después y `null` si la fecha límite no es posterior a la de asignación o alguna no es válida.
   - Con `assignedAt`, la barra tiene `role="meter"`, `aria-label="Plazo restante"`, `aria-valuenow="50"` y `aria-valuetext="Queda el 50 % del plazo"` a la mitad, y la línea «Asignada el».
   - Tono neutro, de advertencia por debajo de 24 horas y de peligro al vencer, también con `serverOffsetMs` distinto de cero.
   - Sin `assignedAt` no hay barra. Las pruebas vigentes del contador siguen pasando.
-- [ ] T041 [P] [US5] Actualizar `frontend/src/app/features/reviewer/assignment-detail/assignment-detail.component.spec.ts`. Un bloque de contexto contiene el contador con `assignedAt` y la nota del doble ciego. Una asignación completada no muestra la barra.
-- [ ] T042 [P] [US5] Ampliar `frontend/src/app/shared/components/kpi-card.component.spec.ts`. Con 3 de 5 hay una `.meter-bar` con `aria-hidden="true"` al 60 % y el primer `dd [aria-hidden="true"]` sigue siendo «3/5». Con 5 de 5 y `fullLabel`, la barra está llena, en tono de advertencia y con el texto visible. Un valor mayor que el máximo llena la barra sin superar el 100 %. Sin `max` no hay barra.
-- [ ] T043 [P] [US5] Actualizar `frontend/src/app/features/reviewer/reviewer-standing/reviewer-standing.component.spec.ts` y `frontend/src/app/features/dashboard/dashboard-summaries.spec.ts`. «Cupo completo» aparece con 5 de 5 y la barra con 3 de 5.
-- [ ] T044 [P] [US5] Acotar `standingMetric()` y `activeSlots()` de `frontend/e2e/support/ui.ts` a `dd`, para que un icono o una barra decorativos no cambien lo que leen.
+- [x] T041 [P] [US5] Actualizar `frontend/src/app/features/reviewer/assignment-detail/assignment-detail.component.spec.ts`. Un bloque de contexto contiene el contador con `assignedAt` y la nota del doble ciego. Una asignación completada no muestra la barra.
+- [x] T042 [P] [US5] Ampliar `frontend/src/app/shared/components/kpi-card.component.spec.ts`. Con 3 de 5 hay una `.meter-bar` con `aria-hidden="true"` al 60 % y el primer `dd [aria-hidden="true"]` sigue siendo «3/5». Con 5 de 5 y `fullLabel`, la barra está llena, en tono de advertencia y con el texto visible. Un valor mayor que el máximo llena la barra sin superar el 100 %. Sin `max` no hay barra.
+- [x] T043 [P] [US5] Actualizar `frontend/src/app/features/reviewer/reviewer-standing/reviewer-standing.component.spec.ts` y `frontend/src/app/features/dashboard/dashboard-summaries.spec.ts`. «Cupo completo» aparece con 5 de 5 y la barra con 3 de 5.
+- [x] T044 [P] [US5] Acotar `standingMetric()` y `activeSlots()` de `frontend/e2e/support/ui.ts` a `dd`, para que un icono o una barra decorativos no cambien lo que leen.
 
 ### Implementation for User Story 5
 
-- [ ] T045 [US5] Agregar a `frontend/src/app/features/reviewer/deadline-countdown/deadline-countdown.component.ts` la entrada opcional `assignedAt` y la función exportada `remainingFraction(assignedAt, dueAt, now)`. Dibujar la barra de FR-012 y la línea «Asignada el» en `deadline-countdown.component.html` y dar a la tarjeta el ancho completo en `deadline-countdown.component.scss`.
-- [ ] T046 [US5] En `frontend/src/app/features/reviewer/assignment-detail/assignment-detail.component.html` y `.scss`, crear el bloque de contexto de FR-013, en dos columnas desde 48 rem, y pasar `[assignedAt]="a.assigned_at"` al contador.
-- [ ] T047 [US5] Agregar `fullLabel?: string` a `KpiMetric` en `frontend/src/app/shared/components/kpi-card.component.ts` y dibujar la barra y el texto de FR-010 en `kpi-card.component.html`. Pasar `fullLabel: 'Cupo completo'` en `frontend/src/app/features/reviewer/reviewer-standing/reviewer-standing.component.html` y `frontend/src/app/features/dashboard/reviewer-summary/reviewer-summary.component.html`.
+- [x] T045 [US5] Agregar a `frontend/src/app/features/reviewer/deadline-countdown/deadline-countdown.component.ts` la entrada opcional `assignedAt` y la función exportada `remainingFraction(assignedAt, dueAt, now)`. Dibujar la barra de FR-012 y la línea «Asignada el» en `deadline-countdown.component.html` y dar a la tarjeta el ancho completo en `deadline-countdown.component.scss`.
+- [x] T046 [US5] En `frontend/src/app/features/reviewer/assignment-detail/assignment-detail.component.html` y `.scss`, crear el bloque de contexto de FR-013, en dos columnas desde 48 rem, y pasar `[assignedAt]="a.assigned_at"` al contador.
+- [x] T047 [US5] Agregar `fullLabel?: string` a `KpiMetric` en `frontend/src/app/shared/components/kpi-card.component.ts` y dibujar la barra y el texto de FR-010 en `kpi-card.component.html`. Pasar `fullLabel: 'Cupo completo'` en `frontend/src/app/features/reviewer/reviewer-standing/reviewer-standing.component.html` y `frontend/src/app/features/dashboard/reviewer-summary/reviewer-summary.component.html`.
 
 **Checkpoint**: plazo y cupo visibles con texto y barra en ambos temas. US5 se verifica sola.
 
@@ -445,6 +445,12 @@ Decisiones tomadas al implementar:
 **2026-11-25.** Antes de implementar, las pruebas nuevas fallaron (`editorialStages` y el componente no existían). Con la implementación: `TZ=UTC npx ng test --watch=false` con 80 archivos y 1292 pruebas en verde, `tsc` de app y specs limpios, build de producción sin avisos de presupuesto y los dos validadores en orden. Se agregó al validador de contraste el par `on-accent` sobre `text-muted` (marcador completado de un dado de baja), con 7,58:1 en claro y 9,68:1 en oscuro: son ya 52 pares por tema.
 
 `./scripts/e2e.sh` completo: 58 pruebas en verde. Con un spec temporal (borrado) se abrió el detalle de los estados que dejan los flujos (Borrador, En revisión, Cambios solicitados, Aceptado, Rechazado y un aceptado dado de baja) en ambos temas, a 1366 y 320 px: cero infracciones axe, sin desbordamiento horizontal y el árbol accesible anuncia cada etapa con su situación. `SUBMITTED` y `TIE_BREAKER` no quedaban al terminar los flujos y se verifican en las pruebas unitarias.
+
+### Plazo y cupo (US5, T040 a T047)
+
+**2026-11-25.** Antes de implementar, las pruebas nuevas fallaron (`remainingFraction` no existía). Con la implementación: `TZ=UTC npx ng test --watch=false` con 80 archivos y 1327 pruebas en verde, `tsc` de app, specs y E2E limpios, build de producción sin avisos (paquete inicial de 311,74 kB) y los dos validadores en orden. `standingMetric()` ya leía `dd`; solo cambió `activeSlots()` (T044).
+
+`./scripts/e2e.sh` completo: 58 pruebas en verde. Con un spec temporal (borrado), que altera en el navegador respuestas reales de la API, se revisaron el plazo completo, a la mitad, con menos de 24 horas y vencido, el formulario de evaluación y el cupo en 1/5 y 5/5 en «Mi desempeño» y en el panel, en ambos temas a 1366 y 320 px: cero infracciones axe, sin desbordamiento de la página y el ancho de cada barra proporcional a su valor. A 320 px la tabla «Historial de ajustes» parte las palabras de sus columnas; es anterior a esta funcionalidad y no se cambió.
 
 ### Resultados finales (T064 a T066)
 

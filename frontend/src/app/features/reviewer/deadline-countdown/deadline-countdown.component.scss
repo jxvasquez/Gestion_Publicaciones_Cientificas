@@ -1,5 +1,8 @@
+:host {
+  display: block;
+}
 .countdown {
-  display: inline-flex;
+  display: flex;
   flex-direction: column;
   gap: 0.125rem;
   padding: var(--gpc-space-2) var(--gpc-space-4);
@@ -19,6 +22,10 @@
   font-weight: var(--gpc-weight-bold);
   font-variant-numeric: tabular-nums;
 }
+.countdown__meter {
+  margin-block: var(--gpc-space-1);
+}
+.countdown__assigned,
 .countdown__due {
   font-size: var(--gpc-text-sm);
   color: var(--gpc-text-muted);

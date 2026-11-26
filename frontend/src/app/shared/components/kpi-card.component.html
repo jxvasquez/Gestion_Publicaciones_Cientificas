@@ -34,6 +34,21 @@
               <span class="badge badge--info">{{ metric.value }}</span>
             }
           </dd>
+          @if (metric.percent !== null) {
+            <!-- La barra es decorativa: el valor ya se lee como «3 de 5». -->
+            <dd class="kpi-card__meter" [attr.aria-hidden]="metric.fullLabel ? null : 'true'">
+              <span class="meter-bar" aria-hidden="true">
+                <span
+                  class="meter-bar__fill"
+                  [class.meter-bar__fill--warning]="metric.full"
+                  [style.inline-size.%]="metric.percent"
+                ></span>
+              </span>
+              @if (metric.fullLabel) {
+                <span class="kpi-card__full">{{ metric.fullLabel }}</span>
+              }
+            </dd>
+          }
         </div>
       }
     </dl>

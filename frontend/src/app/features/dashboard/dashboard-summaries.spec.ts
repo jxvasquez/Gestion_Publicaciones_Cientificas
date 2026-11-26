@@ -140,6 +140,25 @@ describe('Resúmenes del panel unificado (TSK-28)', () => {
     expect(element.textContent).not.toMatch(/42|unexpected_count|Autor reservado|example\.invalid/);
   });
 
+  it.each([
+    [3, '60%', false],
+    [5, '100%', true],
+  ])(
+    'con %i de 5 activas la tarjeta del Revisor dibuja la barra al %s',
+    async (active, width, full) => {
+      const fixture = await renderSummary(ReviewerSummaryComponent, {
+        active_assignments: active,
+        max_active_assignments: 5,
+      });
+      const element = fixture.nativeElement as HTMLElement;
+
+      expect(
+        element.querySelector<HTMLElement>('.meter-bar__fill')?.style.getPropertyValue('inline-size'),
+      ).toBe(width);
+      expect((element.textContent ?? '').includes('Cupo completo')).toBe(full);
+    },
+  );
+
   it('muestra el cupo del Revisor como «3/5», con el nombre accesible «3 de 5»', async () => {
     const fixture = await renderSummary(ReviewerSummaryComponent, {
       ranking_score: 110,

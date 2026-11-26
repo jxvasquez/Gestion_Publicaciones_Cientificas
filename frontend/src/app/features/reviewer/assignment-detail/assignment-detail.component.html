@@ -20,22 +20,24 @@
       </div>
     </header>
 
-    <p class="callout callout--info" role="note">
-      Revisión a doble ciego: no se muestra información de los autores.
-    </p>
-
-    @if (a.status === 'ACTIVE') {
-      <app-deadline-countdown
-        [dueAt]="a.due_at"
-        [serverOffsetMs]="serverOffsetMs()"
-        [overdue]="a.is_overdue"
-        (expired)="deadlinePassed.set(true)"
-      />
-    } @else if (a.completed_at) {
-      <p class="callout callout--success" role="status">
-        Evaluación enviada el {{ a.completed_at | date: 'dd/MM/yyyy HH:mm' : offset }}.
+    <div class="assignment-context">
+      @if (a.status === 'ACTIVE') {
+        <app-deadline-countdown
+          [assignedAt]="a.assigned_at"
+          [dueAt]="a.due_at"
+          [serverOffsetMs]="serverOffsetMs()"
+          [overdue]="a.is_overdue"
+          (expired)="deadlinePassed.set(true)"
+        />
+      } @else if (a.completed_at) {
+        <p class="callout callout--success" role="status">
+          Evaluación enviada el {{ a.completed_at | date: 'dd/MM/yyyy HH:mm' : offset }}.
+        </p>
+      }
+      <p class="callout callout--info" role="note">
+        Revisión a doble ciego: no se muestra información de los autores.
       </p>
-    }
+    </div>
 
     <section class="card" aria-labelledby="manuscript-title">
       <h2 id="manuscript-title">Manuscrito</h2>

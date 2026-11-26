@@ -40,6 +40,21 @@
   background: var(--gpc-surface);
   border-color: var(--gpc-border);
 }
+.assignment-context {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+  gap: var(--gpc-space-4);
+  margin: var(--gpc-space-4) 0;
+}
+.assignment-context .callout {
+  margin: 0;
+}
+@media (min-width: 48rem) {
+  .assignment-context {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
 .card {
   margin: var(--gpc-space-4) 0;
   padding: var(--gpc-space-4) var(--gpc-space-6);

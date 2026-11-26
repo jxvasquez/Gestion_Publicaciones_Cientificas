@@ -44,10 +44,14 @@ describe('ReviewerStandingComponent', () => {
 
   afterEach(() => http.verify());
 
-  const render = async (rows: RankingAdjustment[], count = rows.length) => {
+  const render = async (
+    rows: RankingAdjustment[],
+    count = rows.length,
+    standing: ReviewerStanding = STANDING,
+  ) => {
     const fixture = TestBed.createComponent(ReviewerStandingComponent);
     await fixture.whenStable();
-    http.expectOne('/api/v1/reviewer/standing/').flush(STANDING);
+    http.expectOne('/api/v1/reviewer/standing/').flush(standing);
     http
       .expectOne((r) => r.url === '/api/v1/reviewer/standing/adjustments/')
       .flush({ count, next: null, previous: null, results: rows });
@@ -79,6 +83,21 @@ describe('ReviewerStandingComponent', () => {
     expect(element.querySelector('tbody .badge--danger')).not.toBeNull();
     expect(element.querySelector('tbody .badge--success')).not.toBeNull();
     expect(element.textContent).toContain('GPC-2026-000042 · v1');
+  });
+
+  it('muestra el cupo con su barra', async () => {
+    const element = await render([]);
+
+    expect(
+      element.querySelector<HTMLElement>('.meter-bar__fill')?.style.getPropertyValue('inline-size'),
+    ).toBe('60%');
+    expect(element.textContent).not.toContain('Cupo completo');
+  });
+
+  it('con 5 de 5 avisa «Cupo completo»', async () => {
+    const element = await render([], 0, { ...STANDING, active_assignments: 5 });
+
+    expect(element.querySelector('.kpi-card__full')?.textContent?.trim()).toBe('Cupo completo');
   });
 
   it('sin ajustes muestra el estado vacío', async () => {

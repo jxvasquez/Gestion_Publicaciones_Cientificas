@@ -1,7 +1,11 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { vi } from 'vitest';
 
-import { DeadlineCountdownComponent, formatRemaining } from './deadline-countdown.component';
+import {
+  DeadlineCountdownComponent,
+  formatRemaining,
+  remainingFraction,
+} from './deadline-countdown.component';
 
 const MINUTE = 60_000;
 const HOUR = 60 * MINUTE;
@@ -25,6 +29,32 @@ describe('formatRemaining', () => {
   });
 });
 
+describe('remainingFraction', () => {
+  const ASSIGNED = '2026-10-17T12:00:00Z';
+  const DUE = '2026-11-06T12:00:00Z';
+  const at = (iso: string) => Date.parse(iso);
+
+  it.each([
+    ['al asignarse', ASSIGNED, 1],
+    ['a la mitad', '2026-10-27T12:00:00Z', 0.5],
+    ['a un cuarto del final', '2026-11-01T12:00:00Z', 0.25],
+    ['al vencer', DUE, 0],
+    ['después de vencer', '2026-12-01T00:00:00Z', 0],
+    ['antes de asignarse', '2026-10-01T00:00:00Z', 1],
+  ])('%s queda %s', (_, now, expected) => {
+    expect(remainingFraction(ASSIGNED, DUE, at(now))).toBe(expected);
+  });
+
+  it.each([
+    ['la fecha límite es igual a la de asignación', ASSIGNED, ASSIGNED],
+    ['la fecha límite es anterior', DUE, ASSIGNED],
+    ['la fecha de asignación no es válida', 'ayer', DUE],
+    ['la fecha límite no es válida', ASSIGNED, ''],
+  ])('sin plazo calculable (%s) es null', (_, assigned, due) => {
+    expect(remainingFraction(assigned, due, at(ASSIGNED))).toBeNull();
+  });
+});
+
 describe('DeadlineCountdownComponent', () => {
   const NOW = new Date('2026-10-27T12:00:00Z');
   let fixture: ComponentFixture<DeadlineCountdownComponent>;
@@ -41,9 +71,17 @@ describe('DeadlineCountdownComponent', () => {
     vi.useRealTimers();
   });
 
-  const mount = (inputs: { dueAt: string; serverOffsetMs?: number; overdue?: boolean }) => {
+  const mount = (inputs: {
+    dueAt: string;
+    assignedAt?: string;
+    serverOffsetMs?: number;
+    overdue?: boolean;
+  }) => {
     fixture = TestBed.createComponent(DeadlineCountdownComponent);
     fixture.componentRef.setInput('dueAt', inputs.dueAt);
+    if (inputs.assignedAt !== undefined) {
+      fixture.componentRef.setInput('assignedAt', inputs.assignedAt);
+    }
     if (inputs.serverOffsetMs !== undefined) {
       fixture.componentRef.setInput('serverOffsetMs', inputs.serverOffsetMs);
     }
@@ -171,5 +209,98 @@ describe('DeadlineCountdownComponent', () => {
 
     expect(expired).toBe(0);
     expect(vi.getTimerCount()).toBe(0);
+  });
+
+  describe('barra del plazo restante', () => {
+    // NOW está a la mitad de un plazo de 20 días.
+    const ASSIGNED = '2026-10-17T12:00:00Z';
+    const DUE = '2026-11-06T12:00:00Z';
+    const meter = () => root().querySelector('[role="meter"]');
+    const fill = () => root().querySelector<HTMLElement>('.meter-bar__fill')!;
+    const tones = () =>
+      ['meter-bar__fill--warning', 'meter-bar__fill--danger'].filter((name) =>
+        fill().classList.contains(name),
+      );
+
+    it('es un medidor con nombre, valor en texto y la fecha de asignación', () => {
+      mount({ assignedAt: ASSIGNED, dueAt: DUE });
+
+      expect(meter()?.getAttribute('aria-label')).toBe('Plazo restante');
+      expect(meter()?.getAttribute('aria-valuemin')).toBe('0');
+      expect(meter()?.getAttribute('aria-valuemax')).toBe('100');
+      expect(meter()?.getAttribute('aria-valuenow')).toBe('50');
+      expect(meter()?.getAttribute('aria-valuetext')).toBe('Queda el 50 % del plazo');
+      expect(fill().style.getPropertyValue('inline-size')).toBe('50%');
+      expect(text('.countdown__assigned')).toContain('Asignada el 17/10/2026 07:00');
+    });
+
+    it('usa el tono neutro con más de un día', () => {
+      mount({ assignedAt: ASSIGNED, dueAt: DUE });
+
+      expect(tones()).toEqual([]);
+    });
+
+    it('con menos de 24 horas pasa a advertencia, junto a «Próximo a vencer»', () => {
+      mount({ assignedAt: ASSIGNED, dueAt: '2026-10-28T11:00:00Z' });
+
+      expect(tones()).toEqual(['meter-bar__fill--warning']);
+      expect(text('.countdown__warning')).toBe('Próximo a vencer');
+    });
+
+    it('al vencer queda vacía en tono de peligro, junto a «Plazo vencido»', () => {
+      mount({ assignedAt: ASSIGNED, dueAt: '2026-10-27T12:00:03Z' });
+
+      advance(3_000);
+
+      expect(tones()).toEqual(['meter-bar__fill--danger']);
+      expect(meter()?.getAttribute('aria-valuenow')).toBe('0');
+      expect(meter()?.getAttribute('aria-valuetext')).toBe('Queda el 0 % del plazo');
+      expect(text('.countdown__value')).toBe('Plazo vencido');
+    });
+
+    it('si el servidor la dio por vencida queda vacía aunque falte tiempo en el reloj', () => {
+      mount({ assignedAt: ASSIGNED, dueAt: DUE, overdue: true });
+
+      expect(meter()?.getAttribute('aria-valuenow')).toBe('0');
+      expect(tones()).toEqual(['meter-bar__fill--danger']);
+    });
+
+    it('usa la hora del servidor para el valor y el tono', () => {
+      // El navegador va 5 días atrasado: para el servidor queda un cuarto, no la mitad.
+      mount({ assignedAt: ASSIGNED, dueAt: DUE, serverOffsetMs: 5 * DAY });
+
+      expect(meter()?.getAttribute('aria-valuenow')).toBe('25');
+    });
+
+    it('con la corrección del servidor puede ser urgente', () => {
+      mount({ assignedAt: ASSIGNED, dueAt: DUE, serverOffsetMs: 9.5 * DAY });
+
+      expect(tones()).toEqual(['meter-bar__fill--warning']);
+    });
+
+    it('avanza con el paso del tiempo', () => {
+      mount({ assignedAt: '2026-10-27T11:59:00Z', dueAt: '2026-10-27T12:01:00Z' });
+      expect(meter()?.getAttribute('aria-valuenow')).toBe('50');
+
+      advance(30_000);
+
+      expect(meter()?.getAttribute('aria-valuenow')).toBe('25');
+    });
+
+    it('sin fecha de asignación no hay barra ni línea de asignación', () => {
+      mount({ dueAt: DUE });
+
+      expect(meter()).toBeNull();
+      expect(root().querySelector('.countdown__assigned')).toBeNull();
+    });
+
+    it('con un plazo imposible no hay barra y se conservan el contador y las fechas', () => {
+      mount({ assignedAt: '2026-11-07T12:00:00Z', dueAt: DUE });
+
+      expect(meter()).toBeNull();
+      expect(text('.countdown__value')).toContain('10 d 0 h');
+      expect(text('.countdown__assigned')).toContain('07/11/2026');
+      expect(text('.countdown__due')).toContain('06/11/2026');
+    });
   });
 });
