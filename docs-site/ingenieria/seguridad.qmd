@@ -67,6 +67,7 @@ Los archivos de credenciales locales (por ejemplo `credentials.txt`) están igno
 - Solo Nginx publica puertos (80 → 443); `db` y `backend` viven en la red interna de Compose.
 - **Cabeceras de seguridad** en todas las respuestas (SPA, API, errores y PDF): `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy` y una `Content-Security-Policy` estricta (`script-src 'self'`, sin `unsafe-eval`). Nginx es el único dueño de esa política y oculta las que Django también emite.
 - **Django Admin apagado en producción:** `/admin/` responde `404` en Nginx y en Django, y ninguna variable lo enciende.
+- **Tema sin excepciones en la CSP**: el tema claro u oscuro se aplica antes del primer pintado con `theme-init.js`, un archivo del mismo origen cargado en `<head>`, en lugar de un script en línea o un `hash` en la política. Solo lee la preferencia guardada en `localStorage` (`gpc-theme`), que no contiene datos personales ni sale del navegador. `scripts/check_frontend_build.py` falla si el *build* incluye un `<script>` en línea.
 - **Documentación de la API** controlada por `API_DOCS_ENABLED` y compatible con la CSP (Swagger UI sin `<script>` en línea).
 - **PDF por rutas internas:** `/_protected/` y `/_catalog/` son `internal`; `/media/` no se sirve. Una prueba de humo (`scripts/smoke_media_isolation.sh`) verifica el aislamiento.
 - **Errores sin filtraciones:** los `500` son genéricos; el detalle va al log con el mismo `request_id`.

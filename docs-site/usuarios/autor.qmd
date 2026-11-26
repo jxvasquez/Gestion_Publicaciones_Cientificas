@@ -80,6 +80,7 @@ El envío es seguro ante reintentos: repetirlo no crea una segunda versión ni d
 
 En el detalle del manuscrito ve:
 
+- el **progreso del ciclo editorial** en cuatro etapas (Borrador, Enviado, En revisión y Decisión), con las completadas, la actual y las pendientes. La etapa actual puede rotularse «En espera de revisores», «En desempate» o «Cambios solicitados»; al terminar, la decisión muestra «Aceptado» o «Rechazado», y un manuscrito retirado, «Dado de baja»;
 - el **estado** actual y qué acción le toca (si alguna);
 - el **contador de rondas de corrección** y el de versiones, por separado;
 - el **historial** cronológico (estados, versiones, rondas), que nunca se edita.
@@ -103,17 +104,17 @@ Debe cambiar algo: un PDF nuevo, los metadatos, o ambos. Enviar exactamente lo m
 
 ## Retirar un manuscrito
 
-Puede retirar un manuscrito en cualquier estado. El retiro es **lógico**: sale de sus listados activos y del catálogo público (si estaba aceptado), pero **no se borra nada**; el historial queda conservado.
+Puede retirar un manuscrito en cualquier estado: en su detalle, abra **Más acciones** y pulse **Dar de baja**. El retiro es **lógico**: sale de sus listados activos y del catálogo público (si estaba aceptado), pero **no se borra nada**; el historial queda conservado.
 
 - Si está **en revisión** o **aceptado**, debe indicar un motivo.
 - Un segundo retiro del mismo manuscrito se rechaza.
 - No hay restauración desde la interfaz.
 
-Para ver los retirados, use el filtro de archivados del listado.
+Para ver los retirados, abra **Filtros** en el listado y marque **Ver archivados (dados de baja)**.
 
 ## Consultas y filtros
 
-El listado admite filtrar por estado, área, rango de fechas y texto (código, título o resumen), y ordenar por fecha, título, estado o código. Use **Filtrar** para aplicar y **Limpiar** para empezar de nuevo.
+En el panel **Filtros** del listado puede filtrar por estado y por rango de fechas, y ver los archivados. Use **Filtrar** para aplicar y **Limpiar** para empezar de nuevo.
 
 ## Problemas frecuentes
 

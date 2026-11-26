@@ -126,3 +126,14 @@
     block-size: 2px;
   }
 }
+
+/* Colores forzados: marcadores y líneas con color del sistema; la actual conserva su anillo. */
+@media (forced-colors: active) {
+  .progress__marker {
+    border-color: CanvasText;
+  }
+
+  .progress__stage:not(:last-child)::after {
+    background: CanvasText;
+  }
+}

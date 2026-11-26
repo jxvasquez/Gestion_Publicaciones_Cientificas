@@ -9,7 +9,8 @@ import { accountFor, buildWorld, Role, screens, World } from './support/world';
  * Tema claro y oscuro (spec 005). US1: preferencia del sistema, elección persistente,
  * sincronía entre pestañas, arranque sin destello y almacenamiento bloqueado. US2:
  * contraste medido en reposo, hover, foco y error en ambos temas. US6: como máximo una
- * acción destacada por vista, por fila de tabla y por elemento de lista.
+ * acción destacada por vista, por fila de tabla y por elemento de lista. Colores
+ * forzados: barras, avatar, marcadores de etapa y paneles conservan su borde.
  */
 const KEY = 'gpc-theme';
 
@@ -241,4 +242,66 @@ test.describe('acciones destacadas', () => {
       expect(found.length).toBeGreaterThan(0);
     });
   }
+});
+
+test.describe('colores forzados', () => {
+  let world: World;
+  test.beforeAll(async () => {
+    world = await buildWorld('Colores forzados');
+  });
+
+  /** Ancho del borde superior de cada coincidencia, en píxeles. */
+  const borders = (page: Page, selector: string) =>
+    page.locator(selector).evaluateAll((elements) =>
+      elements.map((el) => {
+        const style = getComputedStyle(el);
+        return style.borderTopStyle === 'none' ? 0 : parseFloat(style.borderTopWidth);
+      }),
+    );
+
+  const expectBorders = async (page: Page, selector: string) => {
+    const widths = await borders(page, selector);
+    expect(widths.length, `sin elementos ${selector}`).toBeGreaterThan(0);
+    for (const width of widths) {
+      expect(width, selector).toBeGreaterThanOrEqual(1);
+    }
+  };
+
+  const background = (page: Page, selector: string) =>
+    page
+      .locator(selector)
+      .first()
+      .evaluate((el) => getComputedStyle(el).backgroundColor);
+
+  test('avatar, marcadores de etapa y paneles se distinguen', async ({ page }) => {
+    await page.emulateMedia({ forcedColors: 'active' });
+    await loginUi(page, 'author');
+    await visit(page, `/app/author/manuscripts/${world.review.id}`);
+
+    await expectBorders(page, '.avatar');
+    await expectBorders(page, '.progress__marker');
+    await expectBorders(page, '.disclosure > summary');
+    // La línea entre etapas es un fondo: sin un color del sistema desaparecería.
+    const line = await page
+      .locator('.progress__stage')
+      .first()
+      .evaluate((el) => getComputedStyle(el, '::after').backgroundColor);
+    expect(line).not.toBe(await background(page, '.progress'));
+  });
+
+  test('las barras conservan su borde y su relleno visible', async ({ page }) => {
+    await page.emulateMedia({ forcedColors: 'active' });
+    await loginUi(page, accountFor('reviewer', world));
+    for (const path of [
+      '/app/reviewer/assignments',
+      `/app/reviewer/assignments/${world.assignmentId}`,
+    ]) {
+      await visit(page, path);
+      await expect(page.locator('.meter-bar').first()).toBeVisible();
+      await expectBorders(page, '.meter-bar');
+      expect(await background(page, '.meter-bar__fill')).not.toBe(
+        await background(page, '.meter-bar'),
+      );
+    }
+  });
 });

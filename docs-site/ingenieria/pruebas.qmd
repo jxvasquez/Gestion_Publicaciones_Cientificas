@@ -78,16 +78,18 @@ El script levanta un **stack aislado** (otro proyecto de Compose, volúmenes y p
 | `02-ciclo-completo` | Flujos 2 a 8 de punta a punta: el Autor envía y el sistema asigna a dos Revisores de su carrera, un Revisor evalúa con la rúbrica (ranking +10, cupo `X/5`), con dos «Aceptar» el consenso publica, el público lo descarga, el Autor lo retira y la auditoría guarda la huella. |
 | `03-correccion` | Consenso y corrección: «Revisión menor» da «Cambios solicitados» y una versión 2; «Aceptar» contra «Rechazar» abre el desempate automático y la justificación exige 100 caracteres; el Administrador corrige un veredicto y el historial conserva ambas decisiones. |
 | `04-fuga-de-identidad` | Con una cuenta Autor–Revisor: el Revisor reporta, el Administrador pide una versión anonimizada y el Autor no llega a conocer a ningún Revisor (pantalla, árbol accesible, respuestas, PDF y avisos). |
-| `05-accesibilidad` | Revisión de accesibilidad con axe-core. |
+| `05-accesibilidad` | Revisión de accesibilidad con axe-core en tema claro y en tema oscuro, con diálogos y paneles plegables abiertos. |
 | `06-teclado` | Todo el flujo por teclado. |
 | `07-responsive` | Diseños móvil y de escritorio. |
+| `08-tema-y-acciones` | Tema claro y oscuro (preferencia, persistencia, arranque sin destello), contraste de los estados, una acción destacada por vista y colores forzados. |
 
 ### Otras verificaciones
 
 | Comando | Qué comprueba |
 |---|---|
 | `python3 scripts/check_runbook.py` | Que el runbook cite scripts, comandos y variables que existen. |
-| `python3 scripts/check_frontend_build.py` | Que el *build* de producción sea de producción (sin mapas de código ni herramientas de desarrollo). |
+| `python3 scripts/check_frontend_build.py` | Que el *build* de producción sea de producción (sin mapas de código ni herramientas de desarrollo) y que el tema se aplique antes de arrancar, sin `<script>` en línea. |
+| `python3 scripts/check_theme_contrast.py` | Que los pares de color de los temas claro y oscuro cumplan WCAG 2.1 AA (4.5:1 en texto, 3:1 en elementos no textuales). |
 | `./scripts/smoke_media_isolation.sh` | Aislamiento del volumen de PDF por Nginx. |
 | `./scripts/verify_pilot.sh` | Verificación completa del despliegue (restauración, puertos, TLS y cabeceras). |
 | `./scripts/load_test.sh` | Prueba de carga (50 usuarios en catálogo, cargas de 50 MB). |
@@ -102,7 +104,7 @@ El flujo `.github/workflows/ci.yml` corre en cada *push* y *pull request*:
 | `backend-tests` | Pytest sobre PostgreSQL 16, sin migraciones pendientes y con **cobertura mínima del 80 %** en servicios y permisos. |
 | `backend-audit` | `pip-audit` de las dependencias de producción y desarrollo. |
 | `frontend-tests` | Verificación de tipos de la aplicación y los *specs*, más las pruebas unitarias. |
-| `frontend-build` | *Build* de producción verificado. |
+| `frontend-build` | *Build* de producción y contraste de los temas verificados. |
 | `frontend-audit` | `npm audit` de producción. |
 | `compose-config` | Validación de los archivos de Compose. |
 | `media-isolation` | Aislamiento de los PDF en Nginx. |

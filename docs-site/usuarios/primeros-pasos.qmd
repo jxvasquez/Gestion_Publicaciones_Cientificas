@@ -33,6 +33,21 @@ Cada sección del panel se carga por separado. Si una falla, las demás siguen f
 Tener varios roles no le da acceso a todo. Cada acción sigue dependiendo de su relación con el documento: nadie evalúa su propio manuscrito, nadie decide sobre un manuscrito del que es autor o coautor, y un Revisor solo ve lo que se le asignó.
 :::
 
+## Tema claro u oscuro
+
+En la cabecera, junto a los avisos, el botón **Tema oscuro** alterna entre los dos temas. Mientras no lo use, el sistema sigue la preferencia de su equipo. Su elección se recuerda **en ese navegador** (no en su cuenta), así que en otro equipo se elige de nuevo. Las páginas públicas y el inicio de sesión aplican la misma preferencia, sin botón propio.
+
+El botón **Mi cuenta** muestra sus iniciales; al abrirlo ve su nombre completo.
+
+## Filtros y acciones plegadas
+
+Para no saturar la pantalla, cada vista destaca como máximo una acción principal y agrupa lo demás:
+
+- **Filtros** (mis manuscritos, auditoría y catálogo) es un panel plegable. Se abre solo cuando hay filtros aplicados o un error en ellos, y junto a su nombre indica cuántos hay.
+- **Más acciones** (detalle de un manuscrito) guarda las acciones poco frecuentes, como **Dar de baja**.
+
+Ambos se abren con un clic, o con el teclado mediante Intro o la barra espaciadora.
+
 ## Su sesión
 
 - Mientras trabaja, la sesión se renueva sola. Si está **30 minutos sin actividad**, se cierra.

@@ -378,3 +378,19 @@ a {
   font-weight: var(--gpc-weight-bold);
   line-height: 1;
 }
+
+/*
+ * Colores forzados del sistema: los fondos y las sombras propios desaparecen, así que lo
+ * que se distinguía por su relleno recibe un borde, y las barras un color del sistema.
+ */
+@media (forced-colors: active) {
+  .meter-bar,
+  .avatar,
+  .disclosure > summary {
+    border: 1px solid CanvasText;
+  }
+
+  .meter-bar__fill {
+    background: CanvasText;
+  }
+}

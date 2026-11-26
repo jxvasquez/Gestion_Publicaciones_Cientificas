@@ -232,13 +232,13 @@ description: "Tareas de implementación del tema claro y oscuro descansado y del
 
 **Purpose**: colores forzados, documentación, CI y verificación de SC-001 a SC-007.
 
-- [ ] T061 [P] Agregar a `frontend/src/styles.scss` y a las hojas de `editorial-progress` y `header` las reglas `@media (forced-colors: active)` del plan, y a `frontend/e2e/08-tema-y-acciones.e2e.ts` una prueba con `emulateMedia({ forcedColors: 'active' })` que exige un borde de al menos 1 px en `.meter-bar`, `.avatar`, los marcadores de etapa y `.disclosure > summary`.
-- [ ] T062 [P] Agregar un paso `python3 scripts/check_theme_contrast.py` al trabajo del frontend de `.github/workflows/ci.yml`, junto a `python3 scripts/check_frontend_build.py`, y actualizar la sección de verificación del frontend de `README.md`: suites `05` en dos temas, suite `08` y el validador de contraste.
-- [ ] T063 [P] Actualizar el sitio de documentación: `docs-site/usuarios/primeros-pasos.qmd` (botón de tema, preferencia por navegador, paneles «Filtros» y «Más acciones»), `docs-site/usuarios/autor.qmd` (indicador de etapas y «Dar de baja» en «Más acciones»), `docs-site/usuarios/revisor.qmd` (barras de plazo y de cupo), `docs-site/ingenieria/pruebas.qmd` (validador de contraste y suites `05` y `08`) y `docs-site/ingenieria/seguridad.qmd` (`theme-init.js` y la CSP sin excepciones). Ejecutar `python3 scripts/check_docs_site.py`.
-- [ ] T064 Desde `frontend/`, ejecutar `npx tsc -p tsconfig.app.json --noEmit`, `npx tsc -p tsconfig.spec.json --noEmit`, `npx tsc -p e2e/tsconfig.json`, `npx ng build --configuration production` y `TZ=UTC npx ng test --watch=false`. Desde la raíz, ejecutar `python3 scripts/check_frontend_build.py` y `python3 scripts/check_theme_contrast.py`. Confirmar que no aparecen avisos de presupuesto nuevos frente a T001 y registrar los resultados.
-- [ ] T065 Ejecutar `./scripts/e2e.sh` completo desde un stack nuevo. Exigir cero infracciones axe A/AA en ambos temas, cero exposiciones de identidad en `04-fuga-de-identidad.e2e.ts`, cero hallazgos de teclado y responsive en `06` y `07` y el conteo de acciones de `08` en verde. Registrar número de pruebas, duración y hallazgos frente a T002.
-- [ ] T066 Recorrer en el entorno de desarrollo, en ambos temas y a 320, 768 y 1366 px, la cabecera, el panel de cada rol, el detalle del manuscrito en cada estado, el detalle de una asignación activa y una vencida, «Mi desempeño» con 5 de 5 y los paneles plegables. Anotar en «Resultados de verificación» lo que las pruebas automáticas no cubren, como la legibilidad prolongada y la lectura con un lector de pantalla.
-- [ ] T067 Ejecutar `graphify update .` para actualizar `graphify-out/graph.json`, según `CLAUDE.md`, y `git diff --check` antes de cerrar la implementación. Si la CLI `graphify` no está instalada en el entorno, instalarla o registrar la omisión.
+- [x] T061 [P] Agregar a `frontend/src/styles.scss` y a las hojas de `editorial-progress` y `header` las reglas `@media (forced-colors: active)` del plan, y a `frontend/e2e/08-tema-y-acciones.e2e.ts` una prueba con `emulateMedia({ forcedColors: 'active' })` que exige un borde de al menos 1 px en `.meter-bar`, `.avatar`, los marcadores de etapa y `.disclosure > summary`.
+- [x] T062 [P] Agregar un paso `python3 scripts/check_theme_contrast.py` al trabajo del frontend de `.github/workflows/ci.yml`, junto a `python3 scripts/check_frontend_build.py`, y actualizar la sección de verificación del frontend de `README.md`: suites `05` en dos temas, suite `08` y el validador de contraste.
+- [x] T063 [P] Actualizar el sitio de documentación: `docs-site/usuarios/primeros-pasos.qmd` (botón de tema, preferencia por navegador, paneles «Filtros» y «Más acciones»), `docs-site/usuarios/autor.qmd` (indicador de etapas y «Dar de baja» en «Más acciones»), `docs-site/usuarios/revisor.qmd` (barras de plazo y de cupo), `docs-site/ingenieria/pruebas.qmd` (validador de contraste y suites `05` y `08`) y `docs-site/ingenieria/seguridad.qmd` (`theme-init.js` y la CSP sin excepciones). Ejecutar `python3 scripts/check_docs_site.py`.
+- [x] T064 Desde `frontend/`, ejecutar `npx tsc -p tsconfig.app.json --noEmit`, `npx tsc -p tsconfig.spec.json --noEmit`, `npx tsc -p e2e/tsconfig.json`, `npx ng build --configuration production` y `TZ=UTC npx ng test --watch=false`. Desde la raíz, ejecutar `python3 scripts/check_frontend_build.py` y `python3 scripts/check_theme_contrast.py`. Confirmar que no aparecen avisos de presupuesto nuevos frente a T001 y registrar los resultados.
+- [x] T065 Ejecutar `./scripts/e2e.sh` completo desde un stack nuevo. Exigir cero infracciones axe A/AA en ambos temas, cero exposiciones de identidad en `04-fuga-de-identidad.e2e.ts`, cero hallazgos de teclado y responsive en `06` y `07` y el conteo de acciones de `08` en verde. Registrar número de pruebas, duración y hallazgos frente a T002.
+- [x] T066 Recorrer en el entorno de desarrollo, en ambos temas y a 320, 768 y 1366 px, la cabecera, el panel de cada rol, el detalle del manuscrito en cada estado, el detalle de una asignación activa y una vencida, «Mi desempeño» con 5 de 5 y los paneles plegables. Anotar en «Resultados de verificación» lo que las pruebas automáticas no cubren, como la legibilidad prolongada y la lectura con un lector de pantalla.
+- [x] T067 Ejecutar `graphify update .` para actualizar `graphify-out/graph.json`, según `CLAUDE.md`, y `git diff --check` antes de cerrar la implementación. Si la CLI `graphify` no está instalada en el entorno, instalarla o registrar la omisión.
 
 ---
 
@@ -471,6 +471,48 @@ Decisiones tomadas al implementar:
 - El conteo del resumen incluye «Ver archivados» en el listado y un orden distinto del predeterminado en el catálogo, porque ambos viven dentro del panel.
 - En un caso que el inventario de pantallas no recorre conviven dos rellenos en tarjetas distintas: al elegir un archivo en un borrador, «Subir» del cargador aparece junto a «Enviar manuscrito». Cada tarjeta mantiene una sola acción destacada.
 
+### Cierre: colores forzados, CI y documentación (T061 a T063)
+
+**2026-11-25.**
+
+- **T061:** las dos pruebas nuevas de colores forzados fallaron antes del CSS (avatar y barras sin borde) y pasan después. Las reglas quedaron en `styles.scss` (barras, avatar y resúmenes) y en la hoja de `editorial-progress` (marcadores y líneas). La hoja de `header` no necesitó cambios: el avatar es una utilidad global y el menú de la cuenta ya tenía borde.
+- **T062:** paso «Check theme colour contrast» en el trabajo `frontend-build` de `.github/workflows/ci.yml` y sección 10.10 de `README.md` con las cuatro suites por nombre de archivo. El filtro `-g` anterior no incluía la suite `08`. El flujo de CI no se ha ejecutado en GitHub: solo se comprobó que el YAML es válido.
+- **T063:** además de las cinco páginas previstas, se agregó a `usuarios/catalogo.qmd` que los filtros están en un panel. En `usuarios/autor.qmd` se corrigió de paso que el listado no filtra por área ni texto, ni permite ordenar. `scripts/check_docs_site.py` en orden (25 páginas); el sitio no se renderizó con Quarto.
+
 ### Resultados finales (T064 a T066)
 
-Pendiente.
+**T064 (2026-11-25).** `tsc` de app, specs y E2E limpios; build de producción sin avisos de presupuesto; `TZ=UTC npx ng test --watch=false` con 81 archivos y 1376 pruebas en verde; `scripts/check_frontend_build.py` en orden, incluido el arranque del tema; `scripts/check_theme_contrast.py` con 52 pares por tema y cero fallos; `scripts/check_runbook.py` en orden.
+
+| Medida | Línea base (T001) | Final | Diferencia |
+| --- | --- | --- | --- |
+| Paquete inicial | 306,45 kB (85,94 kB transferidos) | 311,87 kB (87,19 kB) | +5,42 kB, de ellos 3,48 kB de `styles` (5,27 a 8,75 kB) |
+| Avisos de presupuesto | 0 | 0 | — |
+| Pruebas unitarias | 76 archivos, 1198 | 81 archivos, 1376 | +178 |
+| Pruebas E2E | 39 en 2,3 min | 65 en 4,7 min | +26 |
+
+**T065.** `./scripts/e2e.sh` completo desde un stack nuevo: 65 pruebas en verde en 4,7 min (337 s con la construcción), sin reintentos. Por archivo: `01` 5, `02` 8, `03` 5, `04` 3, `05` 9, `06` 8, `07` 5 y `08` 22.
+
+| Criterio | Resultado |
+| --- | --- |
+| SC-001 | Cero infracciones axe WCAG A/AA en claro y oscuro, con diálogos y paneles abiertos. |
+| SC-002 | Validador de paleta sin fallos. Mínimos medidos en pantalla: claro 5,93 (texto), 4,55 (borde) y 7,73 (anillo); oscuro 5,98, 4,17 y 6,49. La medición de estados no recorre los resúmenes de los paneles plegables; sus pares de color están en el validador y axe los revisa en reposo. |
+| SC-003 | Atributo correcto antes de ejecutar la SPA, persistencia tras recargar y en otra pestaña (`08`). |
+| SC-004 | `06-teclado` y `07-responsive` sin hallazgos; el recorrido de T066 no encontró desbordamiento de página a 320, 768 ni 1366 px. |
+| SC-005 | Etapas, plazo y cupo verificados en las pruebas unitarias. |
+| SC-006 | Como máximo una acción destacada por vista, fila y elemento de lista en las 23 pantallas, con la excepción anotada en US6: «Subir» junto a «Enviar manuscrito» al elegir un archivo en un borrador. |
+| SC-007 | Unitarias y E2E en verde, cero exposiciones de identidad en `04`, sin `<script>` en línea y dentro de los presupuestos. |
+
+**T066.** El recorrido se hizo sobre el stack aislado de E2E, no sobre el entorno de desarrollo, para no tocar sus datos, y con un spec temporal (borrado). Ambos temas a 320, 768 y 1366 px: inicio de sesión, catálogo, panel de cada rol y de la cuenta Autor–Revisor, menú de la cuenta, detalle del manuscrito en los siete estados y dado de baja, asignación activa y vencida, «Mi desempeño» con 5 de 5 y los paneles plegables. Los estados difíciles de provocar se simularon alterando en el navegador respuestas reales de la API. 126 capturas, cero infracciones axe y sin desbordamiento de página. La revisión visual se centró en 768 px, el ancho no revisado en fases anteriores.
+
+**Sin cubrir; requiere una persona:**
+
+- Legibilidad y descanso visual en una sesión prolongada.
+- Lectura con un lector de pantalla real (Orca o NVDA).
+- Firefox y Safari: todo se probó en Chromium.
+- Colores forzados en Windows: solo se emularon en Chromium.
+- El contenido del PDF en el visor, que Chromium sin interfaz no dibuja.
+
+**Defectos de maquetación anteriores a esta funcionalidad, sin corregir:**
+
+- Inicio de sesión: `.login__error--global` se ve como una barra vacía porque `:empty` no aplica.
+- Tablas de gestión a 768 px y menos (manuscritos, auditoría, asignaciones y ajustes): las insignias y encabezados parten palabras, y la última columna puede requerir desplazamiento dentro de la tabla.

@@ -26,6 +26,10 @@ En **Mis asignaciones** ve su bandeja con el estado de cada una y, arriba, **Mi 
 
 El sistema elige a los Revisores por coincidencia exacta de carrera, sin el Autor ni los coautores, por **ranking** (mayor primero) y menor carga. Empieza con 100 puntos.
 
+Una **barra** acompaña a «X/5»; con las cinco ocupadas cambia de color y dice **«Cupo completo»**.
+
+En el detalle de una asignación activa, la tarjeta de plazo muestra el tiempo restante, una **barra del plazo que queda**, la fecha de asignación y la fecha límite. Con menos de 24 horas pasa a advertencia con «Próximo a vencer», y al vencer queda vacía con «Plazo vencido».
+
 ::: {.callout-warning}
 ## Ranking y plazo
 Entregar la evaluación final **a tiempo suma 10 puntos**. Si el plazo vence sin evaluación final, el sistema **revoca la asignación, le resta 20 puntos y reasigna el manuscrito a otro Revisor**: ya no puede guardar ni enviar. Conviene evaluar a tiempo.

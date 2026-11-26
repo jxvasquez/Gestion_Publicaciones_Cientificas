@@ -18,7 +18,7 @@ Nunca se expone: evaluaciones, identidad de revisores, historial ni información
 
 ## Buscar y filtrar
 
-Escriba en el cuadro de búsqueda y pulse **Buscar**. La búsqueda es de texto completo en español y puede combinarse con filtros:
+Escriba en el cuadro de búsqueda y pulse **Buscar**. La búsqueda es de texto completo en español y puede combinarse con los filtros del panel **Filtros**:
 
 | Filtro | Qué hace |
 |---|---|

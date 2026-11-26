@@ -708,11 +708,14 @@ cd .. && ./scripts/e2e.sh      # los 10 flujos (≈ 3 min, más la primera const
 ### 10.10 Accesibilidad, responsive y build de producción (TSK-92)
 
 ```bash
-./scripts/e2e.sh -g "Accesibilidad|teclado|Tab alcanza|diálogo atrapa|sin desbordes"   # las tres suites
+./scripts/e2e.sh 05-accesibilidad 06-teclado 07-responsive 08-tema   # las cuatro suites
 cd frontend && npx ng build --configuration production && cd .. && python3 scripts/check_frontend_build.py
+python3 scripts/check_theme_contrast.py                              # no necesita el build
 ```
 
-Las suites `05` a `07` de `frontend/e2e/` recorren las pantallas de cada rol con datos reales: **axe-core** (WCAG A/AA, contraste incluido), **teclado y foco** (todo control se alcanza con Tab y muestra un indicador de foco; los diálogos atrapan el foco y lo devuelven) y **responsive** (1920×1080, 1366×768 y tableta 1024×768 y 768×1024: sin desbordes ni controles tapados). La lista de pantallas está en `frontend/e2e/support/world.ts` (`screens()`): al añadir una, añádela allí. `scripts/check_frontend_build.py` comprueba que el build es de producción: sin `sourceMap` ni `.map`, sin dependencias de desarrollo en el bundle, `dependencies` solo con el runtime de Angular y una imagen final solo de Nginx (`--container gpc_e2e-web-1` lo comprueba también en un contenedor en marcha). Los axe y el resto son verificaciones automáticas: no sustituyen una prueba manual con lector de pantalla.
+Las suites `05` a `07` de `frontend/e2e/` recorren las pantallas de cada rol con datos reales: **axe-core** (WCAG A/AA, contraste incluido, **en tema claro y en tema oscuro** y con los diálogos y paneles plegables abiertos), **teclado y foco** (todo control se alcanza con Tab y muestra un indicador de foco; los diálogos atrapan el foco y lo devuelven) y **responsive** (1920×1080, 1366×768 y tableta 1024×768 y 768×1024: sin desbordes ni controles tapados). La lista de pantallas está en `frontend/e2e/support/world.ts` (`screens()`): al añadir una, añádela allí. `scripts/check_frontend_build.py` comprueba que el build es de producción: sin `sourceMap` ni `.map`, sin dependencias de desarrollo en el bundle, `dependencies` solo con el runtime de Angular y una imagen final solo de Nginx (`--container gpc_e2e-web-1` lo comprueba también en un contenedor en marcha) y que el tema se aplica antes de arrancar (`theme-init.js` síncrono en `<head>` y ningún `<script>` en línea).
+
+La suite `08-tema-y-acciones` comprueba el **tema** (preferencia del sistema, elección que persiste y se sincroniza entre pestañas, arranque sin destello y almacenamiento bloqueado), mide el **contraste de los estados** (reposo, puntero, foco y error), cuenta que haya como máximo **una acción destacada** por vista y por fila, y revisa los **colores forzados** del sistema. `scripts/check_theme_contrast.py` calcula el contraste de la paleta de ambos temas a partir de `frontend/src/styles/_tokens.scss`: un par de color nuevo se agrega a su lista. Los axe y el resto son verificaciones automáticas: no sustituyen una prueba manual con lector de pantalla.
 
 ## 11. Seguridad
 
