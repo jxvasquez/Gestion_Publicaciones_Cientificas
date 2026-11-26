@@ -5,6 +5,7 @@ import { AuthService } from '../auth/auth.service';
 import { AuthStore } from '../auth/auth.store';
 import { ApiFeedbackStore } from '../http/api-feedback.store';
 import { NotificationService } from '../services/notification.service';
+import { initialsOf } from '../../shared/utils/initials';
 import { HeaderComponent } from './header.component';
 import { SideNavComponent } from './side-nav.component';
 
@@ -39,8 +40,14 @@ export class ShellComponent {
     this.notifications.refresh();
   }
 
-  /** Nombre visible de la persona autenticada (null si anónima). */
-  protected readonly userName = computed(() => this.store.user()?.full_name ?? null);
+  /** Nombre visible (o el usuario, si la cuenta no tiene nombre); null si anónima. */
+  protected readonly userName = computed(() => {
+    const user = this.store.user();
+    return user ? user.full_name || user.username : null;
+  });
+
+  /** Iniciales de la persona autenticada para el avatar de la cabecera. */
+  protected readonly userInitials = computed(() => initialsOf(this.store.user()));
 
   /** Roles activos: alimentan insignias y módulos de navegación. */
   protected readonly roles = computed(() => this.store.roles());

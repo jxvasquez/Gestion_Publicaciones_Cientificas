@@ -1,17 +1,7 @@
 <article class="card kpi-card">
   <header class="kpi-card__header">
     <svg class="kpi-card__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-      @switch (icon()) {
-        @case ('author') {
-          <use href="icons/ui.svg#author" />
-        }
-        @case ('reviewer') {
-          <use href="icons/ui.svg#reviewer" />
-        }
-        @case ('admin') {
-          <use href="icons/ui.svg#admin" />
-        }
-      }
+      <use [attr.href]="'icons/ui.svg#' + icon()" />
     </svg>
     <h2 class="kpi-card__title">{{ title() }}</h2>
   </header>
@@ -20,7 +10,19 @@
     <dl class="kpi-card__metrics">
       @for (metric of counts(); track $index) {
         <div class="kpi-card__metric">
-          <dt>{{ metric.label }}</dt>
+          <dt>
+            @if (metric.icon) {
+              <svg
+                class="kpi-card__metric-icon"
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+                focusable="false"
+              >
+                <use [attr.href]="'icons/ui.svg#' + metric.icon" />
+              </svg>
+            }
+            {{ metric.label }}
+          </dt>
           <dd>
             @if (metric.max !== null) {
               <!-- «3/5» a la vista; «3 de 5» para el lector de pantalla. -->

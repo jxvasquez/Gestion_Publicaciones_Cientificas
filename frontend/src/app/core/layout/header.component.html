@@ -16,7 +16,18 @@
     <app-theme-toggle />
     @if (userName(); as name) {
       <details class="app-header__account">
-        <summary class="btn btn--ghost app-header__account-toggle">Mi cuenta</summary>
+        <summary class="btn btn--ghost app-header__account-toggle">
+          <span class="avatar" aria-hidden="true">
+            @if (userInitials(); as initials) {
+              {{ initials }}
+            } @else {
+              <svg class="btn__icon" viewBox="0 0 24 24" focusable="false">
+                <use href="icons/ui.svg#user" />
+              </svg>
+            }
+          </span>
+          <span class="app-header__account-label">Mi cuenta</span>
+        </summary>
         <p class="app-header__user">{{ name }}</p>
       </details>
     }

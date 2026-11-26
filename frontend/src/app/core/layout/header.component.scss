@@ -44,6 +44,8 @@
 }
 
 .app-header__account-toggle {
+  min-block-size: 2.5rem;
+  padding-block: var(--gpc-space-1);
   list-style: none;
 }
 
@@ -84,4 +86,17 @@
   inline-size: 1.125rem;
   block-size: 1.125rem;
   flex: none;
+}
+
+/* En pantallas muy estrechas queda el avatar; el nombre accesible «Mi cuenta» se conserva. */
+@media (max-width: 30rem) {
+  .app-header__account-label {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
 }

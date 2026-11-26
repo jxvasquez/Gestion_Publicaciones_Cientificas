@@ -81,6 +81,46 @@ describe('ShellComponent', () => {
     });
   });
 
+  it('«Mi cuenta» muestra un avatar decorativo con las iniciales y conserva su nombre', async () => {
+    setSession();
+    const fixture = await render();
+    const element = fixture.nativeElement as HTMLElement;
+    const summary = element.querySelector('.app-header__account summary')!;
+    const avatar = summary.querySelector('.avatar')!;
+
+    expect(avatar.textContent?.trim()).toBe('AL');
+    expect(avatar.getAttribute('aria-hidden')).toBe('true');
+    expect(summary.querySelector('.app-header__account-label')?.textContent?.trim()).toBe(
+      'Mi cuenta',
+    );
+    expect(element.querySelector('.app-header__user')?.textContent?.trim()).toBe('Ana López');
+    expect(element.querySelectorAll('.app-header__roles .badge')).toHaveLength(2);
+  });
+
+  it('sin nombre ni apellidos el avatar es un icono genérico y el menú muestra el usuario', async () => {
+    store.setSession({
+      user: {
+        id: 'uuid-2',
+        institutional_id: 'INST-0002',
+        username: 'sin.nombre',
+        email: 'sin.nombre@unl.edu.ec',
+        first_name: '',
+        last_name: '',
+        full_name: '',
+      },
+      roles: ['AUTHOR'],
+      access: 'access-2',
+    });
+    const fixture = await render();
+    const element = fixture.nativeElement as HTMLElement;
+    const avatar = element.querySelector('.app-header__account summary .avatar')!;
+
+    expect(avatar.getAttribute('aria-hidden')).toBe('true');
+    expect(avatar.textContent?.trim()).toBe('');
+    expect(avatar.querySelector('use')?.getAttribute('href')).toBe('icons/ui.svg#user');
+    expect(element.querySelector('.app-header__user')?.textContent?.trim()).toBe('sin.nombre');
+  });
+
   it('ofrece el botón de tema entre la campana y «Mi cuenta»', async () => {
     setSession();
     const fixture = await render();

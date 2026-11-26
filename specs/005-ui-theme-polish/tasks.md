@@ -127,17 +127,17 @@ description: "Tareas de implementación del tema claro y oscuro descansado y del
 
 ### Tests for User Story 3 ⚠️
 
-- [ ] T026 [P] [US3] Crear `frontend/src/app/shared/utils/initials.spec.ts`: «Marcela» y «Quizhpe Ordóñez» dan «MQ»; «ángel» y «ñuño» dan «ÁÑ»; solo nombre da una letra; solo apellido da una letra; vacíos o con espacios dan `null`; los espacios sobrantes se ignoran.
-- [ ] T027 [P] [US3] Actualizar `frontend/src/app/core/layout/shell.component.spec.ts`. Para «Ana López» el `summary` contiene `.avatar` con «AL» y `aria-hidden="true"` y el texto «Mi cuenta», y el menú muestra «Ana López». Sin nombre ni apellidos se muestra el icono `user`. Las insignias de rol no cambian.
-- [ ] T028 [P] [US3] Actualizar `frontend/src/app/shared/components/kpi-card.component.spec.ts`. Una métrica con `icon: 'incident'` dibuja dentro de `dt` un `svg` con `aria-hidden="true"` y `use[href="icons/ui.svg#incident"]`, y el texto de `dt` sigue siendo la etiqueta. Sin `icon` no hay `svg` en `dt`.
-- [ ] T029 [P] [US3] Actualizar `frontend/src/app/features/dashboard/dashboard-summaries.spec.ts`. La tarjeta del Administrador usa los iconos `incident` y `hourglass`. Los destinos conservan su orden: Incidentes con `btn--ghost` y Revisores, Carreras y Auditoría con `btn--subtle`. En Autor y Revisor, el primer acceso es `btn--ghost` y los demás `btn--subtle`. Se conservan los casos de cero y dato ausente.
+- [x] T026 [P] [US3] Crear `frontend/src/app/shared/utils/initials.spec.ts`: «Marcela» y «Quizhpe Ordóñez» dan «MQ»; «ángel» y «ñuño» dan «ÁÑ»; solo nombre da una letra; solo apellido da una letra; vacíos o con espacios dan `null`; los espacios sobrantes se ignoran.
+- [x] T027 [P] [US3] Actualizar `frontend/src/app/core/layout/shell.component.spec.ts`. Para «Ana López» el `summary` contiene `.avatar` con «AL» y `aria-hidden="true"` y el texto «Mi cuenta», y el menú muestra «Ana López». Sin nombre ni apellidos se muestra el icono `user`. Las insignias de rol no cambian.
+- [x] T028 [P] [US3] Actualizar `frontend/src/app/shared/components/kpi-card.component.spec.ts`. Una métrica con `icon: 'incident'` dibuja dentro de `dt` un `svg` con `aria-hidden="true"` y `use[href="icons/ui.svg#incident"]`, y el texto de `dt` sigue siendo la etiqueta. Sin `icon` no hay `svg` en `dt`.
+- [x] T029 [P] [US3] Actualizar `frontend/src/app/features/dashboard/dashboard-summaries.spec.ts`. La tarjeta del Administrador usa los iconos `incident` y `hourglass`. Los destinos conservan su orden: Incidentes con `btn--ghost` y Revisores, Carreras y Auditoría con `btn--subtle`. En Autor y Revisor, el primer acceso es `btn--ghost` y los demás `btn--subtle`. Se conservan los casos de cero y dato ausente.
 
 ### Implementation for User Story 3
 
-- [ ] T030 [US3] Crear `frontend/src/app/shared/utils/initials.ts` con `initialsOf(user: Pick<SessionUser, 'first_name' | 'last_name'> | null): string | null` según R-09.
-- [ ] T031 [US3] Agregar la entrada `userInitials` a `frontend/src/app/core/layout/header.component.ts`. En `header.component.html`, poner en el `summary` el avatar decorativo, o el icono `user`, y el texto «Mi cuenta» en `.app-header__account-label`. En `header.component.scss`, ocultar visualmente esa etiqueta por debajo de 30 rem sin quitarla del árbol accesible. Calcular las iniciales en `frontend/src/app/core/layout/shell.component.ts` con `initialsOf(store.user())` y pasarlas en `shell.component.html`.
-- [ ] T032 [US3] En `frontend/src/app/shared/components/kpi-card.component.ts`, agregar `incident` y `hourglass` a `KpiIcon` y `icon?: KpiIcon` a `KpiMetric`. Dibujar el icono en `dt` de `kpi-card.component.html` y su tamaño en `kpi-card.component.scss`.
-- [ ] T033 [US3] Actualizar `frontend/src/app/features/dashboard/admin-summary/admin-summary.component.html` con los iconos y la jerarquía de accesos de FR-009, y `reviewer-summary.component.html` y `author-summary.component.html` con el acceso principal con borde y los demás compactos.
+- [x] T030 [US3] Crear `frontend/src/app/shared/utils/initials.ts` con `initialsOf(user: Pick<SessionUser, 'first_name' | 'last_name'> | null): string | null` según R-09.
+- [x] T031 [US3] Agregar la entrada `userInitials` a `frontend/src/app/core/layout/header.component.ts`. En `header.component.html`, poner en el `summary` el avatar decorativo, o el icono `user`, y el texto «Mi cuenta» en `.app-header__account-label`. En `header.component.scss`, ocultar visualmente esa etiqueta por debajo de 30 rem sin quitarla del árbol accesible. Calcular las iniciales en `frontend/src/app/core/layout/shell.component.ts` con `initialsOf(store.user())` y pasarlas en `shell.component.html`.
+- [x] T032 [US3] En `frontend/src/app/shared/components/kpi-card.component.ts`, agregar `incident` y `hourglass` a `KpiIcon` y `icon?: KpiIcon` a `KpiMetric`. Dibujar el icono en `dt` de `kpi-card.component.html` y su tamaño en `kpi-card.component.scss`.
+- [x] T033 [US3] Actualizar `frontend/src/app/features/dashboard/admin-summary/admin-summary.component.html` con los iconos y la jerarquía de accesos de FR-009, y `reviewer-summary.component.html` y `author-summary.component.html` con el acceso principal con borde y los demás compactos.
 
 **Checkpoint**: cabecera y panel identificables de un vistazo en ambos temas, sin selector de rol.
 
@@ -429,6 +429,16 @@ Medidas el 2026-11-25 sobre `45ffaeb`, cuyo árbol de `frontend/` y `scripts/` e
 **Revisión visual en oscuro.** Con un spec temporal de capturas (borrado después) se revisaron las 23 pantallas, el visor PDF y el diálogo de baja: superficies, campos, listas, fechas, casillas y selector de archivo adoptan el esquema oscuro. El PDF en sí no se pudo revisar porque Chromium sin interfaz no lo dibuja. Quedan dos defectos de maquetación que no dependen del tema ni son de contraste, anteriores a esta funcionalidad y sin corregir: en el inicio de sesión el párrafo `.login__error--global` se ve como una barra vacía (`:empty` no aplica porque contiene espacios), y en la auditoría la insignia «Éxito» se parte en varias líneas.
 
 **Nota sobre el filtro de T024.** `-g "tema|Accesibilidad|accesibilidad"` también coincide con «sistema» y ejecuta sueltos dos pasos encadenados de `02-ciclo-completo` y `03-correccion`, que fallan por faltarles los anteriores. En la suite completa pasan.
+
+### Cabecera y panel (US3, T026 a T033)
+
+**2026-11-25.** Antes de implementar, las pruebas nuevas fallaron (módulo de iniciales inexistente y 7 casos). Con la implementación: `TZ=UTC npx ng test --watch=false` con 79 archivos y 1247 pruebas en verde, `tsc` de app y specs limpios, build de producción sin avisos (paquete inicial de 311,41 kB) y los dos validadores en orden. `./scripts/e2e.sh` completo: 58 pruebas en verde. Con capturas temporales (borradas) se revisaron las cuentas Administrador y Autor–Revisor en ambos temas a 320 y 1366 px; ahí apareció que el icono desalineaba el conteo y, a 320 px, lo bajaba de línea. Se corrigió en `kpi-card.component.scss` y se repitieron `05`, `06` y `07`, en verde.
+
+Decisiones tomadas al implementar:
+
+- Una cuenta sin nombre ni apellidos llega con `full_name` vacío y antes no mostraba «Mi cuenta». Ahora el menú muestra su nombre de usuario, y el avatar, el icono genérico.
+- El icono de la cabecera de `KpiCardComponent` y el de cada métrica enlazan `href` a partir del nombre del símbolo, en lugar de un `@switch` por icono.
+- `activeSlots()` y `standingMetric()` de E2E siguen sin acotar a `dd` hasta T044: solo la tarjeta del Administrador lleva iconos en sus métricas y esas funciones no la leen.
 
 ### Resultados finales (T064 a T066)
 

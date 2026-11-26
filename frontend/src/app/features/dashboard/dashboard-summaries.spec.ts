@@ -87,6 +87,46 @@ describe('Resúmenes del panel unificado (TSK-28)', () => {
     });
   }
 
+  const actions = (element: HTMLElement) =>
+    Array.from(element.querySelectorAll<HTMLAnchorElement>('.kpi-card__actions a'), (link) => ({
+      path: link.getAttribute('href'),
+      tone: ['btn--primary', 'btn--ghost', 'btn--subtle'].filter((name) =>
+        link.classList.contains(name),
+      ),
+    }));
+
+  it.each(cases.map((entry) => [entry.heading, entry] as const))(
+    '%s: un acceso principal con borde y los demás compactos, en el mismo orden',
+    async (_, { component, metric, paths }) => {
+      const fixture = await renderSummary(component, { [metric]: 3 });
+
+      expect(actions(fixture.nativeElement as HTMLElement)).toEqual(
+        paths.map((path, index) => ({
+          path,
+          tone: [index === 0 ? 'btn--ghost' : 'btn--subtle'],
+        })),
+      );
+    },
+  );
+
+  it('la tarjeta del Administrador acompaña cada métrica con su icono', async () => {
+    const fixture = await renderSummary(AdminSummaryComponent, {
+      open_incidents: 0,
+      awaiting_reviewers: 4,
+    });
+    const element = fixture.nativeElement as HTMLElement;
+    const metrics = Array.from(element.querySelectorAll('.kpi-card__metric'), (metric) => [
+      metric.querySelector('dt')?.textContent?.trim(),
+      metric.querySelector('dt use')?.getAttribute('href'),
+      metric.querySelector('dd')?.textContent?.trim(),
+    ]);
+
+    expect(metrics).toEqual([
+      ['Reportes abiertos', 'icons/ui.svg#incident', '0'],
+      ['Manuscritos esperando revisores', 'icons/ui.svg#hourglass', '4'],
+    ]);
+  });
+
   it('omite conteos no válidos y campos ajenos a la tarjeta en la vista del Revisor', async () => {
     const fixture = await renderSummary(ReviewerSummaryComponent, {
       ranking_score: '3',

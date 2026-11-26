@@ -20,6 +20,9 @@ export class HeaderComponent {
   /** Nombre visible de la persona autenticada. */
   readonly userName = input<string | null>(null);
 
+  /** Iniciales para el avatar; `null` muestra el icono genérico de persona. */
+  readonly userInitials = input<string | null>(null);
+
   /** Roles activos, mostrados como insignias informativas. */
   readonly roles = input<Role[]>([]);
 

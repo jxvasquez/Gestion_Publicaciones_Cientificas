@@ -2,7 +2,9 @@ import { TestBed } from '@angular/core/testing';
 
 import { KpiCardComponent } from './kpi-card.component';
 
-const render = async (metrics: { label: string; value: unknown; max?: unknown }[]) => {
+const render = async (
+  metrics: { label: string; value: unknown; max?: unknown; icon?: string }[],
+) => {
   const fixture = TestBed.createComponent(KpiCardComponent);
   fixture.componentRef.setInput('title', 'Revisor');
   fixture.componentRef.setInput('icon', 'reviewer');
@@ -24,6 +26,24 @@ describe('KpiCardComponent', () => {
 
     expect(element.querySelector('dd .badge')?.textContent?.trim()).toBe('2');
     expect(element.querySelector('dd .visually-hidden')).toBeNull();
+  });
+
+  it.each(['incident', 'hourglass'])(
+    'con `icon: %s` dibuja un icono decorativo junto a la etiqueta',
+    async (icon) => {
+      const element = await render([{ label: 'Reportes abiertos', value: 2, icon }]);
+      const term = element.querySelector('dt')!;
+
+      expect(term.querySelector('svg')?.getAttribute('aria-hidden')).toBe('true');
+      expect(term.querySelector('use')?.getAttribute('href')).toBe(`icons/ui.svg#${icon}`);
+      expect(term.textContent?.trim()).toBe('Reportes abiertos');
+    },
+  );
+
+  it('sin `icon` la etiqueta no lleva dibujo', async () => {
+    const element = await render([{ label: 'Activas', value: 3 }]);
+
+    expect(element.querySelector('dt svg')).toBeNull();
   });
 
   it.each([-1, 2.5, '5', null])('un `max` no válido (%j) se ignora', async (max) => {
