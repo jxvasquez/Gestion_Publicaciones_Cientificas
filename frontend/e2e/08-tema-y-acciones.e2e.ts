@@ -1,11 +1,14 @@
 import { expect, Page, test } from '@playwright/test';
 
-import { visit } from './support/a11y';
+import { expectTheme, THEMES, visit, withTheme } from './support/a11y';
+import { measureView, read, Sample } from './support/contrast';
 import { loginUi } from './support/ui';
+import { accountFor, buildWorld, Role, World } from './support/world';
 
 /**
- * Tema claro y oscuro (spec 005, US1): preferencia del sistema, elección persistente,
- * sincronía entre pestañas, arranque sin destello y almacenamiento bloqueado.
+ * Tema claro y oscuro (spec 005). US1: preferencia del sistema, elección persistente,
+ * sincronía entre pestañas, arranque sin destello y almacenamiento bloqueado. US2:
+ * contraste medido en reposo, hover, foco y error en ambos temas.
  */
 const KEY = 'gpc-theme';
 
@@ -109,4 +112,66 @@ test('con el almacenamiento bloqueado el tema cambia y no hay errores', async ({
   await toggle(page).click();
   await expect(theme(page)).toHaveAttribute('data-theme', 'light');
   expect(errors).toEqual([]);
+});
+
+test('control: la medición detecta contrastes insuficientes (no pasa en vacío)', async ({
+  page,
+}) => {
+  await page.setContent(
+    '<!doctype html><body style="background:#fff"><button style="color:#bbb;background:#fff;' +
+      'border:1px solid #eee;outline:3px solid #ddd">Bajo contraste</button></body>',
+  );
+  const reading = await read(page.getByRole('button'));
+  expect(reading.text).toBeLessThan(4.5);
+  expect(reading.border).toBeLessThan(3);
+  expect(reading.ring).toBeLessThan(3);
+});
+
+test.describe('contraste de estados', () => {
+  let world: World;
+  test.beforeAll(async () => {
+    world = await buildWorld('Contraste');
+  });
+
+  const views: { name: string; role: Role; path: (w: World) => string }[] = [
+    { name: 'panel', role: 'author', path: () => '/app/dashboard' },
+    {
+      name: 'detalle del manuscrito',
+      role: 'author',
+      path: (w) => `/app/author/manuscripts/${w.review.id}`,
+    },
+    {
+      name: 'detalle de la asignación',
+      role: 'reviewer',
+      path: (w) => `/app/reviewer/assignments/${w.assignmentId}`,
+    },
+    { name: 'auditoría', role: 'admin', path: () => '/app/admin/audit' },
+  ];
+
+  const lowest = (samples: Sample[], metric: Sample['metric']) =>
+    Math.min(...samples.filter((s) => s.metric === metric).map((s) => s.ratio)).toFixed(2);
+
+  for (const theme of THEMES) {
+    for (const view of views) {
+      test(`${view.name} en tema ${theme}`, async ({ page }) => {
+        await withTheme(page, theme);
+        await loginUi(page, accountFor(view.role, world));
+        await visit(page, view.path(world));
+        await expectTheme(page, theme);
+
+        const samples = await measureView(page);
+
+        for (const state of ['reposo', 'hover', 'foco', 'error']) {
+          expect(samples.some((s) => s.state === state), `sin muestras en ${state}`).toBe(true);
+        }
+        console.log(
+          `CONTRASTE | ${theme} | ${view.name} | ${samples.length} muestras | texto ${lowest(samples, 'texto')} | borde ${lowest(samples, 'borde')} | anillo ${lowest(samples, 'anillo')}`,
+        );
+        const low = samples
+          .filter((s) => s.ratio < s.min)
+          .map((s) => `${s.target} · ${s.state} · ${s.metric}: ${s.ratio.toFixed(2)} < ${s.min}`);
+        expect(low, `[tema ${theme}] ${view.name}:\n${low.join('\n')}`).toEqual([]);
+      });
+    }
+  }
 });

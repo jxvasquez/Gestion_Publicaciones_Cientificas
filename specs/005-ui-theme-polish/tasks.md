@@ -106,14 +106,14 @@ description: "Tareas de implementación del tema claro y oscuro descansado y del
 
 ### Tests for User Story 2 ⚠️
 
-- [ ] T021 [P] [US2] Ampliar `frontend/e2e/support/a11y.ts` con `THEMES = ['light', 'dark'] as const`, `withTheme(page, theme)`, que guarda `gpc-theme` con `page.addInitScript` antes de navegar, y `expectTheme(page, theme)`, que comprueba el atributo de `<html>`.
-- [ ] T022 [US2] Reescribir `frontend/e2e/05-accesibilidad.e2e.ts` para que los recorridos público, Autor, Revisor y Administrador corran en cada tema dentro de `test.describe(\`tema ${theme}\`)`. Cada hallazgo lleva el tema en su nombre y cada recorrido comprueba el tema antes de analizar. La prueba de control del contraste insuficiente corre una sola vez.
-- [ ] T023 [P] [US2] Agregar a `frontend/e2e/08-tema-y-acciones.e2e.ts` una medición de estilos computados en ambos temas. Para `.btn--primary`, `.btn--success`, `.btn--danger`, `.btn--ghost`, `.btn--subtle`, `.btn--danger-text`, enlaces, campos y las insignias de FR-004, medir el contraste de texto y fondo en reposo, con `hover()`, con `focus()` (anillo frente al fondo) y en error (`aria-invalid="true"`). Exigir 4.5:1 en texto y 3:1 en anillos y bordes, en el panel, el detalle del manuscrito, el detalle de la asignación y la auditoría.
+- [x] T021 [P] [US2] Ampliar `frontend/e2e/support/a11y.ts` con `THEMES = ['light', 'dark'] as const`, `withTheme(page, theme)`, que guarda `gpc-theme` con `page.addInitScript` antes de navegar, y `expectTheme(page, theme)`, que comprueba el atributo de `<html>`.
+- [x] T022 [US2] Reescribir `frontend/e2e/05-accesibilidad.e2e.ts` para que los recorridos público, Autor, Revisor y Administrador corran en cada tema dentro de `test.describe(\`tema ${theme}\`)`. Cada hallazgo lleva el tema en su nombre y cada recorrido comprueba el tema antes de analizar. La prueba de control del contraste insuficiente corre una sola vez.
+- [x] T023 [P] [US2] Agregar a `frontend/e2e/08-tema-y-acciones.e2e.ts` una medición de estilos computados en ambos temas. Para `.btn--primary`, `.btn--success`, `.btn--danger`, `.btn--ghost`, `.btn--subtle`, `.btn--danger-text`, enlaces, campos y las insignias de FR-004, medir el contraste de texto y fondo en reposo, con `hover()`, con `focus()` (anillo frente al fondo) y en error (`aria-invalid="true"`). Exigir 4.5:1 en texto y 3:1 en anillos y bordes, en el panel, el detalle del manuscrito, el detalle de la asignación y la auditoría.
 
 ### Implementation for User Story 2
 
-- [ ] T024 [US2] Ejecutar `./scripts/e2e.sh -g "tema|Accesibilidad|accesibilidad"` y corregir cada hallazgo solo con tokens: superficies públicas del inicio de sesión y del catálogo, marco del visor PDF, telón de los diálogos, cabeceras de tabla, enlace de salto y controles nativos con `color-scheme`. Registrar los hallazgos y su corrección por vista en «Resultados de verificación».
-- [ ] T025 [US2] Si T023 detecta un par de estado por debajo del mínimo, ajustar el token afectado en `frontend/src/styles/_tokens.scss` y agregar el par al inventario de `scripts/check_theme_contrast.py` para que no vuelva a fallar.
+- [x] T024 [US2] Ejecutar `./scripts/e2e.sh -g "tema|Accesibilidad|accesibilidad"` y corregir cada hallazgo solo con tokens: superficies públicas del inicio de sesión y del catálogo, marco del visor PDF, telón de los diálogos, cabeceras de tabla, enlace de salto y controles nativos con `color-scheme`. Registrar los hallazgos y su corrección por vista en «Resultados de verificación».
+- [x] T025 [US2] Si T023 detecta un par de estado por debajo del mínimo, ajustar el token afectado en `frontend/src/styles/_tokens.scss` y agregar el par al inventario de `scripts/check_theme_contrast.py` para que no vuelva a fallar.
 
 **Checkpoint**: axe sin infracciones y estados medidos en ambos temas. US1 y US2 forman un tema oscuro publicable.
 
@@ -411,7 +411,24 @@ Medidas el 2026-11-25 sobre `45ffaeb`, cuyo árbol de `frontend/` y `scripts/` e
 
 ### Accesibilidad y estados (T024 y T023)
 
-Pendiente: hallazgos de axe por vista y tema, y ratios medidos en reposo, hover, foco y error.
+**2026-11-25.** `./scripts/e2e.sh` completo desde un stack nuevo: 58 pruebas en verde en 4,1 min.
+
+**axe (T022 y T024).** `05-accesibilidad` corre los recorridos público, Autor, Revisor y Administrador en `light` y en `dark`, con sus diálogos: cero infracciones WCAG A/AA en las ocho pruebas, a la primera. No hubo nada que corregir en T024.
+
+**Estados computados (T023).** `support/contrast.ts` mide variantes de prueba (sobre el fondo de trabajo y dentro de una tarjeta), el primer control real de cada tipo y el enlace de salto, en reposo, hover, foco por teclado y error. Una prueba de control confirma que detecta contrastes insuficientes. Mínimos por vista y tema, con cero pares por debajo del mínimo:
+
+| Vista | Muestras | Claro: texto · borde · anillo | Oscuro: texto · borde · anillo |
+| --- | --- | --- | --- |
+| Panel | 159 | 5,93 · 4,55 · 8,02 | 5,98 · 4,17 · 6,76 |
+| Detalle del manuscrito | 171 | 5,93 · 4,55 · 8,02 | 5,98 · 4,17 · 6,76 |
+| Detalle de la asignación | 173 | 5,93 · 4,55 · 8,02 | 5,98 · 4,17 · 6,76 |
+| Auditoría | 196 | 5,93 · 4,55 · 7,73 | 5,98 · 4,17 · 6,49 |
+
+**T025.** No aplica: ningún par quedó por debajo del mínimo, así que `_tokens.scss` y el inventario del validador no cambian.
+
+**Revisión visual en oscuro.** Con un spec temporal de capturas (borrado después) se revisaron las 23 pantallas, el visor PDF y el diálogo de baja: superficies, campos, listas, fechas, casillas y selector de archivo adoptan el esquema oscuro. El PDF en sí no se pudo revisar porque Chromium sin interfaz no lo dibuja. Quedan dos defectos de maquetación que no dependen del tema ni son de contraste, anteriores a esta funcionalidad y sin corregir: en el inicio de sesión el párrafo `.login__error--global` se ve como una barra vacía (`:empty` no aplica porque contiene espacios), y en la auditoría la insignia «Éxito» se parte en varias líneas.
+
+**Nota sobre el filtro de T024.** `-g "tema|Accesibilidad|accesibilidad"` también coincide con «sistema» y ejecuta sueltos dos pasos encadenados de `02-ciclo-completo` y `03-correccion`, que fallan por faltarles los anteriores. En la suite completa pasan.
 
 ### Resultados finales (T064 a T066)
 

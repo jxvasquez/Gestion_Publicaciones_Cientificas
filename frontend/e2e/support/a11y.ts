@@ -4,6 +4,26 @@ import { expect, Page } from '@playwright/test';
 /** Criterios de la TSK-92: WCAG 2.x nivel A y AA (incluye el contraste de color). */
 const TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
 
+/** Los dos temas de la interfaz (spec 005). */
+export const THEMES = ['light', 'dark'] as const;
+export type Theme = (typeof THEMES)[number];
+
+/** Deja elegido el tema, como lo haría el botón, antes de que cargue cada documento. */
+export async function withTheme(page: Page, theme: Theme): Promise<void> {
+  await page.addInitScript((value) => {
+    try {
+      localStorage.setItem('gpc-theme', value);
+    } catch {
+      // `about:blank` y las páginas de control no tienen almacenamiento.
+    }
+  }, theme);
+}
+
+/** El tema pedido es el que está aplicado: así un análisis no pasa sobre el tema equivocado. */
+export async function expectTheme(page: Page, theme: Theme): Promise<void> {
+  await expect(page.locator('html')).toHaveAttribute('data-theme', theme);
+}
+
 /** Entra a una ruta y espera a que la SPA termine de arrancar (sesión incluida). */
 export async function visit(page: Page, path: string): Promise<void> {
   await page.goto(path);
