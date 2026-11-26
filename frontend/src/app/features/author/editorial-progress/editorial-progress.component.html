@@ -1,0 +1,27 @@
+<ol class="card progress" aria-label="Progreso del ciclo editorial">
+  @for (stage of stages(); track stage.key; let position = $index) {
+    <li
+      [class]="
+        'progress__stage progress__stage--' + stage.state + ' progress__stage--' + stage.tone
+      "
+      [attr.aria-current]="stage.state === 'current' ? 'step' : null"
+    >
+      <span class="progress__marker" aria-hidden="true">
+        @if (stage.state === 'done') {
+          <svg class="progress__check" viewBox="0 0 24 24" focusable="false">
+            <use href="icons/ui.svg#check" />
+          </svg>
+        } @else {
+          {{ position + 1 }}
+        }
+      </span>
+      <span class="progress__label">{{ stage.label }}</span>
+      <span class="visually-hidden">, {{ stateText[stage.state] }}</span>
+    </li>
+  }
+</ol>
+@if (returnsToReview()) {
+  <p class="progress__note">
+    Al enviar una nueva versión, el manuscrito vuelve a la etapa En revisión.
+  </p>
+}

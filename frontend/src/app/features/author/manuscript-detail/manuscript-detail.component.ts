@@ -19,6 +19,7 @@ import { LoadingSpinnerComponent } from '../../../shared/components/loading-spin
 import { RoundCounterComponent } from '../../../shared/components/round-counter.component';
 import { StatusBadgeComponent } from '../../../shared/components/status-badge.component';
 import { FileSizePipe } from '../../../shared/pipes/file-size.pipe';
+import { EditorialProgressComponent } from '../editorial-progress/editorial-progress.component';
 import { PdfUploaderComponent } from '../pdf-uploader/pdf-uploader.component';
 import { SUBMISSION_FIELD_LABELS, submissionErrorMessage } from '../submission-messages';
 import { WithdrawDialogComponent } from '../withdraw-dialog/withdraw-dialog.component';
@@ -30,6 +31,7 @@ const INSTITUTIONAL_OFFSET = '-0500';
  * Detalle de un manuscrito propio (plan sección 3.5, HU-06/HU-22).
  *
  * * Metadatos, autores, estado, versión, ronda y la **siguiente acción**.
+ * * Progreso del ciclo editorial por etapas, sin datos de los revisores.
  * * Observaciones y veredicto cuando existen: la vista solo lee
  *   `comments_for_author`, `decision` y `observations`
  *   (`AuthorEvaluationFeedbackSerializer`). Nunca muestra la identidad
@@ -53,6 +55,7 @@ const INSTITUTIONAL_OFFSET = '-0500';
     ErrorStateComponent,
     StatusBadgeComponent,
     RoundCounterComponent,
+    EditorialProgressComponent,
     FileSizePipe,
     PdfUploaderComponent,
     WithdrawDialogComponent,

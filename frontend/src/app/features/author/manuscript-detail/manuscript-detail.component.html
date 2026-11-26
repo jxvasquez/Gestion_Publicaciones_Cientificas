@@ -25,6 +25,8 @@
       </div>
     </header>
 
+    <app-editorial-progress [manuscript]="m" />
+
     @if (!m.is_active) {
       <div class="callout callout--neutral" role="status">
         <p>

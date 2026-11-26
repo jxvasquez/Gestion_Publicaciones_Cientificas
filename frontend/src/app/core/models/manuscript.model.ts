@@ -274,3 +274,61 @@ const NEXT_ACTION_ARCHIVED: NextAction = {
 export function nextAction(manuscript: Pick<Manuscript, 'status' | 'is_active'>): NextAction {
   return manuscript.is_active ? NEXT_ACTION_BY_STATUS[manuscript.status] : NEXT_ACTION_ARCHIVED;
 }
+
+/** Situación de una etapa del ciclo editorial respecto del manuscrito. */
+export type StageState = 'done' | 'current' | 'upcoming';
+
+export type StageTone = 'neutral' | 'info' | 'success' | 'warning' | 'danger';
+
+/** Etapa del indicador de progreso (spec 005, FR-011). Se deriva: no se almacena. */
+export interface EditorialStage {
+  key: 'draft' | 'submitted' | 'review' | 'decision';
+  label: string;
+  state: StageState;
+  tone: StageTone;
+}
+
+const EDITORIAL_STAGES: readonly Pick<EditorialStage, 'key' | 'label'>[] = [
+  { key: 'draft', label: 'Borrador' },
+  { key: 'submitted', label: 'Enviado' },
+  { key: 'review', label: 'En revisión' },
+  { key: 'decision', label: 'Decisión' },
+];
+
+/**
+ * Etapa alcanzada por cada estado, con su rótulo y tono cuando difieren de los de la
+ * etapa. `closed` indica que el ciclo terminó y esa etapa ya está completada.
+ */
+const REACHED_STAGE: Record<
+  ManuscriptStatus,
+  { index: number; label?: string; tone?: StageTone; closed?: boolean }
+> = {
+  DRAFT: { index: 0 },
+  SUBMITTED: { index: 1, label: 'En espera de revisores' },
+  UNDER_REVIEW: { index: 2 },
+  TIE_BREAKER: { index: 2, label: 'En desempate' },
+  CHANGES_REQUESTED: { index: 3, label: 'Cambios solicitados', tone: 'warning' },
+  ACCEPTED: { index: 3, label: 'Aceptado', tone: 'success', closed: true },
+  REJECTED: { index: 3, label: 'Rechazado', tone: 'danger', closed: true },
+};
+
+/**
+ * Las cuatro etapas del ciclo editorial según el estado. En un manuscrito dado de baja
+ * la etapa alcanzada se rotula así, en tono neutro, y las posteriores quedan pendientes.
+ */
+export function editorialStages(
+  manuscript: Pick<Manuscript, 'status' | 'is_active'>,
+): EditorialStage[] {
+  const reached = REACHED_STAGE[manuscript.status];
+  return EDITORIAL_STAGES.map(({ key, label }, index): EditorialStage => {
+    if (index !== reached.index) {
+      return index < reached.index
+        ? { key, label, state: 'done', tone: 'info' }
+        : { key, label, state: 'upcoming', tone: 'neutral' };
+    }
+    const state = reached.closed ? 'done' : 'current';
+    return manuscript.is_active
+      ? { key, label: reached.label ?? label, state, tone: reached.tone ?? 'info' }
+      : { key, label: 'Dado de baja', state, tone: 'neutral' };
+  });
+}

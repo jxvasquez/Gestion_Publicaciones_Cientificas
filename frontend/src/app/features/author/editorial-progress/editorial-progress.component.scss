@@ -1,0 +1,128 @@
+:host {
+  display: block;
+  margin-block: var(--gpc-space-4);
+}
+
+.progress {
+  display: grid;
+  gap: var(--gpc-space-4);
+  margin: 0;
+  padding: var(--gpc-space-4);
+  list-style: none;
+}
+
+.progress__stage {
+  --stage-ink: var(--gpc-primary-700);
+
+  position: relative;
+  display: flex;
+  min-inline-size: 0;
+  align-items: center;
+  gap: var(--gpc-space-3);
+}
+
+.progress__stage--neutral {
+  --stage-ink: var(--gpc-text-muted);
+}
+
+.progress__stage--success {
+  --stage-ink: var(--gpc-success-700);
+}
+
+.progress__stage--warning {
+  --stage-ink: var(--gpc-warning-800);
+}
+
+.progress__stage--danger {
+  --stage-ink: var(--gpc-danger-700);
+}
+
+.progress__marker {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  inline-size: 2rem;
+  block-size: 2rem;
+  border: 2px solid var(--stage-ink);
+  border-radius: 50%;
+  color: var(--stage-ink);
+  font-size: var(--gpc-text-sm);
+  font-weight: var(--gpc-weight-bold);
+}
+
+.progress__stage--done .progress__marker {
+  background: var(--stage-ink);
+  color: var(--gpc-on-accent);
+}
+
+.progress__stage--current .progress__marker {
+  outline: 3px solid var(--stage-ink);
+  outline-offset: 2px;
+}
+
+.progress__stage--upcoming .progress__marker {
+  border-color: var(--gpc-control-border);
+}
+
+.progress__check {
+  inline-size: 1.125rem;
+  block-size: 1.125rem;
+}
+
+.progress__label {
+  overflow-wrap: anywhere;
+}
+
+.progress__stage--upcoming .progress__label {
+  color: var(--gpc-text-muted);
+}
+
+.progress__stage--current .progress__label,
+.progress__stage--success .progress__label,
+.progress__stage--warning .progress__label,
+.progress__stage--danger .progress__label {
+  color: var(--stage-ink);
+  font-weight: var(--gpc-weight-bold);
+}
+
+/* Línea que une cada etapa con la siguiente: en vertical, dentro del espacio entre ellas. */
+.progress__stage:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  inset-block-start: 100%;
+  inset-inline-start: calc(1rem - 1px);
+  inline-size: 2px;
+  block-size: var(--gpc-space-4);
+  background: var(--gpc-border);
+}
+
+.progress__stage--done:not(:last-child)::after {
+  background: var(--gpc-primary-700);
+}
+
+.progress__note {
+  margin: var(--gpc-space-2) 0 0;
+  color: var(--gpc-text-muted);
+  font-size: var(--gpc-text-sm);
+}
+
+@media (min-width: 34rem) {
+  .progress {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: var(--gpc-space-2);
+  }
+
+  .progress__stage {
+    flex-direction: column;
+    gap: var(--gpc-space-2);
+    text-align: center;
+  }
+
+  .progress__stage:not(:last-child)::after {
+    inset-block-start: calc(1rem - 1px);
+    inset-inline-start: calc(50% + 1.5rem);
+    inline-size: calc(100% - 3rem + var(--gpc-space-2));
+    block-size: 2px;
+  }
+}

@@ -51,6 +51,7 @@ PAIRS: tuple[tuple[str, str, float, str], ...] = (
     ("on-accent", "success-900", TEXT, "botón de éxito al pasar el puntero"),
     ("on-accent", "danger-700", TEXT, "botón destructivo y contador de avisos"),
     ("on-accent", "danger-800", TEXT, "botón destructivo al pasar el puntero"),
+    ("on-accent", "text-muted", TEXT, "marcador de etapa completada en un dado de baja"),
     ("neutral-700", "neutral-100", TEXT, "insignia neutra"),
     ("success-900", "success-100", TEXT, "insignia ACCEPTED y ajuste «+10»"),
     ("warning-800", "warning-100", TEXT, "insignia CHANGES_REQUESTED"),

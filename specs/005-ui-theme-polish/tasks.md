@@ -151,15 +151,15 @@ description: "Tareas de implementación del tema claro y oscuro descansado y del
 
 ### Tests for User Story 4 ⚠️
 
-- [ ] T034 [P] [US4] Ampliar `frontend/src/app/core/models/manuscript.model.spec.ts` con `editorialStages()`. Para cada fila de la «Tabla de etapas del ciclo editorial» de [spec.md](spec.md#tabla-de-etapas-del-ciclo-editorial), comprobar estado, rótulo y tono de las cuatro etapas, incluido el caso dado de baja con cada estado.
-- [ ] T035 [P] [US4] Crear `frontend/src/app/features/author/editorial-progress/editorial-progress.component.spec.ts`. Lista `ol` con `aria-label="Progreso del ciclo editorial"` y cuatro `li`. `aria-current="step"` solo en la actual. Texto oculto «completada», «etapa actual» o «pendiente» en cada etapa. Icono `check` en las completadas. Rótulos «En desempate», «Cambios solicitados», «Aceptado», «Rechazado» y «Dado de baja». Ningún texto de «Revisor».
-- [ ] T036 [P] [US4] Actualizar `frontend/src/app/features/author/manuscript-detail/manuscript-detail.component.spec.ts`. El indicador aparece bajo la cabecera en cada estado y refleja el estado nuevo tras el envío, sin recargar.
+- [x] T034 [P] [US4] Ampliar `frontend/src/app/core/models/manuscript.model.spec.ts` con `editorialStages()`. Para cada fila de la «Tabla de etapas del ciclo editorial» de [spec.md](spec.md#tabla-de-etapas-del-ciclo-editorial), comprobar estado, rótulo y tono de las cuatro etapas, incluido el caso dado de baja con cada estado.
+- [x] T035 [P] [US4] Crear `frontend/src/app/features/author/editorial-progress/editorial-progress.component.spec.ts`. Lista `ol` con `aria-label="Progreso del ciclo editorial"` y cuatro `li`. `aria-current="step"` solo en la actual. Texto oculto «completada», «etapa actual» o «pendiente» en cada etapa. Icono `check` en las completadas. Rótulos «En desempate», «Cambios solicitados», «Aceptado», «Rechazado» y «Dado de baja». Ningún texto de «Revisor».
+- [x] T036 [P] [US4] Actualizar `frontend/src/app/features/author/manuscript-detail/manuscript-detail.component.spec.ts`. El indicador aparece bajo la cabecera en cada estado y refleja el estado nuevo tras el envío, sin recargar.
 
 ### Implementation for User Story 4
 
-- [ ] T037 [US4] Agregar a `frontend/src/app/core/models/manuscript.model.ts` la interfaz `EditorialStage` (`key`, `label`, `state` con `done`, `current` o `upcoming`, y `tone`) y la función pura `editorialStages(manuscript: Pick<Manuscript, 'status' | 'is_active'>)`, junto a `nextAction()`.
-- [ ] T038 [US4] Crear `frontend/src/app/features/author/editorial-progress/editorial-progress.component.ts`, `.html` y `.scss` con la entrada `manuscript`, en horizontal desde 34 rem y en vertical por debajo, con los marcadores y anillos de «Presentación y accesibilidad» de [plan.md](plan.md#presentación-y-accesibilidad).
-- [ ] T039 [US4] Mostrar `<app-editorial-progress>` bajo `.detail-header` en `frontend/src/app/features/author/manuscript-detail/manuscript-detail.component.html` e importarlo en `manuscript-detail.component.ts`.
+- [x] T037 [US4] Agregar a `frontend/src/app/core/models/manuscript.model.ts` la interfaz `EditorialStage` (`key`, `label`, `state` con `done`, `current` o `upcoming`, y `tone`) y la función pura `editorialStages(manuscript: Pick<Manuscript, 'status' | 'is_active'>)`, junto a `nextAction()`.
+- [x] T038 [US4] Crear `frontend/src/app/features/author/editorial-progress/editorial-progress.component.ts`, `.html` y `.scss` con la entrada `manuscript`, en horizontal desde 34 rem y en vertical por debajo, con los marcadores y anillos de «Presentación y accesibilidad» de [plan.md](plan.md#presentación-y-accesibilidad).
+- [x] T039 [US4] Mostrar `<app-editorial-progress>` bajo `.detail-header` en `frontend/src/app/features/author/manuscript-detail/manuscript-detail.component.html` e importarlo en `manuscript-detail.component.ts`.
 
 **Checkpoint**: el Autor reconoce la etapa de su manuscrito en ambos temas. US4 se verifica sola.
 
@@ -439,6 +439,12 @@ Decisiones tomadas al implementar:
 - Una cuenta sin nombre ni apellidos llega con `full_name` vacío y antes no mostraba «Mi cuenta». Ahora el menú muestra su nombre de usuario, y el avatar, el icono genérico.
 - El icono de la cabecera de `KpiCardComponent` y el de cada métrica enlazan `href` a partir del nombre del símbolo, en lugar de un `@switch` por icono.
 - `activeSlots()` y `standingMetric()` de E2E siguen sin acotar a `dd` hasta T044: solo la tarjeta del Administrador lleva iconos en sus métricas y esas funciones no la leen.
+
+### Progreso del manuscrito (US4, T034 a T039)
+
+**2026-11-25.** Antes de implementar, las pruebas nuevas fallaron (`editorialStages` y el componente no existían). Con la implementación: `TZ=UTC npx ng test --watch=false` con 80 archivos y 1292 pruebas en verde, `tsc` de app y specs limpios, build de producción sin avisos de presupuesto y los dos validadores en orden. Se agregó al validador de contraste el par `on-accent` sobre `text-muted` (marcador completado de un dado de baja), con 7,58:1 en claro y 9,68:1 en oscuro: son ya 52 pares por tema.
+
+`./scripts/e2e.sh` completo: 58 pruebas en verde. Con un spec temporal (borrado) se abrió el detalle de los estados que dejan los flujos (Borrador, En revisión, Cambios solicitados, Aceptado, Rechazado y un aceptado dado de baja) en ambos temas, a 1366 y 320 px: cero infracciones axe, sin desbordamiento horizontal y el árbol accesible anuncia cada etapa con su situación. `SUBMITTED` y `TIE_BREAKER` no quedaban al terminar los flujos y se verifican en las pruebas unitarias.
 
 ### Resultados finales (T064 a T066)
 

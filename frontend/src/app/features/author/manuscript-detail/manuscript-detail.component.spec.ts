@@ -258,6 +258,67 @@ describe('ManuscriptDetailComponent', () => {
     });
   });
 
+  describe('progreso del ciclo editorial', () => {
+    const current = (element: HTMLElement) =>
+      element.querySelector('app-editorial-progress [aria-current="step"]');
+
+    it.each(MANUSCRIPT_STATUSES)('en %s aparece justo bajo la cabecera', async (status) => {
+      const { element } = await open({ status });
+
+      const header = element.querySelector('.detail-header')!;
+      expect(header.nextElementSibling?.tagName.toLowerCase()).toBe('app-editorial-progress');
+      expect(element.querySelectorAll('app-editorial-progress li')).toHaveLength(4);
+    });
+
+    it('un manuscrito dado de baja lo indica en la etapa alcanzada', async () => {
+      const { element } = await open({
+        status: 'UNDER_REVIEW',
+        is_active: false,
+        withdrawn_at: '2026-10-22T17:00:00Z',
+      });
+
+      expect(text(current(element) as HTMLElement)).toContain('Dado de baja');
+    });
+
+    it('tras el envío refleja el estado nuevo sin recargar', async () => {
+      const { element, settle } = await open({
+        status: 'DRAFT',
+        draft_file: {
+          filename: 'articulo.pdf',
+          size_bytes: 1024,
+          uploaded_at: '2026-10-20T15:30:00Z',
+        },
+      });
+      expect(text(current(element) as HTMLElement)).toContain('Borrador');
+      const button = (scope: ParentNode) =>
+        Array.from(scope.querySelectorAll('button')).find(
+          (b) => b.textContent?.trim() === 'Enviar manuscrito',
+        ) as HTMLButtonElement;
+
+      button(element).click();
+      await settle();
+      button(element.querySelector('app-confirm-dialog dialog')!).click();
+      await settle();
+      http.expectOne('/api/v1/manuscripts/m-1/submit/').flush(
+        {
+          code: 'GPC-2026-000001',
+          status: 'SUBMITTED',
+          version_number: 1,
+          round_number: 0,
+          submitted_at: '2026-10-25T20:30:00Z',
+          integrity_seal: `sha256:${'a'.repeat(64)}`,
+        },
+        { status: 201, statusText: 'Created' },
+      );
+      http
+        .expectOne('/api/v1/manuscripts/m-1/')
+        .flush(buildManuscript({ status: 'UNDER_REVIEW', current_version: 1 }));
+      await settle();
+
+      expect(text(current(element) as HTMLElement)).toContain('En revisión');
+    });
+  });
+
   describe('siguiente acción', () => {
     it('SUBMITTED explica la asignación automática y muestra las carreras como badges', async () => {
       const { element } = await open({
